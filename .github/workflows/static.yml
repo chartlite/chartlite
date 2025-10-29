@@ -40,8 +40,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install
@@ -55,6 +55,8 @@ jobs:
           cp -r examples/* _site/
           mkdir -p _site/packages/core/dist
           cp -r packages/core/dist/* _site/packages/core/dist/
+
+          sed -i "s|from '../packages/|from './packages/|g" _site/*.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
