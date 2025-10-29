@@ -33,6 +33,15 @@
   ],
   "author": "Riel St. Amand",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chartlite/chartlite.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/chartlite/chartlite/issues"
+  },
+  "homepage": "https://github.com/chartlite/chartlite#readme",
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.4",
     "jsdom": "^25.0.1",
