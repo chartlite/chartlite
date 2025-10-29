@@ -1,6 +1,6 @@
 {
   "name": "@chartlite/react",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "React wrapper for chartlite",
   "type": "module",
   "main": "./dist/index.js",
@@ -12,7 +12,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -21,7 +23,12 @@
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
-  "keywords": ["charts", "react", "visualization", "chartlite"],
+  "keywords": [
+    "charts",
+    "react",
+    "visualization",
+    "chartlite"
+  ],
   "author": "Riel St. Amand",
   "license": "MIT",
   "repository": {
