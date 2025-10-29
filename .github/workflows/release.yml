@@ -46,10 +46,18 @@ jobs:
 
       - name: Version bump
         run: |
-          # Bump version in all packages
+          # Bump version in core package first
           cd packages/core
           npm version ${{ github.event.inputs.version }} --no-git-tag-version
           NEW_VERSION=$(node -p "require('./package.json').version")
+          cd ../..
+
+          # Update VERSION constant in code
+          sed -i "s/export const VERSION = '.*';/export const VERSION = '$NEW_VERSION';/" packages/core/src/index.ts
+
+          # Update all other packages to match
+          cd packages/react
+          npm version $NEW_VERSION --no-git-tag-version
           cd ../..
 
           # Update root package.json
@@ -85,22 +93,21 @@ jobs:
           git push origin "v${{ env.NEW_VERSION }}"
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.NEW_VERSION }}
-          release_name: Release v${{ env.NEW_VERSION }}
+          name: Release v${{ env.NEW_VERSION }}
           draft: false
           prerelease: false
+          generate_release_notes: true
           body: |
-            ## What's Changed
-
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
-
             ## Installation
 
             ```bash
             npm install @chartlite/core@${{ env.NEW_VERSION }}
             npm install @chartlite/react@${{ env.NEW_VERSION }}
             ```
+
+            ## Changes
+
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for full details.
