@@ -35,7 +35,7 @@
   "license": "MIT",
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.4",
-    "jsdom": "^27.0.1",
+    "jsdom": "^25.0.1",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
     "vitest": "^4.0.4"
