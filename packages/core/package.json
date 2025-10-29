@@ -1,0 +1,43 @@
+{
+  "name": "@chartlite/core",
+  "version": "0.1.0",
+  "description": "Core charting library - framework agnostic",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "charts",
+    "graphs",
+    "svg",
+    "visualization",
+    "lightweight",
+    "performance"
+  ],
+  "author": "Riel St. Amand",
+  "license": "MIT",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.4",
+    "jsdom": "^27.0.1",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^4.0.4"
+  }
+}

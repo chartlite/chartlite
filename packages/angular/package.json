@@ -1,0 +1,16 @@
+{
+  "name": "@chartlite/angular",
+  "version": "0.1.0",
+  "description": "Angular wrapper for chartlite",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Angular package - coming soon'"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@angular/core": "^17.0.0 || ^18.0.0"
+  },
+  "dependencies": {
+    "@chartlite/core": "workspace:*"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@chartlite/svelte",
+  "version": "0.1.0",
+  "description": "Svelte wrapper for chartlite",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Svelte package - coming soon'"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "svelte": "^4.0.0 || ^5.0.0"
+  },
+  "dependencies": {
+    "@chartlite/core": "workspace:*"
+  }
+}

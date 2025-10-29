@@ -1,0 +1,16 @@
+{
+  "name": "@chartlite/vue",
+  "version": "0.1.0",
+  "description": "Vue wrapper for chartlite",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Vue package - coming soon'"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "dependencies": {
+    "@chartlite/core": "workspace:*"
+  }
+}

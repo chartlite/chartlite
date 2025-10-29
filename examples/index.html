@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chartlite Examples - Lightweight Charts</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 3rem;
+    }
+
+    h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1.25rem;
+      opacity: 0.9;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .chart-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .chart-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #1f2937;
+    }
+
+    .chart-description {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 1rem;
+    }
+
+    .chart-container {
+      margin-top: 1rem;
+    }
+
+    footer {
+      text-align: center;
+      color: white;
+      margin-top: 3rem;
+      opacity: 0.8;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      opacity: 0.8;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📊 Chartlite</h1>
+      <p class="subtitle">Beautiful, lightweight charts for the web</p>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value">~16KB</div>
+          <div class="stat-label">Bundle Size</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">0</div>
+          <div class="stat-label">Dependencies</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">100%</div>
+          <div class="stat-label">TypeScript</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Example 1: Basic Line Chart -->
+      <div class="chart-card">
+        <h2 class="chart-title">Basic Line Chart</h2>
+        <p class="chart-description">Simple line chart with default settings and theme</p>
+        <div id="chart1" class="chart-container"></div>
+      </div>
+
+      <!-- Example 2: Smooth Curve -->
+      <div class="chart-card">
+        <h2 class="chart-title">Smooth Curve</h2>
+        <p class="chart-description">Line chart with smooth bezier curves</p>
+        <div id="chart2" class="chart-container"></div>
+      </div>
+
+      <!-- Example 3: Midnight Theme -->
+      <div class="chart-card">
+        <h2 class="chart-title">Midnight Theme</h2>
+        <p class="chart-description">Dark theme perfect for dashboards</p>
+        <div id="chart3" class="chart-container"></div>
+      </div>
+
+      <!-- Example 4: Custom Colors -->
+      <div class="chart-card">
+        <h2 class="chart-title">Custom Colors</h2>
+        <p class="chart-description">Line chart with custom color scheme</p>
+        <div id="chart4" class="chart-container"></div>
+      </div>
+
+      <!-- Example 5: No Points -->
+      <div class="chart-card">
+        <h2 class="chart-title">Line Only (No Points)</h2>
+        <p class="chart-description">Cleaner look without data point markers</p>
+        <div id="chart5" class="chart-container"></div>
+      </div>
+
+      <!-- Example 6: With Title -->
+      <div class="chart-card">
+        <h2 class="chart-title">With Title</h2>
+        <p class="chart-description">Chart with built-in title</p>
+        <div id="chart6" class="chart-container"></div>
+      </div>
+
+      <!-- Example 7: Vertical Bar Chart -->
+      <div class="chart-card">
+        <h2 class="chart-title">Vertical Bar Chart</h2>
+        <p class="chart-description">Classic bar chart for comparing categories</p>
+        <div id="chart7" class="chart-container"></div>
+      </div>
+
+      <!-- Example 8: Horizontal Bar Chart -->
+      <div class="chart-card">
+        <h2 class="chart-title">Horizontal Bar Chart</h2>
+        <p class="chart-description">Great for ranking or comparing items</p>
+        <div id="chart8" class="chart-container"></div>
+      </div>
+
+      <!-- Example 9: Colorful Bar Chart -->
+      <div class="chart-card">
+        <h2 class="chart-title">Multi-Color Bars</h2>
+        <p class="chart-description">Each bar with its own color</p>
+        <div id="chart9" class="chart-container"></div>
+      </div>
+
+      <!-- Example 10: Area Chart -->
+      <div class="chart-card">
+        <h2 class="chart-title">Area Chart</h2>
+        <p class="chart-description">Perfect for showing trends over time</p>
+        <div id="chart10" class="chart-container"></div>
+      </div>
+
+      <!-- Example 11: Smooth Area Chart -->
+      <div class="chart-card">
+        <h2 class="chart-title">Smooth Area Chart</h2>
+        <p class="chart-description">Area chart with smooth curves</p>
+        <div id="chart11" class="chart-container"></div>
+      </div>
+
+      <!-- Example 12: Area Chart with Custom Opacity -->
+      <div class="chart-card">
+        <h2 class="chart-title">Transparent Area</h2>
+        <p class="chart-description">Customizable fill opacity</p>
+        <div id="chart12" class="chart-container"></div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Made with ❤️ using Chartlite</p>
+      <p style="margin-top: 0.5rem; font-size: 0.875rem;">
+        Open source under MIT License
+      </p>
+    </footer>
+  </div>
+
+  <script type="module">
+    // Import from the built package
+    import { LineChart, BarChart, AreaChart } from '../packages/core/dist/index.js';
+
+    // Sample data
+    const monthlyRevenue = [
+      { x: 'Jan', y: 4200 },
+      { x: 'Feb', y: 4800 },
+      { x: 'Mar', y: 4100 },
+      { x: 'Apr', y: 5600 },
+      { x: 'May', y: 6200 },
+      { x: 'Jun', y: 5800 },
+      { x: 'Jul', y: 7100 },
+      { x: 'Aug', y: 7800 },
+    ];
+
+    const userGrowth = [
+      { x: 'Week 1', y: 120 },
+      { x: 'Week 2', y: 185 },
+      { x: 'Week 3', y: 245 },
+      { x: 'Week 4', y: 320 },
+      { x: 'Week 5', y: 410 },
+      { x: 'Week 6', y: 520 },
+    ];
+
+    const temperature = [
+      { x: 'Mon', y: 22 },
+      { x: 'Tue', y: 24 },
+      { x: 'Wed', y: 26 },
+      { x: 'Thu', y: 25 },
+      { x: 'Fri', y: 27 },
+      { x: 'Sat', y: 29 },
+      { x: 'Sun', y: 28 },
+    ];
+
+    // Example 1: Basic Line Chart
+    const chart1 = new LineChart('#chart1', {
+      data: monthlyRevenue,
+      width: 500,
+      height: 300,
+    });
+    chart1.render();
+
+    // Example 2: Smooth Curve
+    const chart2 = new LineChart('#chart2', {
+      data: userGrowth,
+      width: 500,
+      height: 300,
+      curve: 'smooth',
+    });
+    chart2.render();
+
+    // Example 3: Midnight Theme
+    const chart3 = new LineChart('#chart3', {
+      data: monthlyRevenue,
+      width: 500,
+      height: 300,
+      theme: 'midnight',
+      curve: 'smooth',
+    });
+    chart3.render();
+
+    // Example 4: Custom Colors
+    const chart4 = new LineChart('#chart4', {
+      data: temperature,
+      width: 500,
+      height: 300,
+      colors: ['#f59e0b'],
+      curve: 'smooth',
+    });
+    chart4.render();
+
+    // Example 5: No Points
+    const chart5 = new LineChart('#chart5', {
+      data: userGrowth,
+      width: 500,
+      height: 300,
+      showPoints: false,
+      curve: 'smooth',
+    });
+    chart5.render();
+
+    // Example 6: With Title
+    const chart6 = new LineChart('#chart6', {
+      data: monthlyRevenue,
+      width: 500,
+      height: 300,
+      title: 'Monthly Revenue (USD)',
+      theme: 'minimal',
+    });
+    chart6.render();
+
+    // Example 7: Vertical Bar Chart
+    const quarterlySales = [
+      { x: 'Q1', y: 45000 },
+      { x: 'Q2', y: 52000 },
+      { x: 'Q3', y: 48000 },
+      { x: 'Q4', y: 61000 },
+    ];
+    const chart7 = new BarChart('#chart7', {
+      data: quarterlySales,
+      width: 500,
+      height: 300,
+    });
+    chart7.render();
+
+    // Example 8: Horizontal Bar Chart
+    const topProducts = [
+      { x: 'Product A', y: 320 },
+      { x: 'Product B', y: 280 },
+      { x: 'Product C', y: 245 },
+      { x: 'Product D', y: 190 },
+      { x: 'Product E', y: 150 },
+    ];
+    const chart8 = new BarChart('#chart8', {
+      data: topProducts,
+      width: 500,
+      height: 300,
+      orientation: 'horizontal',
+    });
+    chart8.render();
+
+    // Example 9: Multi-Color Bars
+    const chart9 = new BarChart('#chart9', {
+      data: quarterlySales,
+      width: 500,
+      height: 300,
+      colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+      theme: 'minimal',
+    });
+    chart9.render();
+
+    // Example 10: Area Chart
+    const chart10 = new AreaChart('#chart10', {
+      data: monthlyRevenue,
+      width: 500,
+      height: 300,
+    });
+    chart10.render();
+
+    // Example 11: Smooth Area Chart
+    const chart11 = new AreaChart('#chart11', {
+      data: userGrowth,
+      width: 500,
+      height: 300,
+      curve: 'smooth',
+      colors: ['#10b981'],
+    });
+    chart11.render();
+
+    // Example 12: Transparent Area
+    const chart12 = new AreaChart('#chart12', {
+      data: temperature,
+      width: 500,
+      height: 300,
+      curve: 'smooth',
+      fillOpacity: 0.1,
+      colors: ['#f59e0b'],
+      theme: 'midnight',
+    });
+    chart12.render();
+  </script>
+</body>
+</html>
