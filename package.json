@@ -11,10 +11,10 @@
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
+    "@types/node": "^24.9.0",
     "turbo": "^2.0.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
+    "vitest": "^4.0.0"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
