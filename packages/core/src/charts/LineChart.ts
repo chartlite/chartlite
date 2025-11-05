@@ -10,26 +10,20 @@ import {
   generateLinePath,
   getThemeColors,
   calculateNiceTicks,
-  normalizeData,
-  extractColorsFromSeriesData,
+  getAllXValues,
+  getCombinedYRange,
 } from '../utils';
 
 export class LineChart extends BaseChart {
   protected config: LineChartConfig;
 
   constructor(container: HTMLElement | string, config: LineChartConfig) {
-    // Normalize data and extract colors if from series-first format
-    const normalizedData = normalizeData(config.data);
-    const extractedColors = extractColorsFromSeriesData(config.data);
-
-    super(container, config, normalizedData);
+    super(container, config, config.data);
 
     this.config = {
       curve: 'linear',
       showPoints: true,
       ...config,
-      // Use extracted colors if available and not overridden
-      colors: config.colors || extractedColors,
     };
   }
 
@@ -46,11 +40,9 @@ export class LineChart extends BaseChart {
     mainGroup.classList.add('chart-main');
     this.svg.appendChild(mainGroup);
 
-    // Extract data
-    const xValues = this.data.map((d) => String(d.x));
-    const yValues = this.data.map((d) => d.y);
-    const yMin = Math.min(...yValues, 0);
-    const yMax = Math.max(...yValues);
+    // Get all unique x values and combined y range from all series
+    const xValues = getAllXValues(this.seriesData).map(String);
+    const { min: yMin, max: yMax } = getCombinedYRange(this.seriesData);
 
     // Create scales
     const xScale = createBandScale(xValues, [0, chartWidth], 0);
@@ -59,37 +51,40 @@ export class LineChart extends BaseChart {
     // Render axes
     this.renderAxes(mainGroup, xValues, yMin, yMax, chartWidth, chartHeight, colors);
 
-    // Generate line path
-    const points = this.data.map((d) => ({
-      x: xScale.scale(String(d.x)) + xScale.bandwidth / 2,
-      y: yScale(d.y),
-    }));
+    // Render each series
+    this.seriesData.forEach((series) => {
+      // Generate line path for this series
+      const points = series.data.map((d) => ({
+        x: xScale.scale(String(d.x)) + xScale.bandwidth / 2,
+        y: yScale(d.y),
+      }));
 
-    const linePath = generateLinePath(points, this.config.curve);
+      const linePath = generateLinePath(points, this.config.curve);
 
-    // Render line
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', linePath);
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', this.config.colors?.[0] || colors.primary);
-    path.setAttribute('stroke-width', '2');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    mainGroup.appendChild(path);
+      // Render line
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', linePath);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', series.color || colors.primary);
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      mainGroup.appendChild(path);
 
-    // Render points if enabled
-    if (this.config.showPoints) {
-      points.forEach((point) => {
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('cx', String(point.x));
-        circle.setAttribute('cy', String(point.y));
-        circle.setAttribute('r', '4');
-        circle.setAttribute('fill', this.config.colors?.[0] || colors.primary);
-        circle.setAttribute('stroke', colors.background);
-        circle.setAttribute('stroke-width', '2');
-        mainGroup.appendChild(circle);
-      });
-    }
+      // Render points if enabled
+      if (this.config.showPoints) {
+        points.forEach((point) => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', String(point.x));
+          circle.setAttribute('cy', String(point.y));
+          circle.setAttribute('r', '4');
+          circle.setAttribute('fill', series.color || colors.primary);
+          circle.setAttribute('stroke', colors.background);
+          circle.setAttribute('stroke-width', '2');
+          mainGroup.appendChild(circle);
+        });
+      }
+    });
   }
 
   private renderAxes(
@@ -164,10 +159,5 @@ export class LineChart extends BaseChart {
       label.textContent = value;
       group.appendChild(label);
     });
-  }
-
-  protected renderLegend(): void {
-    // Legend implementation can be added later
-    // For now, line charts typically don't need legends for single series
   }
 }

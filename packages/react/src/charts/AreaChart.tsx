@@ -1,19 +1,19 @@
 import { useEffect, useRef } from 'react';
-import { LineChart as CoreLineChart, type LineChartConfig } from '@chartlite/core';
+import { AreaChart as CoreAreaChart, type AreaChartConfig } from '@chartlite/core';
 
-export interface LineChartProps extends Omit<LineChartConfig, 'width' | 'height'> {
+export interface AreaChartProps extends Omit<AreaChartConfig, 'width' | 'height'> {
   className?: string;
   style?: React.CSSProperties;
 }
 
-export function LineChart({ className, style, ...config }: LineChartProps) {
+export function AreaChart({ className, style, ...config }: AreaChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<CoreLineChart | null>(null);
+  const chartRef = useRef<CoreAreaChart | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    chartRef.current = new CoreLineChart(containerRef.current, config);
+    chartRef.current = new CoreAreaChart(containerRef.current, config);
     chartRef.current.render();
 
     return () => {

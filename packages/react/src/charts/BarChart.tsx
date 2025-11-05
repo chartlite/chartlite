@@ -1,19 +1,19 @@
 import { useEffect, useRef } from 'react';
-import { LineChart as CoreLineChart, type LineChartConfig } from '@chartlite/core';
+import { BarChart as CoreBarChart, type BarChartConfig } from '@chartlite/core';
 
-export interface LineChartProps extends Omit<LineChartConfig, 'width' | 'height'> {
+export interface BarChartProps extends Omit<BarChartConfig, 'width' | 'height'> {
   className?: string;
   style?: React.CSSProperties;
 }
 
-export function LineChart({ className, style, ...config }: LineChartProps) {
+export function BarChart({ className, style, ...config }: BarChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<CoreLineChart | null>(null);
+  const chartRef = useRef<CoreBarChart | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    chartRef.current = new CoreLineChart(containerRef.current, config);
+    chartRef.current = new CoreBarChart(containerRef.current, config);
     chartRef.current.render();
 
     return () => {

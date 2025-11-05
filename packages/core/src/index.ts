@@ -7,6 +7,13 @@
 export type {
   Theme,
   DataPoint,
+  SeriesDefinition,
+  SeriesFirstData,
+  ColumnOrientedData,
+  FlexibleDataInput,
+  SeriesData,
+  LegendPosition,
+  LegendConfig,
   BaseChartConfig,
   LineChartConfig,
   BarChartConfig,

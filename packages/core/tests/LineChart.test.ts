@@ -321,4 +321,263 @@ describe('LineChart', () => {
       expect(container.querySelector('svg')).toBeFalsy();
     });
   });
+
+  describe('Multi-series support', () => {
+    describe('Series-first format', () => {
+      it('should render multiple lines', () => {
+        const multiSeriesData = {
+          series: [
+            { name: 'Series 1', dataKey: 'value1' },
+            { name: 'Series 2', dataKey: 'value2' },
+            { name: 'Series 3', dataKey: 'value3' }
+          ],
+          data: [
+            { month: 'Jan', value1: 30, value2: 45, value3: 25 },
+            { month: 'Feb', value1: 40, value2: 50, value3: 30 },
+            { month: 'Mar', value1: 35, value2: 48, value3: 28 }
+          ]
+        };
+
+        const chart = new LineChart(container, { data: multiSeriesData });
+        chart.render();
+
+        const paths = container.querySelectorAll('path');
+        // Should have 3 line paths (one per series)
+        expect(paths.length).toBe(3);
+      });
+
+      it('should render legend for multi-series', () => {
+        const multiSeriesData = {
+          series: [
+            { name: 'Revenue', dataKey: 'revenue' },
+            { name: 'Costs', dataKey: 'costs' }
+          ],
+          data: [
+            { month: 'Jan', revenue: 100, costs: 60 },
+            { month: 'Feb', revenue: 120, costs: 70 }
+          ]
+        };
+
+        const chart = new LineChart(container, { data: multiSeriesData, showLegend: true });
+        chart.render();
+
+        const legend = container.querySelector('.chart-legend');
+        expect(legend).toBeTruthy();
+      });
+
+      it('should not render legend for single series', () => {
+        const chart = new LineChart(container, { data, showLegend: true });
+        chart.render();
+
+        const legend = container.querySelector('.chart-legend');
+        expect(legend).toBeFalsy();
+      });
+
+      it('should auto-assign colors from theme', () => {
+        const multiSeriesData = {
+          series: [
+            { name: 'Series 1', dataKey: 'value1' },
+            { name: 'Series 2', dataKey: 'value2' }
+          ],
+          data: [
+            { month: 'Jan', value1: 30, value2: 45 },
+            { month: 'Feb', value1: 40, value2: 50 }
+          ]
+        };
+
+        const chart = new LineChart(container, { data: multiSeriesData });
+        chart.render();
+
+        const paths = container.querySelectorAll('path');
+        // Each path should have a stroke color
+        expect(paths[0].getAttribute('stroke')).toBeTruthy();
+        expect(paths[1].getAttribute('stroke')).toBeTruthy();
+        // Colors should be different
+        expect(paths[0].getAttribute('stroke')).not.toBe(paths[1].getAttribute('stroke'));
+      });
+
+      it('should use custom series colors', () => {
+        const multiSeriesData = {
+          series: [
+            { name: 'Series 1', dataKey: 'value1', color: '#ff0000' },
+            { name: 'Series 2', dataKey: 'value2', color: '#00ff00' }
+          ],
+          data: [
+            { month: 'Jan', value1: 30, value2: 45 },
+            { month: 'Feb', value1: 40, value2: 50 }
+          ]
+        };
+
+        const chart = new LineChart(container, { data: multiSeriesData });
+        chart.render();
+
+        const paths = container.querySelectorAll('path');
+        expect(paths[0].getAttribute('stroke')).toBe('#ff0000');
+        expect(paths[1].getAttribute('stroke')).toBe('#00ff00');
+      });
+
+      it('should render points for all series when showPoints is true', () => {
+        const multiSeriesData = {
+          series: [
+            { name: 'Series 1', dataKey: 'value1' },
+            { name: 'Series 2', dataKey: 'value2' }
+          ],
+          data: [
+            { month: 'Jan', value1: 30, value2: 45 },
+            { month: 'Feb', value1: 40, value2: 50 },
+            { month: 'Mar', value1: 35, value2: 48 }
+          ]
+        };
+
+        const chart = new LineChart(container, { data: multiSeriesData, showPoints: true });
+        chart.render();
+
+        const circles = container.querySelectorAll('circle');
+        // 2 series × 3 data points = 6 circles
+        expect(circles.length).toBe(6);
+      });
+    });
+
+    describe('Column-oriented format', () => {
+      it('should render multiple series from column format', () => {
+        const columnData = {
+          x: ['Q1', 'Q2', 'Q3', 'Q4'],
+          y: {
+            'Product A': [100, 120, 110, 130],
+            'Product B': [80, 90, 95, 100],
+            'Product C': [60, 70, 75, 80]
+          }
+        };
+
+        const chart = new LineChart(container, { data: columnData });
+        chart.render();
+
+        const paths = container.querySelectorAll('path');
+        expect(paths.length).toBe(3);
+      });
+
+      it('should handle single series in column format', () => {
+        const columnData = {
+          x: ['Q1', 'Q2', 'Q3'],
+          y: [100, 120, 110]
+        };
+
+        const chart = new LineChart(container, { data: columnData });
+        chart.render();
+
+        const paths = container.querySelectorAll('path');
+        expect(paths.length).toBe(1);
+      });
+    });
+
+    describe('Scale and axes', () => {
+      it('should combine y-axis ranges from all series', () => {
+        const multiSeriesData = {
+          series: [
+            { name: 'Small', dataKey: 'small' },
+            { name: 'Large', dataKey: 'large' }
+          ],
+          data: [
+            { x: 'A', small: 10, large: 100 },
+            { x: 'B', small: 15, large: 150 }
+          ]
+        };
+
+        const chart = new LineChart(container, { data: multiSeriesData });
+        chart.render();
+
+        // Y-axis should accommodate both ranges
+        const labels = container.querySelectorAll('text');
+        const hasLargeValue = Array.from(labels).some(l => {
+          const value = parseInt(l.textContent || '0');
+          return value >= 150;
+        });
+        expect(hasLargeValue).toBe(true);
+      });
+
+      it('should handle all unique x values from series', () => {
+        const multiSeriesData = {
+          series: [
+            { name: 'Series 1', dataKey: 'value1' },
+            { name: 'Series 2', dataKey: 'value2' }
+          ],
+          data: [
+            { month: 'Jan', value1: 30, value2: 45 },
+            { month: 'Feb', value1: 40, value2: 50 },
+            { month: 'Mar', value1: 35 }, // value2 missing
+            { month: 'Apr', value2: 55 } // value1 missing
+          ]
+        };
+
+        const chart = new LineChart(container, { data: multiSeriesData });
+        chart.render();
+
+        // Should handle missing values gracefully
+        expect(container.querySelector('svg')).toBeTruthy();
+      });
+    });
+
+    describe('Legend configuration', () => {
+      it('should support legend.show config', () => {
+        const multiSeriesData = {
+          series: [
+            { name: 'Series 1', dataKey: 'value1' },
+            { name: 'Series 2', dataKey: 'value2' }
+          ],
+          data: [
+            { month: 'Jan', value1: 30, value2: 45 }
+          ]
+        };
+
+        const chart = new LineChart(container, {
+          data: multiSeriesData,
+          legend: { show: true }
+        });
+        chart.render();
+
+        const legend = container.querySelector('.chart-legend');
+        expect(legend).toBeTruthy();
+      });
+
+      it('should position legend based on config', () => {
+        const multiSeriesData = {
+          series: [
+            { name: 'Series 1', dataKey: 'value1' },
+            { name: 'Series 2', dataKey: 'value2' }
+          ],
+          data: [
+            { month: 'Jan', value1: 30, value2: 45 }
+          ]
+        };
+
+        const chart = new LineChart(container, {
+          data: multiSeriesData,
+          legend: { show: true, position: 'right' }
+        });
+        chart.render();
+
+        const legend = container.querySelector('.chart-legend');
+        expect(legend).toBeTruthy();
+      });
+    });
+
+    describe('Backward compatibility', () => {
+      it('should still work with DataPoint[] format', () => {
+        const chart = new LineChart(container, { data });
+        chart.render();
+
+        const paths = container.querySelectorAll('path');
+        expect(paths.length).toBe(1);
+      });
+
+      it('should still work with number array format', () => {
+        const numberData = [10, 20, 30, 40, 50];
+        const chart = new LineChart(container, { data: numberData });
+        chart.render();
+
+        const paths = container.querySelectorAll('path');
+        expect(paths.length).toBe(1);
+      });
+    });
+  });
 });

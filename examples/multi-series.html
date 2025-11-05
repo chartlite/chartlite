@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chartlite - Multi-Series Examples</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: background 0.2s;
+            font-weight: 500;
+        }
+
+        nav a:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 3em;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            margin-bottom: 60px;
+            font-size: 1.2em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+        }
+
+        .chart-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1f2937;
+        }
+
+        .chart-description {
+            font-size: 0.95em;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            height: 400px;
+            position: relative;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html" style="font-weight: 600;">📊 Chartlite</a>
+            <div class="nav-links">
+                <a href="basic-examples.html">Basic Examples</a>
+                <a href="multi-series.html">Multi-Series</a>
+                <a href="flexible-data.html">Data Formats</a>
+            </div>
+        </nav>
+
+        <h1>📊 Multi-Series Charts</h1>
+        <p class="subtitle">Phase 1: Multiple datasets on a single chart with auto-colors and legend <span class="badge">NEW</span></p>
+
+        <div class="grid">
+            <!-- Multi-Series Line Chart -->
+            <div class="chart-card">
+                <h2 class="chart-title">Multi-Series Line Chart</h2>
+                <p class="chart-description">
+                    Multiple lines with auto-assigned colors from theme palette. Perfect for comparing trends.
+                </p>
+                <div id="multi-line-chart" class="chart-container"></div>
+            </div>
+
+            <!-- Grouped Bar Chart -->
+            <div class="chart-card">
+                <h2 class="chart-title">Grouped Bar Chart</h2>
+                <p class="chart-description">
+                    Side-by-side bars for easy comparison across categories and series.
+                </p>
+                <div id="grouped-bar-chart" class="chart-container"></div>
+            </div>
+
+            <!-- Stacked Area Chart -->
+            <div class="chart-card full-width">
+                <h2 class="chart-title">Stacked Area Chart</h2>
+                <p class="chart-description">
+                    Cumulative areas show part-to-whole relationships over time. Great for visualizing composition.
+                </p>
+                <div id="stacked-area-chart" class="chart-container"></div>
+            </div>
+
+            <!-- Column-Oriented Format -->
+            <div class="chart-card">
+                <h2 class="chart-title">Column-Oriented Data</h2>
+                <p class="chart-description">
+                    Using <code>{ x: [...], y: { series1: [...], series2: [...] } }</code> format.
+                </p>
+                <div id="column-format-chart" class="chart-container"></div>
+            </div>
+
+            <!-- Series-First Format -->
+            <div class="chart-card">
+                <h2 class="chart-title">Series-First Format</h2>
+                <p class="chart-description">
+                    Using <code>{ series: [...], data: [...] }</code> with custom colors.
+                </p>
+                <div id="series-format-chart" class="chart-container"></div>
+            </div>
+
+            <!-- Dark Theme Multi-Series -->
+            <div class="chart-card full-width">
+                <h2 class="chart-title">Dark Theme Multi-Series</h2>
+                <p class="chart-description">
+                    Midnight theme with auto-adjusted series colors for optimal contrast.
+                </p>
+                <div id="dark-theme-chart" class="chart-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { LineChart, BarChart, AreaChart } from '../packages/core/dist/index.js';
+
+        // Multi-Series Line Chart
+        new LineChart('#multi-line-chart', {
+            data: {
+                series: [
+                    { name: 'Revenue', dataKey: 'revenue' },
+                    { name: 'Costs', dataKey: 'costs' },
+                    { name: 'Profit', dataKey: 'profit' }
+                ],
+                data: [
+                    { month: 'Jan', revenue: 4200, costs: 2800, profit: 1400 },
+                    { month: 'Feb', revenue: 4800, costs: 3200, profit: 1600 },
+                    { month: 'Mar', revenue: 5200, costs: 3500, profit: 1700 },
+                    { month: 'Apr', revenue: 4900, costs: 3100, profit: 1800 },
+                    { month: 'May', revenue: 5800, costs: 3600, profit: 2200 },
+                    { month: 'Jun', revenue: 6200, costs: 3800, profit: 2400 }
+                ]
+            },
+            curve: 'smooth',
+            showPoints: true,
+            showLegend: true,
+            title: 'Financial Overview'
+        }).render();
+
+        // Grouped Bar Chart
+        new BarChart('#grouped-bar-chart', {
+            data: {
+                series: [
+                    { name: 'Product A', dataKey: 'productA' },
+                    { name: 'Product B', dataKey: 'productB' },
+                    { name: 'Product C', dataKey: 'productC' }
+                ],
+                data: [
+                    { quarter: 'Q1', productA: 450, productB: 380, productC: 290 },
+                    { quarter: 'Q2', productA: 520, productB: 420, productC: 310 },
+                    { quarter: 'Q3', productA: 480, productB: 450, productC: 340 },
+                    { quarter: 'Q4', productA: 610, productB: 490, productC: 380 }
+                ]
+            },
+            showLegend: true,
+            title: 'Quarterly Sales by Product'
+        }).render();
+
+        // Stacked Area Chart
+        new AreaChart('#stacked-area-chart', {
+            data: {
+                series: [
+                    { name: 'Desktop', dataKey: 'desktop' },
+                    { name: 'Mobile', dataKey: 'mobile' },
+                    { name: 'Tablet', dataKey: 'tablet' }
+                ],
+                data: [
+                    { month: 'Jan', desktop: 3200, mobile: 2100, tablet: 800 },
+                    { month: 'Feb', desktop: 3400, mobile: 2300, tablet: 850 },
+                    { month: 'Mar', desktop: 3100, mobile: 2600, tablet: 900 },
+                    { month: 'Apr', desktop: 3500, mobile: 2800, tablet: 920 },
+                    { month: 'May', desktop: 3700, mobile: 3100, tablet: 1000 },
+                    { month: 'Jun', desktop: 3600, mobile: 3400, tablet: 1100 }
+                ]
+            },
+            curve: 'smooth',
+            fillOpacity: 0.6,
+            showLegend: true,
+            title: 'Traffic by Device Type'
+        }).render();
+
+        // Column-Oriented Format
+        new LineChart('#column-format-chart', {
+            data: {
+                x: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                y: {
+                    'New Users': [120, 150, 180, 220],
+                    'Active Users': [450, 480, 520, 590],
+                    'Returning': [230, 260, 280, 310]
+                }
+            },
+            curve: 'smooth',
+            showPoints: true,
+            showLegend: true,
+            title: 'User Metrics'
+        }).render();
+
+        // Series-First Format with Custom Colors
+        new BarChart('#series-format-chart', {
+            data: {
+                series: [
+                    { name: 'North', dataKey: 'north', color: '#3b82f6' },
+                    { name: 'South', dataKey: 'south', color: '#10b981' },
+                    { name: 'East', dataKey: 'east', color: '#f59e0b' },
+                    { name: 'West', dataKey: 'west', color: '#ef4444' }
+                ],
+                data: [
+                    { region: 'Jan', north: 32, south: 28, east: 35, west: 30 },
+                    { region: 'Feb', north: 38, south: 32, east: 40, west: 35 },
+                    { region: 'Mar', north: 42, south: 36, east: 38, west: 39 }
+                ]
+            },
+            showLegend: true,
+            title: 'Regional Performance'
+        }).render();
+
+        // Dark Theme Multi-Series
+        new LineChart('#dark-theme-chart', {
+            data: {
+                series: [
+                    { name: 'CPU Usage', dataKey: 'cpu' },
+                    { name: 'Memory Usage', dataKey: 'memory' },
+                    { name: 'Disk I/O', dataKey: 'disk' },
+                    { name: 'Network', dataKey: 'network' }
+                ],
+                data: [
+                    { time: '00:00', cpu: 45, memory: 62, disk: 30, network: 25 },
+                    { time: '04:00', cpu: 38, memory: 58, disk: 28, network: 22 },
+                    { time: '08:00', cpu: 72, memory: 75, disk: 55, network: 48 },
+                    { time: '12:00', cpu: 85, memory: 82, disk: 68, network: 62 },
+                    { time: '16:00', cpu: 78, memory: 80, disk: 62, network: 58 },
+                    { time: '20:00', cpu: 65, memory: 72, disk: 48, network: 42 },
+                    { time: '24:00', cpu: 52, memory: 65, disk: 35, network: 30 }
+                ]
+            },
+            theme: 'midnight',
+            curve: 'smooth',
+            showPoints: false,
+            showLegend: true,
+            title: 'System Metrics - 24h Overview'
+        }).render();
+    </script>
+</body>
+</html>

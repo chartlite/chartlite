@@ -19,6 +19,35 @@
       padding: 2rem;
     }
 
+    nav {
+      background: white;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    nav a {
+      color: #1f2937;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      transition: background 0.2s;
+      font-weight: 500;
+    }
+
+    nav a:hover {
+      background: #f3f4f6;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+
     .container {
       max-width: 1400px;
       margin: 0 auto;
@@ -119,6 +148,15 @@
 </head>
 <body>
   <div class="container">
+    <nav>
+      <a href="index.html" style="font-weight: 600;">📊 Chartlite</a>
+      <div class="nav-links">
+        <a href="basic-examples.html">Basic Examples</a>
+        <a href="multi-series.html">Multi-Series</a>
+        <a href="flexible-data.html">Data Formats</a>
+      </div>
+    </nav>
+
     <header>
       <h1>📊 Flexible Data Formats</h1>
       <p class="subtitle">Chartlite supports multiple data input formats for maximum flexibility</p>

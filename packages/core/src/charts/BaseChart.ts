@@ -2,18 +2,37 @@
  * Base chart class that all chart types extend
  */
 
-import type { BaseChartConfig, Chart, Dimensions, DataPoint } from '../types';
-import { getDefaultDimensions, getThemeColors } from '../utils';
+import type {
+  BaseChartConfig,
+  Chart,
+  Dimensions,
+  DataPoint,
+  SeriesData,
+  FlexibleDataInput,
+} from '../types';
+import {
+  getDefaultDimensions,
+  getThemeColors,
+  isMultiSeriesData,
+  normalizeToSeriesData,
+  generateSeriesColors,
+} from '../utils';
 
 export abstract class BaseChart implements Chart {
   protected container: HTMLElement;
   protected config: BaseChartConfig;
   protected svg: SVGSVGElement | null = null;
   protected dimensions: Dimensions;
-  protected data: DataPoint[];
+  protected data: DataPoint[]; // Legacy: for single-series backward compatibility
+  protected seriesData: SeriesData[]; // New: normalized multi-series data
+  protected isMultiSeries: boolean;
   private resizeObserver: ResizeObserver | null = null;
 
-  constructor(container: HTMLElement | string, config: BaseChartConfig, data: DataPoint[]) {
+  constructor(
+    container: HTMLElement | string,
+    config: BaseChartConfig,
+    dataInput: FlexibleDataInput
+  ) {
     // Handle container selector or element
     if (typeof container === 'string') {
       const element = document.querySelector(container);
@@ -33,7 +52,24 @@ export abstract class BaseChart implements Chart {
       ...config,
     };
 
-    this.data = data;
+    // Detect if multi-series data
+    this.isMultiSeries = isMultiSeriesData(dataInput);
+
+    // Normalize data to both formats for backward compatibility
+    this.seriesData = normalizeToSeriesData(dataInput);
+    this.data = this.seriesData[0]?.data || [];
+
+    // Auto-assign colors to series
+    const autoColors = generateSeriesColors(
+      this.seriesData.length,
+      this.config.colors,
+      this.config.theme || 'default'
+    );
+
+    this.seriesData = this.seriesData.map((series, index) => ({
+      ...series,
+      color: series.color || autoColors[index],
+    }));
 
     // Set up dimensions
     const width = this.config.width || this.container.clientWidth || 600;
@@ -87,8 +123,9 @@ export abstract class BaseChart implements Chart {
       this.renderTitle();
     }
 
-    // Add legend if enabled
-    if (this.config.showLegend) {
+    // Add legend if enabled (only for multi-series charts)
+    const showLegend = this.config.legend?.show ?? this.config.showLegend ?? false;
+    if (showLegend && this.seriesData.length > 1) {
       this.renderLegend();
     }
 
@@ -160,6 +197,103 @@ export abstract class BaseChart implements Chart {
   }
 
   /**
+   * Render legend for multi-series charts
+   */
+  protected renderLegend(): void {
+    if (!this.svg || this.seriesData.length <= 1) return;
+
+    const colors = getThemeColors(this.config.theme || 'default');
+    const position = this.config.legend?.position || 'top';
+    const layout = this.config.legend?.layout || (position === 'top' || position === 'bottom' ? 'horizontal' : 'vertical');
+
+    // Create legend group
+    const legendGroup = this.createGroup();
+    legendGroup.classList.add('chart-legend');
+
+    // Calculate legend item dimensions
+    const itemSpacing = 20;
+    const iconSize = 12;
+    const iconMargin = 6;
+
+    if (layout === 'horizontal') {
+      // Horizontal layout
+      let currentX = 0;
+
+      this.seriesData.forEach((series) => {
+        const itemGroup = this.createGroup(currentX, 0);
+
+        // Color indicator (square)
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('width', String(iconSize));
+        rect.setAttribute('height', String(iconSize));
+        rect.setAttribute('fill', series.color || colors.primary);
+        rect.setAttribute('rx', '2');
+        itemGroup.appendChild(rect);
+
+        // Label
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', String(iconSize + iconMargin));
+        label.setAttribute('y', String(iconSize / 2));
+        label.setAttribute('dominant-baseline', 'middle');
+        label.setAttribute('fill', colors.text);
+        label.setAttribute('font-size', '12');
+        label.textContent = series.name;
+        itemGroup.appendChild(label);
+
+        legendGroup.appendChild(itemGroup);
+
+        // Calculate width for next item
+        const labelWidth = series.name.length * 7; // Rough estimate
+        currentX += iconSize + iconMargin + labelWidth + itemSpacing;
+      });
+
+      // Position legend based on position config
+      if (position === 'top') {
+        legendGroup.setAttribute('transform', `translate(${this.dimensions.margin.left}, 10)`);
+      } else if (position === 'bottom') {
+        legendGroup.setAttribute('transform', `translate(${this.dimensions.margin.left}, ${this.dimensions.height - 20})`);
+      }
+    } else {
+      // Vertical layout
+      let currentY = 0;
+
+      this.seriesData.forEach((series) => {
+        const itemGroup = this.createGroup(0, currentY);
+
+        // Color indicator (square)
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('width', String(iconSize));
+        rect.setAttribute('height', String(iconSize));
+        rect.setAttribute('fill', series.color || colors.primary);
+        rect.setAttribute('rx', '2');
+        itemGroup.appendChild(rect);
+
+        // Label
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', String(iconSize + iconMargin));
+        label.setAttribute('y', String(iconSize / 2));
+        label.setAttribute('dominant-baseline', 'middle');
+        label.setAttribute('fill', colors.text);
+        label.setAttribute('font-size', '12');
+        label.textContent = series.name;
+        itemGroup.appendChild(label);
+
+        legendGroup.appendChild(itemGroup);
+        currentY += iconSize + 8;
+      });
+
+      // Position legend based on position config
+      if (position === 'right') {
+        legendGroup.setAttribute('transform', `translate(${this.dimensions.width - this.dimensions.margin.right + 10}, ${this.dimensions.margin.top})`);
+      } else if (position === 'left') {
+        legendGroup.setAttribute('transform', `translate(10, ${this.dimensions.margin.top})`);
+      }
+    }
+
+    this.svg.appendChild(legendGroup);
+  }
+
+  /**
    * Apply entrance animation
    */
   protected applyAnimation(): void {
@@ -187,8 +321,26 @@ export abstract class BaseChart implements Chart {
   /**
    * Update chart data
    */
-  public update(data: DataPoint[]): void {
-    this.data = data;
+  public update(data: DataPoint[] | FlexibleDataInput): void {
+    // Re-normalize data
+    const dataInput = data as FlexibleDataInput;
+
+    this.isMultiSeries = isMultiSeriesData(dataInput);
+    this.seriesData = normalizeToSeriesData(dataInput);
+    this.data = this.seriesData[0]?.data || [];
+
+    // Re-assign colors
+    const autoColors = generateSeriesColors(
+      this.seriesData.length,
+      this.config.colors,
+      this.config.theme || 'default'
+    );
+
+    this.seriesData = this.seriesData.map((series, index) => ({
+      ...series,
+      color: series.color || autoColors[index],
+    }));
+
     this.render();
   }
 
@@ -223,5 +375,4 @@ export abstract class BaseChart implements Chart {
    * Abstract methods to be implemented by subclasses
    */
   protected abstract renderChart(): void;
-  protected abstract renderLegend(): void;
 }

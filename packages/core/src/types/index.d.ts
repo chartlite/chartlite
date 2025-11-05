@@ -44,6 +44,29 @@ export type FlexibleDataInput =
   | ColumnOrientedData           // Column format: { x: [...], y: [...] }
   | SeriesFirstData;             // Series format: { series: [...], data: [...] }
 
+/**
+ * Internal series data structure after normalization
+ */
+export interface SeriesData {
+  name: string;
+  color?: string;
+  data: DataPoint[];
+}
+
+/**
+ * Legend position options
+ */
+export type LegendPosition = 'top' | 'right' | 'bottom' | 'left';
+
+/**
+ * Legend configuration
+ */
+export interface LegendConfig {
+  show?: boolean;
+  position?: LegendPosition;
+  layout?: 'horizontal' | 'vertical';
+}
+
 export interface BaseChartConfig {
   /** Chart width in pixels. If not provided, fills container */
   width?: number;
@@ -55,8 +78,10 @@ export interface BaseChartConfig {
   colors?: string[];
   /** Chart title */
   title?: string;
-  /** Whether to show legend */
+  /** Whether to show legend (deprecated: use legend.show) */
   showLegend?: boolean;
+  /** Legend configuration */
+  legend?: LegendConfig;
   /** Whether to animate on initial load */
   animate?: boolean;
   /** Whether to resize chart when container size changes */
@@ -97,7 +122,7 @@ export interface Chart {
   /** Render the chart to the container */
   render(): void;
   /** Update chart data */
-  update(data: DataPoint[]): void;
+  update(data: DataPoint[] | FlexibleDataInput): void;
   /** Destroy the chart and cleanup */
   destroy(): void;
   /** Export as SVG string */

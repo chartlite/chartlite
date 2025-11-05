@@ -9,25 +9,19 @@ import {
   createBandScale,
   getThemeColors,
   calculateNiceTicks,
-  normalizeData,
-  extractColorsFromSeriesData,
+  getAllXValues,
+  getCombinedYRange,
 } from '../utils';
 
 export class BarChart extends BaseChart {
   protected config: BarChartConfig;
 
   constructor(container: HTMLElement | string, config: BarChartConfig) {
-    // Normalize data and extract colors if from series-first format
-    const normalizedData = normalizeData(config.data);
-    const extractedColors = extractColorsFromSeriesData(config.data);
-
-    super(container, config, normalizedData);
+    super(container, config, config.data);
 
     this.config = {
       orientation: 'vertical',
       ...config,
-      // Use extracted colors if available and not overridden
-      colors: config.colors || extractedColors,
     };
   }
 
@@ -57,11 +51,9 @@ export class BarChart extends BaseChart {
     chartHeight: number,
     colors: ReturnType<typeof getThemeColors>
   ): void {
-    // Extract data
-    const xValues = this.data.map((d) => String(d.x));
-    const yValues = this.data.map((d) => d.y);
-    const yMin = Math.min(...yValues, 0);
-    const yMax = Math.max(...yValues);
+    // Get all unique x values and combined y range
+    const xValues = getAllXValues(this.seriesData).map(String);
+    const { min: yMin, max: yMax } = getCombinedYRange(this.seriesData);
 
     // Create scales
     const xScale = createBandScale(xValues, [0, chartWidth], 0.2);
@@ -70,31 +62,38 @@ export class BarChart extends BaseChart {
     // Render axes and grid
     this.renderVerticalAxes(group, xValues, yMin, yMax, chartWidth, chartHeight, colors);
 
-    // Render bars
-    this.data.forEach((d, i) => {
-      const x = xScale.scale(String(d.x));
-      const barHeight = chartHeight - yScale(d.y);
-      const y = yScale(d.y);
+    const seriesCount = this.seriesData.length;
+    const groupPadding = 0.1; // Padding between bar groups
+    const barWidth = xScale.bandwidth / seriesCount;
 
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('x', String(x));
-      rect.setAttribute('y', String(y));
-      rect.setAttribute('width', String(xScale.bandwidth));
-      rect.setAttribute('height', String(Math.abs(barHeight)));
-      rect.setAttribute('fill', this.config.colors?.[i % (this.config.colors?.length || 1)] || colors.primary);
-      rect.setAttribute('rx', '4'); // Rounded corners
-      rect.classList.add('bar');
+    // Render bars for each series
+    this.seriesData.forEach((series, seriesIndex) => {
+      series.data.forEach((d) => {
+        const groupX = xScale.scale(String(d.x));
+        const barX = groupX + seriesIndex * barWidth;
+        const barHeight = chartHeight - yScale(d.y);
+        const y = yScale(d.y);
 
-      // Add hover effect via CSS class
-      rect.style.transition = 'opacity 0.2s';
-      rect.addEventListener('mouseenter', () => {
-        rect.style.opacity = '0.8';
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', String(barX));
+        rect.setAttribute('y', String(y));
+        rect.setAttribute('width', String(barWidth * (1 - groupPadding)));
+        rect.setAttribute('height', String(Math.abs(barHeight)));
+        rect.setAttribute('fill', series.color || colors.primary);
+        rect.setAttribute('rx', '4'); // Rounded corners
+        rect.classList.add('bar');
+
+        // Add hover effect
+        rect.style.transition = 'opacity 0.2s';
+        rect.addEventListener('mouseenter', () => {
+          rect.style.opacity = '0.8';
+        });
+        rect.addEventListener('mouseleave', () => {
+          rect.style.opacity = '1';
+        });
+
+        group.appendChild(rect);
       });
-      rect.addEventListener('mouseleave', () => {
-        rect.style.opacity = '1';
-      });
-
-      group.appendChild(rect);
     });
   }
 
@@ -104,11 +103,9 @@ export class BarChart extends BaseChart {
     chartHeight: number,
     colors: ReturnType<typeof getThemeColors>
   ): void {
-    // Extract data
-    const yValues = this.data.map((d) => String(d.x));
-    const xValues = this.data.map((d) => d.y);
-    const xMin = Math.min(...xValues, 0);
-    const xMax = Math.max(...xValues);
+    // Get all unique y values (categories) and combined x range
+    const yValues = getAllXValues(this.seriesData).map(String);
+    const { min: xMin, max: xMax } = getCombinedYRange(this.seriesData);
 
     // Create scales
     const yScale = createBandScale(yValues, [0, chartHeight], 0.2);
@@ -117,30 +114,37 @@ export class BarChart extends BaseChart {
     // Render axes and grid
     this.renderHorizontalAxes(group, yValues, xMin, xMax, chartWidth, chartHeight, colors);
 
-    // Render bars
-    this.data.forEach((d, i) => {
-      const y = yScale.scale(String(d.x));
-      const barWidth = xScale(d.y);
+    const seriesCount = this.seriesData.length;
+    const groupPadding = 0.1;
+    const barHeight = yScale.bandwidth / seriesCount;
 
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('x', '0');
-      rect.setAttribute('y', String(y));
-      rect.setAttribute('width', String(Math.abs(barWidth)));
-      rect.setAttribute('height', String(yScale.bandwidth));
-      rect.setAttribute('fill', this.config.colors?.[i % (this.config.colors?.length || 1)] || colors.primary);
-      rect.setAttribute('rx', '4'); // Rounded corners
-      rect.classList.add('bar');
+    // Render bars for each series
+    this.seriesData.forEach((series, seriesIndex) => {
+      series.data.forEach((d) => {
+        const groupY = yScale.scale(String(d.x));
+        const barY = groupY + seriesIndex * barHeight;
+        const barWidth = xScale(d.y);
 
-      // Add hover effect
-      rect.style.transition = 'opacity 0.2s';
-      rect.addEventListener('mouseenter', () => {
-        rect.style.opacity = '0.8';
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', '0');
+        rect.setAttribute('y', String(barY));
+        rect.setAttribute('width', String(Math.abs(barWidth)));
+        rect.setAttribute('height', String(barHeight * (1 - groupPadding)));
+        rect.setAttribute('fill', series.color || colors.primary);
+        rect.setAttribute('rx', '4'); // Rounded corners
+        rect.classList.add('bar');
+
+        // Add hover effect
+        rect.style.transition = 'opacity 0.2s';
+        rect.addEventListener('mouseenter', () => {
+          rect.style.opacity = '0.8';
+        });
+        rect.addEventListener('mouseleave', () => {
+          rect.style.opacity = '1';
+        });
+
+        group.appendChild(rect);
       });
-      rect.addEventListener('mouseleave', () => {
-        rect.style.opacity = '1';
-      });
-
-      group.appendChild(rect);
     });
   }
 
@@ -290,10 +294,5 @@ export class BarChart extends BaseChart {
       label.textContent = value;
       group.appendChild(label);
     });
-  }
-
-  protected renderLegend(): void {
-    // Legend implementation can be added later
-    // For now, bar charts typically don't need legends for single series
   }
 }

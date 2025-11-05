@@ -1,6 +1,6 @@
 /**
  * Data transformation utilities
- * Converts various data formats into normalized DataPoint[]
+ * Converts various data formats into normalized DataPoint[] or SeriesData[]
  */
 
 import type {
@@ -8,6 +8,8 @@ import type {
   FlexibleDataInput,
   ColumnOrientedData,
   SeriesFirstData,
+  SeriesData,
+  SeriesDefinition,
 } from '../types';
 
 /**
@@ -161,4 +163,130 @@ export function extractColorsFromSeriesData(data: FlexibleDataInput): string[] |
     return colors.length > 0 ? colors : undefined;
   }
   return undefined;
+}
+
+/**
+ * Check if data format supports multi-series
+ */
+export function isMultiSeriesData(data: FlexibleDataInput): boolean {
+  if (isSeriesFirstData(data)) {
+    return data.series.length > 1;
+  }
+
+  if (isColumnOrientedData(data)) {
+    return typeof data.y === 'object' && !Array.isArray(data.y);
+  }
+
+  return false;
+}
+
+/**
+ * Extract series definitions from data
+ * Returns undefined for single-series data
+ */
+export function extractSeriesDefinitions(data: FlexibleDataInput): SeriesDefinition[] | undefined {
+  if (isSeriesFirstData(data)) {
+    return data.series;
+  }
+
+  if (isColumnOrientedData(data) && typeof data.y === 'object' && !Array.isArray(data.y)) {
+    // Convert column-oriented multi-series to SeriesDefinition[]
+    return Object.keys(data.y).map((key) => ({
+      name: key,
+      dataKey: key,
+    }));
+  }
+
+  return undefined;
+}
+
+/**
+ * Normalize multi-series data to SeriesData[]
+ */
+export function normalizeToSeriesData(
+  data: FlexibleDataInput,
+  seriesDefinitions?: SeriesDefinition[]
+): SeriesData[] {
+  // Series-first format
+  if (isSeriesFirstData(data)) {
+    const { series, data: records, xKey } = data;
+
+    // Determine the x-axis key
+    const firstRecord = records[0];
+    const allKeys = Object.keys(firstRecord);
+    const dataKeys = series.map(s => s.dataKey);
+    const xAxisKey = xKey || allKeys.find(key => !dataKeys.includes(key)) || allKeys[0];
+
+    return series.map(s => ({
+      name: s.name,
+      color: s.color,
+      data: records.map(record => ({
+        x: record[xAxisKey],
+        y: record[s.dataKey],
+      })),
+    }));
+  }
+
+  // Column-oriented format with multiple series
+  if (isColumnOrientedData(data) && typeof data.y === 'object' && !Array.isArray(data.y)) {
+    const { x, y } = data;
+    const seriesKeys = Object.keys(y);
+
+    return seriesKeys.map((key, index) => {
+      const values = y[key];
+      const definition = seriesDefinitions?.[index];
+
+      return {
+        name: definition?.name || key,
+        color: definition?.color,
+        data: x.map((xVal, i) => ({
+          x: xVal,
+          y: values[i],
+        })),
+      };
+    });
+  }
+
+  // Single-series data: wrap in SeriesData array
+  const normalized = normalizeData(data);
+  return [{
+    name: 'Series 1',
+    data: normalized,
+  }];
+}
+
+/**
+ * Get all unique x-axis values from multi-series data
+ */
+export function getAllXValues(seriesData: SeriesData[]): (string | number)[] {
+  const xValuesSet = new Set<string | number>();
+
+  seriesData.forEach(series => {
+    series.data.forEach(point => {
+      xValuesSet.add(point.x);
+    });
+  });
+
+  return Array.from(xValuesSet);
+}
+
+/**
+ * Get combined y-axis range from multi-series data
+ */
+export function getCombinedYRange(seriesData: SeriesData[]): { min: number; max: number } {
+  let min = Infinity;
+  let max = -Infinity;
+
+  seriesData.forEach(series => {
+    series.data.forEach(point => {
+      if (point.y < min) min = point.y;
+      if (point.y > max) max = point.y;
+    });
+  });
+
+  // Include 0 in the range
+  min = Math.min(min, 0);
+  max = Math.max(max, 0);
+
+  return { min, max };
 }

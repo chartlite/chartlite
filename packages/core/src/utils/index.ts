@@ -5,7 +5,15 @@
 import type { Dimensions } from '../types';
 
 // Export data transformation utilities
-export { normalizeData, extractColorsFromSeriesData } from './dataTransform';
+export {
+  normalizeData,
+  extractColorsFromSeriesData,
+  isMultiSeriesData,
+  extractSeriesDefinitions,
+  normalizeToSeriesData,
+  getAllXValues,
+  getCombinedYRange,
+} from './dataTransform';
 
 /**
  * Get default dimensions with margins
@@ -114,6 +122,7 @@ export function getThemeColors(theme: string): {
   primary: string;
   grid: string;
   text: string;
+  seriesColors: string[];
 } {
   const themes = {
     default: {
@@ -122,6 +131,16 @@ export function getThemeColors(theme: string): {
       primary: '#3b82f6',
       grid: '#e5e7eb',
       text: '#1f2937',
+      seriesColors: [
+        '#3b82f6', // blue
+        '#10b981', // green
+        '#f59e0b', // amber
+        '#ef4444', // red
+        '#8b5cf6', // violet
+        '#ec4899', // pink
+        '#06b6d4', // cyan
+        '#f97316', // orange
+      ],
     },
     midnight: {
       background: '#0f172a',
@@ -129,6 +148,16 @@ export function getThemeColors(theme: string): {
       primary: '#60a5fa',
       grid: '#334155',
       text: '#f1f5f9',
+      seriesColors: [
+        '#60a5fa', // blue
+        '#34d399', // green
+        '#fbbf24', // amber
+        '#f87171', // red
+        '#a78bfa', // violet
+        '#f472b6', // pink
+        '#22d3ee', // cyan
+        '#fb923c', // orange
+      ],
     },
     minimal: {
       background: '#ffffff',
@@ -136,10 +165,44 @@ export function getThemeColors(theme: string): {
       primary: '#000000',
       grid: '#e5e5e5',
       text: '#171717',
+      seriesColors: [
+        '#000000', // black
+        '#525252', // gray-600
+        '#737373', // gray-500
+        '#a3a3a3', // gray-400
+        '#171717', // gray-900
+        '#404040', // gray-700
+        '#262626', // gray-800
+        '#d4d4d4', // gray-300
+      ],
     },
   };
 
   return themes[theme as keyof typeof themes] || themes.default;
+}
+
+/**
+ * Generate colors for series
+ * Uses custom colors if provided, otherwise auto-assigns from theme
+ */
+export function generateSeriesColors(
+  seriesCount: number,
+  customColors: string[] | undefined,
+  theme: string
+): string[] {
+  const themeColors = getThemeColors(theme);
+
+  // If custom colors provided, use them (cycling if necessary)
+  if (customColors && customColors.length > 0) {
+    return Array.from({ length: seriesCount }, (_, i) =>
+      customColors[i % customColors.length]
+    );
+  }
+
+  // Use theme's series colors (cycling if necessary)
+  return Array.from({ length: seriesCount }, (_, i) =>
+    themeColors.seriesColors[i % themeColors.seriesColors.length]
+  );
 }
 
 /**

@@ -70,16 +70,17 @@ jobs:
           DATE=$(date +%Y-%m-%d)
           VERSION=${{ env.NEW_VERSION }}
 
-          # Create CHANGELOG.md if it doesn't exist
-          if [ ! -f CHANGELOG.md ]; then
-            echo "# Changelog" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
+          # Create docs/CHANGELOG.md if it doesn't exist
+          mkdir -p docs
+          if [ ! -f docs/CHANGELOG.md ]; then
+            echo "# Changelog" > docs/CHANGELOG.md
+            echo "" >> docs/CHANGELOG.md
+            echo "All notable changes to this project will be documented in this file." >> docs/CHANGELOG.md
+            echo "" >> docs/CHANGELOG.md
           fi
 
           # Add new version entry
-          sed -i "3i\\## [$VERSION] - $DATE\n\n### Added\n- \n\n### Changed\n- \n\n### Fixed\n- \n" CHANGELOG.md
+          sed -i "8i\\## [$VERSION] - $DATE\n\n### Added\n- \n\n### Changed\n- \n\n### Fixed\n- \n" docs/CHANGELOG.md
 
       - name: Commit changes
         run: |
@@ -110,4 +111,4 @@ jobs:
 
             ## Changes
 
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for full details.
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/docs/CHANGELOG.md) for full details.
