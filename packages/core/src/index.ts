@@ -43,4 +43,4 @@ export {
 export { normalizeData, extractColorsFromSeriesData } from './utils/dataTransform';
 
 // Version
-export const VERSION = '0.1.3';
+export const VERSION = '0.2.0';
