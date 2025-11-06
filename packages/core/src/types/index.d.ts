@@ -56,7 +56,11 @@ export interface SeriesData {
 /**
  * Legend position options
  */
-export type LegendPosition = 'top' | 'right' | 'bottom' | 'left';
+export type LegendPosition = 'top' | 'bottom';
+
+/**
+ * Legend horizontal alignment (for top/bottom positions) */
+export type LegendAlign = 'left' | 'center' | 'right';
 
 /**
  * Legend configuration
@@ -65,6 +69,7 @@ export interface LegendConfig {
   show?: boolean;
   position?: LegendPosition;
   layout?: 'horizontal' | 'vertical';
+  align?: LegendAlign;
 }
 
 export interface BaseChartConfig {

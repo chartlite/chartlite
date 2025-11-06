@@ -13,6 +13,7 @@ export type {
   FlexibleDataInput,
   SeriesData,
   LegendPosition,
+  LegendAlign,
   LegendConfig,
   BaseChartConfig,
   LineChartConfig,

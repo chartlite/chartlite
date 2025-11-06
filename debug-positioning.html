@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug Positioning</title>
+  <style>
+    body {
+      font-family: system-ui;
+      padding: 40px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    #chart {
+      width: 600px;
+      height: 400px;
+      border: 2px solid #ddd;
+    }
+    #debug {
+      background: #fff3cd;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <h1>Debug Chart Positioning</h1>
+
+  <div class="container">
+    <h2>Chart</h2>
+    <div id="chart"></div>
+  </div>
+
+  <div class="container">
+    <h2>Debug Info</h2>
+    <div id="debug"></div>
+  </div>
+
+  <script type="module">
+    import { BarChart } from './packages/core/dist/index.js';
+
+    const productSalesData = {
+      series: [
+        { name: 'Product A', dataKey: 'productA' },
+        { name: 'Product B', dataKey: 'productB' },
+        { name: 'Product C', dataKey: 'productC' },
+      ],
+      data: [
+        { quarter: 'Q1', productA: 450, productB: 380, productC: 290 },
+        { quarter: 'Q2', productA: 520, productB: 420, productC: 310 },
+        { quarter: 'Q3', productA: 480, productB: 390, productC: 320 },
+        { quarter: 'Q4', productA: 610, productB: 450, productC: 350 },
+      ],
+    };
+
+    const chart = new BarChart('#chart', {
+      data: productSalesData,
+      showLegend: true,
+      title: 'Quarterly Sales by Product'
+    });
+
+    // Access internal dimensions (for debugging)
+    const debugInfo = `
+SVG Dimensions:
+- Width: ${chart.dimensions.width}
+- Height: ${chart.dimensions.height}
+
+Margins:
+- Top: ${chart.dimensions.margin.top}
+- Right: ${chart.dimensions.margin.right}
+- Bottom: ${chart.dimensions.margin.bottom}
+- Left: ${chart.dimensions.margin.left}
+
+Chart Area:
+- Width: ${chart.dimensions.width - chart.dimensions.margin.left - chart.dimensions.margin.right}
+- Height: ${chart.dimensions.height - chart.dimensions.margin.top - chart.dimensions.margin.bottom}
+
+Series Count: ${chart.seriesData.length}
+Has Title: ${chart.config.title ? 'Yes' : 'No'}
+Show Legend: ${chart.config.showLegend ? 'Yes' : 'No'}
+    `;
+
+    document.getElementById('debug').textContent = debugInfo;
+
+    chart.render();
+
+    // After render, inspect the SVG
+    setTimeout(() => {
+      const svg = document.querySelector('#chart svg');
+      const mainGroup = svg.querySelector('.chart-main');
+      const title = svg.querySelector('text[font-weight="600"]');
+      const legend = svg.querySelector('.chart-legend');
+
+      const svgInfo = `
+After Render:
+- Main group transform: ${mainGroup?.getAttribute('transform') || 'none'}
+- Title y position: ${title?.getAttribute('y') || 'not found'}
+- Legend transform: ${legend?.getAttribute('transform') || 'not found'}
+      `;
+
+      document.getElementById('debug').textContent += svgInfo;
+    }, 100);
+  </script>
+</body>
+</html>

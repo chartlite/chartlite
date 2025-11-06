@@ -71,10 +71,57 @@ export abstract class BaseChart implements Chart {
       color: series.color || autoColors[index],
     }));
 
-    // Set up dimensions
-    const width = this.config.width || this.container.clientWidth || 600;
-    const height = this.config.height || this.container.clientHeight || 400;
-    this.dimensions = getDefaultDimensions(width, height);
+    // Set up dimensions with space for title and legend
+    // Use container size as base, but we'll expand for title/legend
+    const baseWidth = this.config.width || this.container.clientWidth || 600;
+    const baseHeight = this.config.height || this.container.clientHeight || 400;
+    this.dimensions = this.calculateDimensions(baseWidth, baseHeight);
+  }
+
+  /**
+   * Calculate dimensions - expand SVG to accommodate title and legend OUTSIDE the data area
+   * The data area size remains unchanged, but we add extra space above/below for UI elements
+   */
+  protected calculateDimensions(width: number, height: number): Dimensions {
+    const baseDims = getDefaultDimensions(width, height);
+
+    // Calculate additional space needed for title and legend
+    let extraTopSpace = 0;
+    let extraBottomSpace = 0;
+
+    // Title adds space at top
+    if (this.config.title) {
+      const titleFontSize = 18;
+      const titlePadding = 10; // Space between title and chart
+      extraTopSpace += titleFontSize + titlePadding;
+    }
+
+    // Legend adds space based on position
+    const showLegend = this.config.legend?.show ?? this.config.showLegend ?? false;
+    if (showLegend && this.seriesData.length > 1) {
+      const legendFontSize = 12;
+      const legendPadding = 15; // Space between legend and chart/title
+      const legendHeight = legendFontSize + legendPadding;
+
+      const position = this.config.legend?.position || 'top';
+      if (position === 'top') {
+        extraTopSpace += legendHeight;
+      } else {
+        extraBottomSpace += legendHeight;
+      }
+    }
+
+    // Return expanded dimensions
+    return {
+      width: baseDims.width,
+      height: baseDims.height + extraTopSpace + extraBottomSpace,
+      margin: {
+        top: baseDims.margin.top + extraTopSpace,
+        right: baseDims.margin.right,
+        bottom: baseDims.margin.bottom + extraBottomSpace,
+        left: baseDims.margin.left,
+      },
+    };
   }
 
   /**
@@ -115,15 +162,16 @@ export abstract class BaseChart implements Chart {
     // Create SVG
     this.svg = this.createSVG();
 
-    // Render chart-specific content
+    // Render chart-specific content FIRST
+    // This must happen before title/legend so we know the data bounds
     this.renderChart();
 
-    // Add title if provided
+    // Add title and legend AFTER chart rendering
+    // This allows us to position them based on actual chart bounds
     if (this.config.title) {
       this.renderTitle();
     }
 
-    // Add legend if enabled (only for multi-series charts)
     const showLegend = this.config.legend?.show ?? this.config.showLegend ?? false;
     if (showLegend && this.seriesData.length > 1) {
       this.renderLegend();
@@ -163,7 +211,7 @@ export abstract class BaseChart implements Chart {
 
           // Update dimensions if changed
           if (newWidth !== this.dimensions.width || newHeight !== this.dimensions.height) {
-            this.dimensions = getDefaultDimensions(newWidth, newHeight);
+            this.dimensions = this.calculateDimensions(newWidth, newHeight);
             // Re-render without animation to avoid janky resizing
             const originalAnimate = this.config.animate;
             this.config.animate = false;
@@ -178,18 +226,25 @@ export abstract class BaseChart implements Chart {
   }
 
   /**
-   * Render title
+   * Render title - positioned at top of SVG, outside the data area
    */
   protected renderTitle(): void {
     if (!this.svg) return;
 
     const colors = getThemeColors(this.config.theme || 'default');
+    const titleFontSize = 18;
+
+    // Position title near the top of SVG
+    // We have expanded the margin.top to include space for title
+    // The base margin is 40, so position title at font size from top edge
+    const titleY = titleFontSize + 5; // 5px padding from top
+
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     text.setAttribute('x', String(this.dimensions.width / 2));
-    text.setAttribute('y', '24');
+    text.setAttribute('y', String(titleY));
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('fill', colors.text);
-    text.setAttribute('font-size', '18');
+    text.setAttribute('font-size', String(titleFontSize));
     text.setAttribute('font-weight', '600');
     text.textContent = this.config.title || '';
 
@@ -204,7 +259,6 @@ export abstract class BaseChart implements Chart {
 
     const colors = getThemeColors(this.config.theme || 'default');
     const position = this.config.legend?.position || 'top';
-    const layout = this.config.legend?.layout || (position === 'top' || position === 'bottom' ? 'horizontal' : 'vertical');
 
     // Create legend group
     const legendGroup = this.createGroup();
@@ -215,79 +269,83 @@ export abstract class BaseChart implements Chart {
     const iconSize = 12;
     const iconMargin = 6;
 
-    if (layout === 'horizontal') {
-      // Horizontal layout
-      let currentX = 0;
+    // Render horizontal legend (only layout supported)
+    let currentX = 0;
+    let totalWidth = 0;
 
-      this.seriesData.forEach((series) => {
-        const itemGroup = this.createGroup(currentX, 0);
+    // First pass: calculate total width
+    this.seriesData.forEach((series) => {
+      const labelWidth = series.name.length * 7; // Rough estimate
+      totalWidth += iconSize + iconMargin + labelWidth + itemSpacing;
+    });
+    totalWidth -= itemSpacing; // Remove trailing spacing
 
-        // Color indicator (square)
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('width', String(iconSize));
-        rect.setAttribute('height', String(iconSize));
-        rect.setAttribute('fill', series.color || colors.primary);
-        rect.setAttribute('rx', '2');
-        itemGroup.appendChild(rect);
+    // Second pass: render items
+    this.seriesData.forEach((series) => {
+      const itemGroup = this.createGroup(currentX, 0);
 
-        // Label
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', String(iconSize + iconMargin));
-        label.setAttribute('y', String(iconSize / 2));
-        label.setAttribute('dominant-baseline', 'middle');
-        label.setAttribute('fill', colors.text);
-        label.setAttribute('font-size', '12');
-        label.textContent = series.name;
-        itemGroup.appendChild(label);
+      // Color indicator (square)
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('width', String(iconSize));
+      rect.setAttribute('height', String(iconSize));
+      rect.setAttribute('fill', series.color || colors.primary);
+      rect.setAttribute('rx', '2');
+      itemGroup.appendChild(rect);
 
-        legendGroup.appendChild(itemGroup);
+      // Label
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', String(iconSize + iconMargin));
+      label.setAttribute('y', String(iconSize / 2));
+      label.setAttribute('dominant-baseline', 'middle');
+      label.setAttribute('fill', colors.text);
+      label.setAttribute('font-size', '12');
+      label.textContent = series.name;
+      itemGroup.appendChild(label);
 
-        // Calculate width for next item
-        const labelWidth = series.name.length * 7; // Rough estimate
-        currentX += iconSize + iconMargin + labelWidth + itemSpacing;
-      });
+      legendGroup.appendChild(itemGroup);
 
-      // Position legend based on position config
-      if (position === 'top') {
-        legendGroup.setAttribute('transform', `translate(${this.dimensions.margin.left}, 10)`);
-      } else if (position === 'bottom') {
-        legendGroup.setAttribute('transform', `translate(${this.dimensions.margin.left}, ${this.dimensions.height - 20})`);
-      }
+      // Calculate width for next item
+      const labelWidth = series.name.length * 7; // Rough estimate
+      currentX += iconSize + iconMargin + labelWidth + itemSpacing;
+    });
+
+    // Calculate horizontal position based on alignment
+    const align = this.config.legend?.align || 'left';
+    const chartWidth = this.dimensions.width - this.dimensions.margin.left - this.dimensions.margin.right;
+
+    let legendX: number;
+    if (align === 'center') {
+      legendX = this.dimensions.margin.left + (chartWidth - totalWidth) / 2;
+    } else if (align === 'right') {
+      legendX = this.dimensions.margin.left + chartWidth - totalWidth;
     } else {
-      // Vertical layout
-      let currentY = 0;
+      legendX = this.dimensions.margin.left;
+    }
 
-      this.seriesData.forEach((series) => {
-        const itemGroup = this.createGroup(0, currentY);
+    // Position legend in the expanded margin area (outside data area)
+    if (position === 'top') {
+      const legendFontSize = 12;
+      let legendY: number;
 
-        // Color indicator (square)
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('width', String(iconSize));
-        rect.setAttribute('height', String(iconSize));
-        rect.setAttribute('fill', series.color || colors.primary);
-        rect.setAttribute('rx', '2');
-        itemGroup.appendChild(rect);
-
-        // Label
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', String(iconSize + iconMargin));
-        label.setAttribute('y', String(iconSize / 2));
-        label.setAttribute('dominant-baseline', 'middle');
-        label.setAttribute('fill', colors.text);
-        label.setAttribute('font-size', '12');
-        label.textContent = series.name;
-        itemGroup.appendChild(label);
-
-        legendGroup.appendChild(itemGroup);
-        currentY += iconSize + 8;
-      });
-
-      // Position legend based on position config
-      if (position === 'right') {
-        legendGroup.setAttribute('transform', `translate(${this.dimensions.width - this.dimensions.margin.right + 10}, ${this.dimensions.margin.top})`);
-      } else if (position === 'left') {
-        legendGroup.setAttribute('transform', `translate(10, ${this.dimensions.margin.top})`);
+      if (this.config.title) {
+        // Title is present - position legend below title
+        const titleFontSize = 18;
+        const titleY = titleFontSize + 5; // Title position
+        const spacing = 10; // Space between title and legend
+        legendY = titleY + spacing;
+      } else {
+        // No title - position legend near top of SVG
+        legendY = legendFontSize + 5; // 5px padding from top
       }
+
+      legendGroup.setAttribute('transform', `translate(${legendX}, ${legendY})`);
+    } else {
+      // Position legend in the bottom margin area
+      const baseDims = getDefaultDimensions(this.dimensions.width, 400);
+      const dataAreaBottom = this.dimensions.height - this.dimensions.margin.bottom + baseDims.margin.bottom;
+      const legendFontSize = 12;
+      const legendY = dataAreaBottom + legendFontSize; // Position just below data area
+      legendGroup.setAttribute('transform', `translate(${legendX}, ${legendY})`);
     }
 
     this.svg.appendChild(legendGroup);

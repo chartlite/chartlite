@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+:root {
+  --gradient-from: #667eea;
+  --gradient-to: #764ba2;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: linear-gradient(135deg, var(--gradient-from) 0%, var(--gradient-to) 100%);
+  min-height: 100vh;
+  padding: 2.5rem 1.25rem;
+}
