@@ -6,6 +6,7 @@
 export { LineChart } from './charts/LineChart';
 export { BarChart } from './charts/BarChart';
 export { AreaChart } from './charts/AreaChart';
+export { ScatterChart } from './charts/ScatterChart';
 
 // Re-export types from core
 export type {
@@ -20,6 +21,10 @@ export type {
   BarChartConfig,
   AreaChartConfig,
   PieChartConfig,
+  ScatterChartConfig,
   LegendPosition,
   LegendConfig,
+  ReferenceLine,
+  Annotation,
+  Region,
 } from '@chartlite/core';

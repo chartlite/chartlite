@@ -9,7 +9,6 @@ import {
   createBandScale,
   generateLinePath,
   getThemeColors,
-  calculateNiceTicks,
   getAllXValues,
   getCombinedYRange,
 } from '../utils';
@@ -44,12 +43,21 @@ export class LineChart extends BaseChart {
     const xValues = getAllXValues(this.seriesData).map(String);
     const { min: yMin, max: yMax } = getCombinedYRange(this.seriesData);
 
+    // Set chart bounds for Phase 2 features (reference lines, annotations, regions)
+    this.chartBounds = {
+      xMin: 0,
+      xMax: xValues.length - 1,
+      yMin,
+      yMax,
+      xValues,
+    };
+
     // Create scales
     const xScale = createBandScale(xValues, [0, chartWidth], 0);
     const yScale = createLinearScale([yMin, yMax], [chartHeight, 0]);
 
-    // Render axes
-    this.renderAxes(mainGroup, xValues, yMin, yMax, chartWidth, chartHeight, colors);
+    // Render axes using shared method
+    this.renderCategoricalXLinearYAxes(mainGroup, xValues, yMin, yMax, chartWidth, chartHeight, colors);
 
     // Render each series
     this.seriesData.forEach((series) => {
@@ -73,7 +81,8 @@ export class LineChart extends BaseChart {
 
       // Render points if enabled
       if (this.config.showPoints) {
-        points.forEach((point) => {
+        points.forEach((point, index) => {
+          const dataPoint = series.data[index];
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           circle.setAttribute('cx', String(point.x));
           circle.setAttribute('cy', String(point.y));
@@ -81,83 +90,17 @@ export class LineChart extends BaseChart {
           circle.setAttribute('fill', series.color || colors.primary);
           circle.setAttribute('stroke', colors.background);
           circle.setAttribute('stroke-width', '2');
+
+          // ARIA attributes for accessibility
+          circle.setAttribute('role', 'img');
+          const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
+          circle.setAttribute('aria-label', `${seriesLabel}Data point: ${dataPoint.x}, value ${dataPoint.y}`);
+          circle.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
+          circle.classList.add('data-point');
+
           mainGroup.appendChild(circle);
         });
       }
-    });
-  }
-
-  private renderAxes(
-    group: SVGGElement,
-    xValues: string[],
-    yMin: number,
-    yMax: number,
-    chartWidth: number,
-    chartHeight: number,
-    colors: ReturnType<typeof getThemeColors>
-  ): void {
-    // Y-axis line
-    const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    yAxis.setAttribute('x1', '0');
-    yAxis.setAttribute('y1', '0');
-    yAxis.setAttribute('x2', '0');
-    yAxis.setAttribute('y2', String(chartHeight));
-    yAxis.setAttribute('stroke', colors.grid);
-    yAxis.setAttribute('stroke-width', '1');
-    group.appendChild(yAxis);
-
-    // X-axis line
-    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    xAxis.setAttribute('x1', '0');
-    xAxis.setAttribute('y1', String(chartHeight));
-    xAxis.setAttribute('x2', String(chartWidth));
-    xAxis.setAttribute('y2', String(chartHeight));
-    xAxis.setAttribute('stroke', colors.grid);
-    xAxis.setAttribute('stroke-width', '1');
-    group.appendChild(xAxis);
-
-    // Y-axis labels and grid lines
-    const yTicks = calculateNiceTicks(yMin, yMax, 5);
-    const yScale = createLinearScale([yMin, yMax], [chartHeight, 0]);
-
-    yTicks.forEach((tick) => {
-      const y = yScale(tick);
-
-      // Grid line
-      const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      gridLine.setAttribute('x1', '0');
-      gridLine.setAttribute('y1', String(y));
-      gridLine.setAttribute('x2', String(chartWidth));
-      gridLine.setAttribute('y2', String(y));
-      gridLine.setAttribute('stroke', colors.grid);
-      gridLine.setAttribute('stroke-width', '1');
-      gridLine.setAttribute('opacity', '0.3');
-      group.appendChild(gridLine);
-
-      // Label
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', '-10');
-      label.setAttribute('y', String(y));
-      label.setAttribute('text-anchor', 'end');
-      label.setAttribute('dominant-baseline', 'middle');
-      label.setAttribute('fill', colors.text);
-      label.setAttribute('font-size', '12');
-      label.textContent = String(tick);
-      group.appendChild(label);
-    });
-
-    // X-axis labels
-    const xScale = createBandScale(xValues, [0, chartWidth], 0);
-    xValues.forEach((value) => {
-      const x = xScale.scale(value) + xScale.bandwidth / 2;
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', String(x));
-      label.setAttribute('y', String(chartHeight + 20));
-      label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('fill', colors.text);
-      label.setAttribute('font-size', '12');
-      label.textContent = value;
-      group.appendChild(label);
     });
   }
 }

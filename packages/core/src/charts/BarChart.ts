@@ -8,7 +8,6 @@ import {
   createLinearScale,
   createBandScale,
   getThemeColors,
-  calculateNiceTicks,
   getAllXValues,
   getCombinedYRange,
 } from '../utils';
@@ -55,12 +54,21 @@ export class BarChart extends BaseChart {
     const xValues = getAllXValues(this.seriesData).map(String);
     const { min: yMin, max: yMax } = getCombinedYRange(this.seriesData);
 
+    // Set chart bounds for Phase 2 features
+    this.chartBounds = {
+      xMin: 0,
+      xMax: xValues.length - 1,
+      yMin,
+      yMax,
+      xValues,
+    };
+
     // Create scales
     const xScale = createBandScale(xValues, [0, chartWidth], 0.2);
     const yScale = createLinearScale([yMin, yMax], [chartHeight, 0]);
 
-    // Render axes and grid
-    this.renderVerticalAxes(group, xValues, yMin, yMax, chartWidth, chartHeight, colors);
+    // Render axes using shared method
+    this.renderCategoricalXLinearYAxes(group, xValues, yMin, yMax, chartWidth, chartHeight, colors);
 
     const seriesCount = this.seriesData.length;
     const groupPadding = 0.1; // Padding between bar groups
@@ -82,15 +90,24 @@ export class BarChart extends BaseChart {
         rect.setAttribute('fill', series.color || colors.primary);
         rect.setAttribute('rx', '4'); // Rounded corners
         rect.classList.add('bar');
+        rect.classList.add('data-point');
 
-        // Add hover effect
+        // ARIA attributes for accessibility
+        rect.setAttribute('role', 'img');
+        const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
+        rect.setAttribute('aria-label', `${seriesLabel}Bar: ${d.x}, value ${d.y}`);
+        rect.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
+
+        // Add hover effect with tracked listeners
         rect.style.transition = 'opacity 0.2s';
-        rect.addEventListener('mouseenter', () => {
+        const handleMouseEnter = () => {
           rect.style.opacity = '0.8';
-        });
-        rect.addEventListener('mouseleave', () => {
+        };
+        const handleMouseLeave = () => {
           rect.style.opacity = '1';
-        });
+        };
+        this.addEventListenerTracked(rect, 'mouseenter', handleMouseEnter);
+        this.addEventListenerTracked(rect, 'mouseleave', handleMouseLeave);
 
         group.appendChild(rect);
       });
@@ -107,12 +124,20 @@ export class BarChart extends BaseChart {
     const yValues = getAllXValues(this.seriesData).map(String);
     const { min: xMin, max: xMax } = getCombinedYRange(this.seriesData);
 
+    this.chartBounds = {
+      xMin,
+      xMax,
+      yMin: 0,
+      yMax: yValues.length - 1,
+      xValues: yValues,
+    };
+
     // Create scales
     const yScale = createBandScale(yValues, [0, chartHeight], 0.2);
     const xScale = createLinearScale([xMin, xMax], [0, chartWidth]);
 
-    // Render axes and grid
-    this.renderHorizontalAxes(group, yValues, xMin, xMax, chartWidth, chartHeight, colors);
+    // Render axes using shared method
+    this.renderLinearXCategoricalYAxes(group, yValues, xMin, xMax, chartWidth, chartHeight, colors);
 
     const seriesCount = this.seriesData.length;
     const groupPadding = 0.1;
@@ -133,166 +158,27 @@ export class BarChart extends BaseChart {
         rect.setAttribute('fill', series.color || colors.primary);
         rect.setAttribute('rx', '4'); // Rounded corners
         rect.classList.add('bar');
+        rect.classList.add('data-point');
 
-        // Add hover effect
+        // ARIA attributes for accessibility
+        rect.setAttribute('role', 'img');
+        const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
+        rect.setAttribute('aria-label', `${seriesLabel}Bar: ${d.x}, value ${d.y}`);
+        rect.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
+
+        // Add hover effect with tracked listeners
         rect.style.transition = 'opacity 0.2s';
-        rect.addEventListener('mouseenter', () => {
+        const handleMouseEnter = () => {
           rect.style.opacity = '0.8';
-        });
-        rect.addEventListener('mouseleave', () => {
+        };
+        const handleMouseLeave = () => {
           rect.style.opacity = '1';
-        });
+        };
+        this.addEventListenerTracked(rect, 'mouseenter', handleMouseEnter);
+        this.addEventListenerTracked(rect, 'mouseleave', handleMouseLeave);
 
         group.appendChild(rect);
       });
-    });
-  }
-
-  private renderVerticalAxes(
-    group: SVGGElement,
-    xValues: string[],
-    yMin: number,
-    yMax: number,
-    chartWidth: number,
-    chartHeight: number,
-    colors: ReturnType<typeof getThemeColors>
-  ): void {
-    // Y-axis line
-    const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    yAxis.setAttribute('x1', '0');
-    yAxis.setAttribute('y1', '0');
-    yAxis.setAttribute('x2', '0');
-    yAxis.setAttribute('y2', String(chartHeight));
-    yAxis.setAttribute('stroke', colors.grid);
-    yAxis.setAttribute('stroke-width', '1');
-    group.appendChild(yAxis);
-
-    // X-axis line
-    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    xAxis.setAttribute('x1', '0');
-    xAxis.setAttribute('y1', String(chartHeight));
-    xAxis.setAttribute('x2', String(chartWidth));
-    xAxis.setAttribute('y2', String(chartHeight));
-    xAxis.setAttribute('stroke', colors.grid);
-    xAxis.setAttribute('stroke-width', '1');
-    group.appendChild(xAxis);
-
-    // Y-axis labels and grid lines
-    const yTicks = calculateNiceTicks(yMin, yMax, 5);
-    const yScale = createLinearScale([yMin, yMax], [chartHeight, 0]);
-
-    yTicks.forEach((tick) => {
-      const y = yScale(tick);
-
-      // Grid line
-      const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      gridLine.setAttribute('x1', '0');
-      gridLine.setAttribute('y1', String(y));
-      gridLine.setAttribute('x2', String(chartWidth));
-      gridLine.setAttribute('y2', String(y));
-      gridLine.setAttribute('stroke', colors.grid);
-      gridLine.setAttribute('stroke-width', '1');
-      gridLine.setAttribute('opacity', '0.3');
-      group.appendChild(gridLine);
-
-      // Label
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', '-10');
-      label.setAttribute('y', String(y));
-      label.setAttribute('text-anchor', 'end');
-      label.setAttribute('dominant-baseline', 'middle');
-      label.setAttribute('fill', colors.text);
-      label.setAttribute('font-size', '12');
-      label.textContent = String(tick);
-      group.appendChild(label);
-    });
-
-    // X-axis labels
-    const xScale = createBandScale(xValues, [0, chartWidth], 0.2);
-    xValues.forEach((value) => {
-      const x = xScale.scale(value) + xScale.bandwidth / 2;
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', String(x));
-      label.setAttribute('y', String(chartHeight + 20));
-      label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('fill', colors.text);
-      label.setAttribute('font-size', '12');
-      label.textContent = value;
-      group.appendChild(label);
-    });
-  }
-
-  private renderHorizontalAxes(
-    group: SVGGElement,
-    yValues: string[],
-    xMin: number,
-    xMax: number,
-    chartWidth: number,
-    chartHeight: number,
-    colors: ReturnType<typeof getThemeColors>
-  ): void {
-    // Y-axis line
-    const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    yAxis.setAttribute('x1', '0');
-    yAxis.setAttribute('y1', '0');
-    yAxis.setAttribute('x2', '0');
-    yAxis.setAttribute('y2', String(chartHeight));
-    yAxis.setAttribute('stroke', colors.grid);
-    yAxis.setAttribute('stroke-width', '1');
-    group.appendChild(yAxis);
-
-    // X-axis line
-    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    xAxis.setAttribute('x1', '0');
-    xAxis.setAttribute('y1', String(chartHeight));
-    xAxis.setAttribute('x2', String(chartWidth));
-    xAxis.setAttribute('y2', String(chartHeight));
-    xAxis.setAttribute('stroke', colors.grid);
-    xAxis.setAttribute('stroke-width', '1');
-    group.appendChild(xAxis);
-
-    // X-axis labels and grid lines
-    const xTicks = calculateNiceTicks(xMin, xMax, 5);
-    const xScale = createLinearScale([xMin, xMax], [0, chartWidth]);
-
-    xTicks.forEach((tick) => {
-      const x = xScale(tick);
-
-      // Grid line
-      const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      gridLine.setAttribute('x1', String(x));
-      gridLine.setAttribute('y1', '0');
-      gridLine.setAttribute('x2', String(x));
-      gridLine.setAttribute('y2', String(chartHeight));
-      gridLine.setAttribute('stroke', colors.grid);
-      gridLine.setAttribute('stroke-width', '1');
-      gridLine.setAttribute('opacity', '0.3');
-      group.appendChild(gridLine);
-
-      // Label
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', String(x));
-      label.setAttribute('y', String(chartHeight + 20));
-      label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('fill', colors.text);
-      label.setAttribute('font-size', '12');
-      label.textContent = String(tick);
-      group.appendChild(label);
-    });
-
-    // Y-axis labels
-    const yScale = createBandScale(yValues, [0, chartHeight], 0.2);
-    yValues.forEach((value) => {
-      const y = yScale.scale(value) + yScale.bandwidth / 2;
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', '-10');
-      label.setAttribute('y', String(y));
-      label.setAttribute('text-anchor', 'end');
-      label.setAttribute('dominant-baseline', 'middle');
-      label.setAttribute('fill', colors.text);
-      label.setAttribute('font-size', '12');
-      label.textContent = value;
-      group.appendChild(label);
     });
   }
 }

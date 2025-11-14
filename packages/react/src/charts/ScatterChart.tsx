@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { BarChart as CoreBarChart, type BarChartConfig } from '@chartlite/core';
+import { ScatterChart as CoreScatterChart, type ScatterChartConfig } from '@chartlite/core';
 
-export interface BarChartProps extends Omit<BarChartConfig, 'width' | 'height'> {
+export interface ScatterChartProps extends Omit<ScatterChartConfig, 'width' | 'height'> {
   className?: string;
   style?: React.CSSProperties;
   onError?: (error: Error) => void;
 }
 
-export function BarChart({ className, style, onError, ...config }: BarChartProps) {
+export function ScatterChart({ className, style, onError, ...config }: ScatterChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<CoreBarChart | null>(null);
+  const chartRef = useRef<CoreScatterChart | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   // Recreate chart when any config changes
@@ -23,7 +23,7 @@ export function BarChart({ className, style, onError, ...config }: BarChartProps
       }
 
       // Create new chart with current config
-      chartRef.current = new CoreBarChart(containerRef.current, config);
+      chartRef.current = new CoreScatterChart(containerRef.current, config);
       chartRef.current.render();
 
       // Clear any previous errors
@@ -34,7 +34,7 @@ export function BarChart({ className, style, onError, ...config }: BarChartProps
       if (onError) {
         onError(error);
       } else {
-        console.error('BarChart render error:', error);
+        console.error('ScatterChart render error:', error);
       }
     }
 
@@ -48,7 +48,11 @@ export function BarChart({ className, style, onError, ...config }: BarChartProps
     config.data,
     config.theme,
     config.title,
-    config.orientation,
+    config.pointSize,
+    config.showLabels,
+    config.labelOffset,
+    config.labelPosition,
+    config.pointShape,
     config.showLegend,
     config.legend,
     config.animate,
