@@ -31,6 +31,7 @@ import {
   generateDataTableHTML,
 } from '../a11y/descriptions';
 import { injectAccessibilityStyles } from '../a11y/styles';
+import { KeyboardNavigator } from '../a11y/keyboard';
 
 /**
  * Default constants for chart rendering
@@ -94,9 +95,7 @@ export abstract class BaseChart implements Chart {
   } | null = null;
 
   // Keyboard navigation (Phase 3)
-  private focusedElementIndex: number = -1;
-  private focusableElements: SVGElement[] = [];
-  private liveRegion: HTMLElement | null = null;
+  private keyboardNav: KeyboardNavigator | null = null;
 
   constructor(
     container: HTMLElement | string,
@@ -461,229 +460,17 @@ export abstract class BaseChart implements Chart {
   }
 
   /**
-   * Setup keyboard navigation for the chart
+   * Setup keyboard navigation for the chart. The focus state machine lives in
+   * KeyboardNavigator; listeners are registered through the tracked mechanism so
+   * destroy() tears them down with everything else.
    */
   private setupKeyboardNavigation(svg: SVGSVGElement): void {
-    // Add keyboard event listeners
-    const handleKeyDown = (e: Event) => this.handleKeyDown(e as KeyboardEvent);
-    const handleFocus = () => this.handleFocus();
-    const handleBlur = () => this.handleBlur();
-
-    this.addEventListenerTracked(svg, 'keydown', handleKeyDown);
-    this.addEventListenerTracked(svg, 'focus', handleFocus);
-    this.addEventListenerTracked(svg, 'blur', handleBlur);
-  }
-
-  /**
-   * Handle focus event on chart
-   */
-  private handleFocus(): void {
-    // Chart is now focused - collect focusable elements
-    this.collectFocusableElements();
-  }
-
-  /**
-   * Handle blur event on chart
-   */
-  private handleBlur(): void {
-    // Clear focus from data points
-    this.clearDataPointFocus();
-    this.focusedElementIndex = -1;
-  }
-
-  /**
-   * Collect all focusable data point elements
-   */
-  private collectFocusableElements(): void {
-    if (!this.svg) return;
-
-    // Find all data points with the data-point class
-    const elements = this.svg.querySelectorAll('.data-point');
-    this.focusableElements = Array.from(elements) as SVGElement[];
-  }
-
-  /**
-   * Handle keyboard events for navigation
-   */
-  private handleKeyDown(event: KeyboardEvent): void {
-    // Prevent default scrolling for arrow keys
-    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
-      event.preventDefault();
-    }
-
-    switch (event.key) {
-      case 'ArrowRight':
-      case 'ArrowDown':
-        this.focusNextElement();
-        break;
-
-      case 'ArrowLeft':
-      case 'ArrowUp':
-        this.focusPreviousElement();
-        break;
-
-      case 'Home':
-        this.focusFirstElement();
-        break;
-
-      case 'End':
-        this.focusLastElement();
-        break;
-
-      case 'Enter':
-      case ' ':
-        this.activateCurrentElement();
-        break;
-
-      case 'Escape':
-        this.clearDataPointFocus();
-        this.focusedElementIndex = -1;
-        // Blur the SVG to exit navigation
-        if (this.svg) {
-          this.svg.blur();
-        }
-        break;
-    }
-  }
-
-  /**
-   * Focus on the next data point
-   */
-  private focusNextElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedElementIndex = (this.focusedElementIndex + 1) % this.focusableElements.length;
-    this.applyFocusToElement(this.focusedElementIndex);
-    this.announceToScreenReader();
-  }
-
-  /**
-   * Focus on the previous data point
-   */
-  private focusPreviousElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedElementIndex = this.focusedElementIndex <= 0
-      ? this.focusableElements.length - 1
-      : this.focusedElementIndex - 1;
-    this.applyFocusToElement(this.focusedElementIndex);
-    this.announceToScreenReader();
-  }
-
-  /**
-   * Focus on the first data point
-   */
-  private focusFirstElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedElementIndex = 0;
-    this.applyFocusToElement(this.focusedElementIndex);
-    this.announceToScreenReader();
-  }
-
-  /**
-   * Focus on the last data point
-   */
-  private focusLastElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedElementIndex = this.focusableElements.length - 1;
-    this.applyFocusToElement(this.focusedElementIndex);
-    this.announceToScreenReader();
-  }
-
-  /**
-   * Apply visual focus to an element
-   */
-  private applyFocusToElement(index: number): void {
-    // Remove previous focus
-    this.clearDataPointFocus();
-
-    const element = this.focusableElements[index];
-    if (!element) return;
-
-    // Add focus class
-    element.classList.add('data-point-focused');
-
-    // Store current focus state
-    element.setAttribute('data-focused', 'true');
-  }
-
-  /**
-   * Clear focus from all data points
-   */
-  private clearDataPointFocus(): void {
-    this.focusableElements.forEach(el => {
-      el.classList.remove('data-point-focused');
-      el.removeAttribute('data-focused');
+    this.keyboardNav = new KeyboardNavigator({
+      svg,
+      emit: (eventName, data) => this.emit(eventName, data),
+      addListener: (element, event, handler) =>
+        this.addEventListenerTracked(element as Element, event, handler),
     });
-  }
-
-  /**
-   * Activate the currently focused element (for Enter/Space)
-   */
-  private activateCurrentElement(): void {
-    if (this.focusedElementIndex < 0 || this.focusedElementIndex >= this.focusableElements.length) {
-      return;
-    }
-
-    const element = this.focusableElements[this.focusedElementIndex];
-    if (!element) return;
-
-    // Emit event for plugins to handle (e.g., tooltip plugin)
-    this.emit('datapoint:activate', {
-      element,
-      index: this.focusedElementIndex,
-      ariaLabel: element.getAttribute('aria-label'),
-    });
-  }
-
-  /**
-   * Announce focused element to screen readers
-   */
-  private announceToScreenReader(): void {
-    if (this.focusedElementIndex < 0 || this.focusedElementIndex >= this.focusableElements.length) {
-      return;
-    }
-
-    const element = this.focusableElements[this.focusedElementIndex];
-    if (!element) return;
-
-    const ariaLabel = element.getAttribute('aria-label') || '';
-
-    // Create or get live region
-    if (!this.liveRegion) {
-      this.liveRegion = document.getElementById('chartlite-live-region');
-
-      if (!this.liveRegion) {
-        this.liveRegion = document.createElement('div');
-        this.liveRegion.id = 'chartlite-live-region';
-        this.liveRegion.setAttribute('role', 'status');
-        this.liveRegion.setAttribute('aria-live', 'polite');
-        this.liveRegion.setAttribute('aria-atomic', 'true');
-        this.liveRegion.className = 'sr-only';
-        document.body.appendChild(this.liveRegion);
-      }
-    }
-
-    // Update announcement
-    this.liveRegion.textContent = ariaLabel;
   }
 
   /**
@@ -1069,6 +856,10 @@ export abstract class BaseChart implements Chart {
     // Clear event handlers
     this.eventHandlers.clear();
 
+    // Release the keyboard navigator (its listeners were removed above)
+    if (this.keyboardNav) {
+      this.keyboardNav = null;
+    }
   }
 
   /**
