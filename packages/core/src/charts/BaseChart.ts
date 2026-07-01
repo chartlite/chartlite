@@ -24,6 +24,13 @@ import {
   autoDownsample,
   ElementPool,
 } from '../utils';
+import {
+  generateAriaLabel,
+  generateDefaultTitle,
+  generateDescription,
+  generateDataTableHTML,
+} from '../a11y/descriptions';
+import { injectAccessibilityStyles } from '../a11y/styles';
 
 /**
  * Default constants for chart rendering
@@ -388,18 +395,30 @@ export abstract class BaseChart implements Chart {
 
     // ARIA role and label for accessibility
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', this.generateAriaLabel());
+    svg.setAttribute(
+      'aria-label',
+      generateAriaLabel({
+        chartTypeName: this.chartTypeName,
+        title: this.config.title,
+        data: this.data,
+        seriesData: this.seriesData,
+      })
+    );
 
     // Make SVG focusable for keyboard navigation
     svg.setAttribute('tabindex', '0');
 
     // Title and description for screen readers
     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    title.textContent = this.config.title || this.generateDefaultTitle();
+    title.textContent = this.config.title || generateDefaultTitle(this.chartTypeName);
     svg.appendChild(title);
 
     const desc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
-    desc.textContent = this.generateDescription();
+    desc.textContent = generateDescription({
+      chartTypeName: this.chartTypeName,
+      data: this.data,
+      seriesData: this.seriesData,
+    });
     svg.appendChild(desc);
 
     // Add data table fallback for screen readers
@@ -409,86 +428,18 @@ export abstract class BaseChart implements Chart {
     this.setupKeyboardNavigation(svg);
 
     // Inject accessibility styles if not already present
-    this.injectAccessibilityStyles();
+    injectAccessibilityStyles();
 
     return svg;
   }
 
   /**
-   * Generate ARIA label for the chart
+   * The chart's type name derived from the concrete subclass, e.g. "Line".
+   * NOTE: relies on `constructor.name`, which is mangled under minification;
+   * a follow-up will have subclasses declare this explicitly.
    */
-  private generateAriaLabel(): string {
-    const chartType = this.constructor.name.replace('Chart', '').toLowerCase();
-    const title = this.config.title || 'Untitled chart';
-    const seriesCount = this.seriesData.length;
-    const totalPoints = this.seriesData.reduce((sum, s) => sum + s.data.length, 0);
-
-    if (seriesCount > 1) {
-      return `${chartType} chart: ${title} with ${seriesCount} data series and ${totalPoints} total data points`;
-    }
-    return `${chartType} chart: ${title} with ${this.data.length} data points`;
-  }
-
-  /**
-   * Generate default title if none provided
-   */
-  private generateDefaultTitle(): string {
-    const chartType = this.constructor.name.replace('Chart', '');
-    return `${chartType} Chart`;
-  }
-
-  /**
-   * Generate descriptive text for screen readers
-   */
-  private generateDescription(): string {
-    const chartType = this.constructor.name.replace('Chart', '').toLowerCase();
-
-    if (this.data.length === 0) {
-      return `Empty ${chartType} chart with no data.`;
-    }
-
-    // Calculate min, max, and trend
-    const allYValues = this.seriesData.flatMap(s => s.data.map(d => d.y));
-    const min = Math.min(...allYValues);
-    const max = Math.max(...allYValues);
-
-    const firstPoint = this.data[0];
-    const lastPoint = this.data[this.data.length - 1];
-    const trend = this.calculateTrend();
-
-    let description = `${chartType} chart showing data from ${firstPoint.x} to ${lastPoint.x}. `;
-    description += `Values range from ${min.toFixed(2)} to ${max.toFixed(2)}`;
-
-    if (trend) {
-      description += `, with a ${trend} trend`;
-    }
-
-    if (this.seriesData.length > 1) {
-      description += `. Chart contains ${this.seriesData.length} data series: ${this.seriesData.map(s => s.name).join(', ')}`;
-    }
-
-    description += '.';
-    return description;
-  }
-
-  /**
-   * Calculate trend from first to last data point
-   */
-  private calculateTrend(): string {
-    if (this.data.length < 2) return '';
-
-    const first = this.data[0].y;
-    const last = this.data[this.data.length - 1].y;
-
-    if (first === 0) return '';
-
-    const change = ((last - first) / Math.abs(first)) * 100;
-
-    if (change > 10) return 'strong upward';
-    if (change > 2) return 'slight upward';
-    if (change < -10) return 'strong downward';
-    if (change < -2) return 'slight downward';
-    return 'relatively flat';
+  protected get chartTypeName(): string {
+    return this.constructor.name.replace('Chart', '');
   }
 
   /**
@@ -500,137 +451,13 @@ export abstract class BaseChart implements Chart {
     foreignObject.setAttribute('height', '0');
     foreignObject.setAttribute('overflow', 'hidden');
 
-    const tableHTML = this.generateDataTableHTML();
-    foreignObject.innerHTML = tableHTML;
+    foreignObject.innerHTML = generateDataTableHTML({
+      title: this.config.title || generateDefaultTitle(this.chartTypeName),
+      data: this.data,
+      seriesData: this.seriesData,
+    });
 
     svg.appendChild(foreignObject);
-  }
-
-  /**
-   * Generate HTML table of chart data for screen readers
-   */
-  private generateDataTableHTML(): string {
-    const title = this.config.title || this.generateDefaultTitle();
-
-    if (this.seriesData.length === 1) {
-      // Single series table
-      const rows = this.data.map(point =>
-        `<tr><td>${point.x}</td><td>${point.y}</td></tr>`
-      ).join('');
-
-      return `
-        <table class="sr-only" aria-label="Chart data table">
-          <caption>${title} - Data Table</caption>
-          <thead>
-            <tr>
-              <th scope="col">Category</th>
-              <th scope="col">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      `;
-    } else {
-      // Multi-series table
-      const seriesHeaders = this.seriesData.map(s =>
-        `<th scope="col">${s.name}</th>`
-      ).join('');
-
-      // Get all unique x values
-      const allXValues = Array.from(new Set(
-        this.seriesData.flatMap(s => s.data.map(d => String(d.x)))
-      ));
-
-      const rows = allXValues.map(x => {
-        const cells = this.seriesData.map(series => {
-          const point = series.data.find(d => String(d.x) === x);
-          return `<td>${point ? point.y : '-'}</td>`;
-        }).join('');
-
-        return `<tr><th scope="row">${x}</th>${cells}</tr>`;
-      }).join('');
-
-      return `
-        <table class="sr-only" aria-label="Chart data table">
-          <caption>${title} - Data Table</caption>
-          <thead>
-            <tr>
-              <th scope="col">Category</th>
-              ${seriesHeaders}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      `;
-    }
-  }
-
-  /**
-   * Inject accessibility CSS styles
-   */
-  private injectAccessibilityStyles(): void {
-    // Check if styles already injected
-    if (document.getElementById('chartlite-a11y-styles')) return;
-
-    const style = document.createElement('style');
-    style.id = 'chartlite-a11y-styles';
-    style.textContent = `
-      /* Chartlite Accessibility Styles */
-
-      /* Screen reader only content */
-      .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border-width: 0;
-      }
-
-      /* Chart focus indicator */
-      svg[role="img"]:focus-visible {
-        outline: 2px solid #2563eb;
-        outline-offset: 4px;
-      }
-
-      /* Remove default outline for mouse users */
-      svg[role="img"]:focus:not(:focus-visible) {
-        outline: none;
-      }
-
-      /* Data point focus indicator */
-      .data-point-focused {
-        stroke: #2563eb !important;
-        stroke-width: 3 !important;
-        filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.5));
-      }
-
-      /* Increase size for focused circles */
-      circle.data-point-focused {
-        r: 6;
-      }
-
-      /* High contrast mode support */
-      @media (prefers-contrast: high) {
-        svg[role="img"]:focus-visible {
-          outline: 3px solid CanvasText;
-          outline-offset: 4px;
-        }
-
-        .data-point-focused {
-          stroke: Highlight !important;
-          stroke-width: 4 !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
   }
 
   /**
