@@ -24,6 +24,14 @@ import {
   autoDownsample,
   ElementPool,
 } from '../utils';
+import {
+  generateAriaLabel,
+  generateDefaultTitle,
+  generateDescription,
+  generateDataTableHTML,
+} from '../a11y/descriptions';
+import { injectAccessibilityStyles } from '../a11y/styles';
+import { KeyboardNavigator } from '../a11y/keyboard';
 
 /**
  * Default constants for chart rendering
@@ -87,9 +95,7 @@ export abstract class BaseChart implements Chart {
   } | null = null;
 
   // Keyboard navigation (Phase 3)
-  private focusedElementIndex: number = -1;
-  private focusableElements: SVGElement[] = [];
-  private liveRegion: HTMLElement | null = null;
+  private keyboardNav: KeyboardNavigator | null = null;
 
   constructor(
     container: HTMLElement | string,
@@ -388,18 +394,30 @@ export abstract class BaseChart implements Chart {
 
     // ARIA role and label for accessibility
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', this.generateAriaLabel());
+    svg.setAttribute(
+      'aria-label',
+      generateAriaLabel({
+        chartTypeName: this.chartTypeName,
+        title: this.config.title,
+        data: this.data,
+        seriesData: this.seriesData,
+      })
+    );
 
     // Make SVG focusable for keyboard navigation
     svg.setAttribute('tabindex', '0');
 
     // Title and description for screen readers
     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    title.textContent = this.config.title || this.generateDefaultTitle();
+    title.textContent = this.config.title || generateDefaultTitle(this.chartTypeName);
     svg.appendChild(title);
 
     const desc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
-    desc.textContent = this.generateDescription();
+    desc.textContent = generateDescription({
+      chartTypeName: this.chartTypeName,
+      data: this.data,
+      seriesData: this.seriesData,
+    });
     svg.appendChild(desc);
 
     // Add data table fallback for screen readers
@@ -409,86 +427,18 @@ export abstract class BaseChart implements Chart {
     this.setupKeyboardNavigation(svg);
 
     // Inject accessibility styles if not already present
-    this.injectAccessibilityStyles();
+    injectAccessibilityStyles();
 
     return svg;
   }
 
   /**
-   * Generate ARIA label for the chart
+   * The chart's type name derived from the concrete subclass, e.g. "Line".
+   * NOTE: relies on `constructor.name`, which is mangled under minification;
+   * a follow-up will have subclasses declare this explicitly.
    */
-  private generateAriaLabel(): string {
-    const chartType = this.constructor.name.replace('Chart', '').toLowerCase();
-    const title = this.config.title || 'Untitled chart';
-    const seriesCount = this.seriesData.length;
-    const totalPoints = this.seriesData.reduce((sum, s) => sum + s.data.length, 0);
-
-    if (seriesCount > 1) {
-      return `${chartType} chart: ${title} with ${seriesCount} data series and ${totalPoints} total data points`;
-    }
-    return `${chartType} chart: ${title} with ${this.data.length} data points`;
-  }
-
-  /**
-   * Generate default title if none provided
-   */
-  private generateDefaultTitle(): string {
-    const chartType = this.constructor.name.replace('Chart', '');
-    return `${chartType} Chart`;
-  }
-
-  /**
-   * Generate descriptive text for screen readers
-   */
-  private generateDescription(): string {
-    const chartType = this.constructor.name.replace('Chart', '').toLowerCase();
-
-    if (this.data.length === 0) {
-      return `Empty ${chartType} chart with no data.`;
-    }
-
-    // Calculate min, max, and trend
-    const allYValues = this.seriesData.flatMap(s => s.data.map(d => d.y));
-    const min = Math.min(...allYValues);
-    const max = Math.max(...allYValues);
-
-    const firstPoint = this.data[0];
-    const lastPoint = this.data[this.data.length - 1];
-    const trend = this.calculateTrend();
-
-    let description = `${chartType} chart showing data from ${firstPoint.x} to ${lastPoint.x}. `;
-    description += `Values range from ${min.toFixed(2)} to ${max.toFixed(2)}`;
-
-    if (trend) {
-      description += `, with a ${trend} trend`;
-    }
-
-    if (this.seriesData.length > 1) {
-      description += `. Chart contains ${this.seriesData.length} data series: ${this.seriesData.map(s => s.name).join(', ')}`;
-    }
-
-    description += '.';
-    return description;
-  }
-
-  /**
-   * Calculate trend from first to last data point
-   */
-  private calculateTrend(): string {
-    if (this.data.length < 2) return '';
-
-    const first = this.data[0].y;
-    const last = this.data[this.data.length - 1].y;
-
-    if (first === 0) return '';
-
-    const change = ((last - first) / Math.abs(first)) * 100;
-
-    if (change > 10) return 'strong upward';
-    if (change > 2) return 'slight upward';
-    if (change < -10) return 'strong downward';
-    if (change < -2) return 'slight downward';
-    return 'relatively flat';
+  protected get chartTypeName(): string {
+    return this.constructor.name.replace('Chart', '');
   }
 
   /**
@@ -500,363 +450,27 @@ export abstract class BaseChart implements Chart {
     foreignObject.setAttribute('height', '0');
     foreignObject.setAttribute('overflow', 'hidden');
 
-    const tableHTML = this.generateDataTableHTML();
-    foreignObject.innerHTML = tableHTML;
+    foreignObject.innerHTML = generateDataTableHTML({
+      title: this.config.title || generateDefaultTitle(this.chartTypeName),
+      data: this.data,
+      seriesData: this.seriesData,
+    });
 
     svg.appendChild(foreignObject);
   }
 
   /**
-   * Generate HTML table of chart data for screen readers
-   */
-  private generateDataTableHTML(): string {
-    const title = this.config.title || this.generateDefaultTitle();
-
-    if (this.seriesData.length === 1) {
-      // Single series table
-      const rows = this.data.map(point =>
-        `<tr><td>${point.x}</td><td>${point.y}</td></tr>`
-      ).join('');
-
-      return `
-        <table class="sr-only" aria-label="Chart data table">
-          <caption>${title} - Data Table</caption>
-          <thead>
-            <tr>
-              <th scope="col">Category</th>
-              <th scope="col">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      `;
-    } else {
-      // Multi-series table
-      const seriesHeaders = this.seriesData.map(s =>
-        `<th scope="col">${s.name}</th>`
-      ).join('');
-
-      // Get all unique x values
-      const allXValues = Array.from(new Set(
-        this.seriesData.flatMap(s => s.data.map(d => String(d.x)))
-      ));
-
-      const rows = allXValues.map(x => {
-        const cells = this.seriesData.map(series => {
-          const point = series.data.find(d => String(d.x) === x);
-          return `<td>${point ? point.y : '-'}</td>`;
-        }).join('');
-
-        return `<tr><th scope="row">${x}</th>${cells}</tr>`;
-      }).join('');
-
-      return `
-        <table class="sr-only" aria-label="Chart data table">
-          <caption>${title} - Data Table</caption>
-          <thead>
-            <tr>
-              <th scope="col">Category</th>
-              ${seriesHeaders}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      `;
-    }
-  }
-
-  /**
-   * Inject accessibility CSS styles
-   */
-  private injectAccessibilityStyles(): void {
-    // Check if styles already injected
-    if (document.getElementById('chartlite-a11y-styles')) return;
-
-    const style = document.createElement('style');
-    style.id = 'chartlite-a11y-styles';
-    style.textContent = `
-      /* Chartlite Accessibility Styles */
-
-      /* Screen reader only content */
-      .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border-width: 0;
-      }
-
-      /* Chart focus indicator */
-      svg[role="img"]:focus-visible {
-        outline: 2px solid #2563eb;
-        outline-offset: 4px;
-      }
-
-      /* Remove default outline for mouse users */
-      svg[role="img"]:focus:not(:focus-visible) {
-        outline: none;
-      }
-
-      /* Data point focus indicator */
-      .data-point-focused {
-        stroke: #2563eb !important;
-        stroke-width: 3 !important;
-        filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.5));
-      }
-
-      /* Increase size for focused circles */
-      circle.data-point-focused {
-        r: 6;
-      }
-
-      /* High contrast mode support */
-      @media (prefers-contrast: high) {
-        svg[role="img"]:focus-visible {
-          outline: 3px solid CanvasText;
-          outline-offset: 4px;
-        }
-
-        .data-point-focused {
-          stroke: Highlight !important;
-          stroke-width: 4 !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  /**
-   * Setup keyboard navigation for the chart
+   * Setup keyboard navigation for the chart. The focus state machine lives in
+   * KeyboardNavigator; listeners are registered through the tracked mechanism so
+   * destroy() tears them down with everything else.
    */
   private setupKeyboardNavigation(svg: SVGSVGElement): void {
-    // Add keyboard event listeners
-    const handleKeyDown = (e: Event) => this.handleKeyDown(e as KeyboardEvent);
-    const handleFocus = () => this.handleFocus();
-    const handleBlur = () => this.handleBlur();
-
-    this.addEventListenerTracked(svg, 'keydown', handleKeyDown);
-    this.addEventListenerTracked(svg, 'focus', handleFocus);
-    this.addEventListenerTracked(svg, 'blur', handleBlur);
-  }
-
-  /**
-   * Handle focus event on chart
-   */
-  private handleFocus(): void {
-    // Chart is now focused - collect focusable elements
-    this.collectFocusableElements();
-  }
-
-  /**
-   * Handle blur event on chart
-   */
-  private handleBlur(): void {
-    // Clear focus from data points
-    this.clearDataPointFocus();
-    this.focusedElementIndex = -1;
-  }
-
-  /**
-   * Collect all focusable data point elements
-   */
-  private collectFocusableElements(): void {
-    if (!this.svg) return;
-
-    // Find all data points with the data-point class
-    const elements = this.svg.querySelectorAll('.data-point');
-    this.focusableElements = Array.from(elements) as SVGElement[];
-  }
-
-  /**
-   * Handle keyboard events for navigation
-   */
-  private handleKeyDown(event: KeyboardEvent): void {
-    // Prevent default scrolling for arrow keys
-    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
-      event.preventDefault();
-    }
-
-    switch (event.key) {
-      case 'ArrowRight':
-      case 'ArrowDown':
-        this.focusNextElement();
-        break;
-
-      case 'ArrowLeft':
-      case 'ArrowUp':
-        this.focusPreviousElement();
-        break;
-
-      case 'Home':
-        this.focusFirstElement();
-        break;
-
-      case 'End':
-        this.focusLastElement();
-        break;
-
-      case 'Enter':
-      case ' ':
-        this.activateCurrentElement();
-        break;
-
-      case 'Escape':
-        this.clearDataPointFocus();
-        this.focusedElementIndex = -1;
-        // Blur the SVG to exit navigation
-        if (this.svg) {
-          this.svg.blur();
-        }
-        break;
-    }
-  }
-
-  /**
-   * Focus on the next data point
-   */
-  private focusNextElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedElementIndex = (this.focusedElementIndex + 1) % this.focusableElements.length;
-    this.applyFocusToElement(this.focusedElementIndex);
-    this.announceToScreenReader();
-  }
-
-  /**
-   * Focus on the previous data point
-   */
-  private focusPreviousElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedElementIndex = this.focusedElementIndex <= 0
-      ? this.focusableElements.length - 1
-      : this.focusedElementIndex - 1;
-    this.applyFocusToElement(this.focusedElementIndex);
-    this.announceToScreenReader();
-  }
-
-  /**
-   * Focus on the first data point
-   */
-  private focusFirstElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedElementIndex = 0;
-    this.applyFocusToElement(this.focusedElementIndex);
-    this.announceToScreenReader();
-  }
-
-  /**
-   * Focus on the last data point
-   */
-  private focusLastElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedElementIndex = this.focusableElements.length - 1;
-    this.applyFocusToElement(this.focusedElementIndex);
-    this.announceToScreenReader();
-  }
-
-  /**
-   * Apply visual focus to an element
-   */
-  private applyFocusToElement(index: number): void {
-    // Remove previous focus
-    this.clearDataPointFocus();
-
-    const element = this.focusableElements[index];
-    if (!element) return;
-
-    // Add focus class
-    element.classList.add('data-point-focused');
-
-    // Store current focus state
-    element.setAttribute('data-focused', 'true');
-  }
-
-  /**
-   * Clear focus from all data points
-   */
-  private clearDataPointFocus(): void {
-    this.focusableElements.forEach(el => {
-      el.classList.remove('data-point-focused');
-      el.removeAttribute('data-focused');
+    this.keyboardNav = new KeyboardNavigator({
+      svg,
+      emit: (eventName, data) => this.emit(eventName, data),
+      addListener: (element, event, handler) =>
+        this.addEventListenerTracked(element as Element, event, handler),
     });
-  }
-
-  /**
-   * Activate the currently focused element (for Enter/Space)
-   */
-  private activateCurrentElement(): void {
-    if (this.focusedElementIndex < 0 || this.focusedElementIndex >= this.focusableElements.length) {
-      return;
-    }
-
-    const element = this.focusableElements[this.focusedElementIndex];
-    if (!element) return;
-
-    // Emit event for plugins to handle (e.g., tooltip plugin)
-    this.emit('datapoint:activate', {
-      element,
-      index: this.focusedElementIndex,
-      ariaLabel: element.getAttribute('aria-label'),
-    });
-  }
-
-  /**
-   * Announce focused element to screen readers
-   */
-  private announceToScreenReader(): void {
-    if (this.focusedElementIndex < 0 || this.focusedElementIndex >= this.focusableElements.length) {
-      return;
-    }
-
-    const element = this.focusableElements[this.focusedElementIndex];
-    if (!element) return;
-
-    const ariaLabel = element.getAttribute('aria-label') || '';
-
-    // Create or get live region
-    if (!this.liveRegion) {
-      this.liveRegion = document.getElementById('chartlite-live-region');
-
-      if (!this.liveRegion) {
-        this.liveRegion = document.createElement('div');
-        this.liveRegion.id = 'chartlite-live-region';
-        this.liveRegion.setAttribute('role', 'status');
-        this.liveRegion.setAttribute('aria-live', 'polite');
-        this.liveRegion.setAttribute('aria-atomic', 'true');
-        this.liveRegion.className = 'sr-only';
-        document.body.appendChild(this.liveRegion);
-      }
-    }
-
-    // Update announcement
-    this.liveRegion.textContent = ariaLabel;
   }
 
   /**
@@ -1242,6 +856,10 @@ export abstract class BaseChart implements Chart {
     // Clear event handlers
     this.eventHandlers.clear();
 
+    // Release the keyboard navigator (its listeners were removed above)
+    if (this.keyboardNav) {
+      this.keyboardNav = null;
+    }
   }
 
   /**
