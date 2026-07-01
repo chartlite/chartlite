@@ -1,7 +1,8 @@
 {
   "name": "@chartlite/svelte",
-  "version": "0.1.0",
-  "description": "Svelte wrapper for chartlite",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Svelte wrapper for chartlite (planned — not yet available)",
   "type": "module",
   "scripts": {
     "build": "echo 'Svelte package - coming soon'"

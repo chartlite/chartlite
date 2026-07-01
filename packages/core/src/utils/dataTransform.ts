@@ -16,27 +16,55 @@ import type {
  * Check if data is in column-oriented format
  */
 function isColumnOrientedData(data: any): data is ColumnOrientedData {
-  return (
-    data &&
-    typeof data === 'object' &&
-    'x' in data &&
-    'y' in data &&
-    Array.isArray(data.x) &&
-    (Array.isArray(data.y) || typeof data.y === 'object')
-  );
+  // Basic structure check
+  if (!data || typeof data !== 'object') return false;
+  if (!('x' in data) || !('y' in data)) return false;
+  if (!Array.isArray(data.x) || data.x.length === 0) return false;
+
+  // Single series: y is number[]
+  if (Array.isArray(data.y)) {
+    // Validate arrays have same length
+    if (data.x.length !== data.y.length) return false;
+    // Validate all y values are numbers
+    return data.y.every((val: any) => typeof val === 'number' && !isNaN(val) && isFinite(val));
+  }
+
+  // Multi-series: y is Record<string, number[]>
+  if (data.y !== null && typeof data.y === 'object' && !Array.isArray(data.y)) {
+    const yValues = Object.values(data.y);
+    // All values must be arrays
+    if (!yValues.every((val) => Array.isArray(val))) return false;
+    // All arrays must have same length as x
+    if (!yValues.every((arr: any) => arr.length === data.x.length)) return false;
+    // All values must be valid numbers
+    return yValues.every((arr: any) =>
+      arr.every((val: any) => typeof val === 'number' && !isNaN(val) && isFinite(val))
+    );
+  }
+
+  return false;
 }
 
 /**
  * Check if data is in series-first format
  */
 function isSeriesFirstData(data: any): data is SeriesFirstData {
-  return (
-    data &&
-    typeof data === 'object' &&
-    'series' in data &&
-    'data' in data &&
-    Array.isArray(data.series) &&
-    Array.isArray(data.data)
+  // Basic structure check
+  if (!data || typeof data !== 'object') return false;
+  if (!('series' in data) || !('data' in data)) return false;
+  if (!Array.isArray(data.series) || !Array.isArray(data.data)) return false;
+
+  // Must have at least one series
+  if (data.series.length === 0 || data.data.length === 0) {
+    throw new Error('Chart data cannot be empty');
+  }
+
+  // Validate series definitions
+  return data.series.every((s: any) =>
+    s &&
+    typeof s === 'object' &&
+    typeof s.name === 'string' &&
+    typeof s.dataKey === 'string'
   );
 }
 
@@ -44,19 +72,33 @@ function isSeriesFirstData(data: any): data is SeriesFirstData {
  * Check if data is a simple array of numbers
  */
 function isNumberArray(data: any): data is number[] {
-  return Array.isArray(data) && data.length > 0 && typeof data[0] === 'number';
+  if (!Array.isArray(data)) return false;
+  if (data.length === 0) {
+    throw new Error('Chart data cannot be empty');
+  }
+
+  return data.every((val) => typeof val === 'number' && !isNaN(val) && isFinite(val));
 }
 
 /**
  * Check if data is already in DataPoint[] format
  */
 function isDataPointArray(data: any): data is DataPoint[] {
-  return (
-    Array.isArray(data) &&
-    data.length > 0 &&
-    typeof data[0] === 'object' &&
-    'x' in data[0] &&
-    'y' in data[0]
+  if (!Array.isArray(data)) return false;
+  if (data.length === 0) {
+    throw new Error('Chart data cannot be empty');
+  }
+
+  // Validate all items are valid DataPoint objects
+  return data.every((item) =>
+    item &&
+    typeof item === 'object' &&
+    'x' in item &&
+    'y' in item &&
+    (typeof item.x === 'string' || typeof item.x === 'number') &&
+    typeof item.y === 'number' &&
+    !isNaN(item.y) &&
+    isFinite(item.y)
   );
 }
 
@@ -147,8 +189,11 @@ export function normalizeData(data: FlexibleDataInput): DataPoint[] {
     return convertSeriesFirstData(data);
   }
 
-  // Fallback: try to treat as DataPoint[]
-  return data as DataPoint[];
+  // Invalid data format
+  throw new Error(
+    'Invalid data format. Expected DataPoint[], number[], ColumnOrientedData, or SeriesFirstData. ' +
+    'See documentation for supported formats.'
+  );
 }
 
 /**

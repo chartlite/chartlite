@@ -1,7 +1,8 @@
 {
   "name": "@chartlite/angular",
-  "version": "0.1.0",
-  "description": "Angular wrapper for chartlite",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Angular wrapper for chartlite (planned — not yet available)",
   "type": "module",
   "scripts": {
     "build": "echo 'Angular package - coming soon'"

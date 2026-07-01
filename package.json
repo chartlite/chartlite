@@ -8,9 +8,15 @@
     "dev": "turbo dev --parallel",
     "test": "turbo test",
     "lint": "turbo lint",
-    "clean": "turbo clean && rm -rf node_modules"
+    "clean": "turbo clean && rm -rf node_modules",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "turbo build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.0",
+    "@types/jsdom": "^27.0.0",
     "@types/node": "^24.9.0",
     "turbo": "^2.0.0",
     "typescript": "^5.5.0",

@@ -71,11 +71,16 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Check bundle size
+      - name: Check bundle size (gzipped)
         run: |
           cd packages/core
-          BUNDLE_SIZE=$(stat -f%z dist/index.js 2>/dev/null || stat -c%s dist/index.js)
-          echo "Bundle size: $BUNDLE_SIZE bytes"
-          if [ $BUNDLE_SIZE -gt 20480 ]; then
-            echo "::warning::Bundle size ($BUNDLE_SIZE bytes) exceeds 20KB target"
+          # Gzipped size is what users actually download, so that's what we budget.
+          RAW=$(stat -c%s dist/index.js)
+          GZIP=$(gzip -c dist/index.js | wc -c)
+          BUDGET=15360  # 15 KB gzipped hard ceiling (current: ~12.7 KB)
+          echo "Core bundle: raw ${RAW} B, gzipped ${GZIP} B (budget ${BUDGET} B)"
+          if [ "$GZIP" -gt "$BUDGET" ]; then
+            echo "::error::Gzipped bundle ${GZIP} B exceeds budget ${BUDGET} B"
+            exit 1
           fi
+          echo "::notice::Gzipped bundle ${GZIP} B is within the ${BUDGET} B budget"

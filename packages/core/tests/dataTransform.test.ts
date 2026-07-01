@@ -123,13 +123,12 @@ describe('Data Transformation', () => {
         ]);
       });
 
-      it('should handle empty series', () => {
+      it('should throw error for empty series', () => {
         const data: SeriesFirstData = {
           series: [],
           data: [],
         };
-        const result = normalizeData(data);
-        expect(result).toEqual([]);
+        expect(() => normalizeData(data)).toThrow('Chart data cannot be empty');
       });
 
       it('should auto-detect x-axis key from non-series keys', () => {
@@ -157,7 +156,7 @@ describe('Data Transformation', () => {
           { name: 'Revenue', dataKey: 'revenue', color: '#3b82f6' },
           { name: 'Profit', dataKey: 'profit', color: '#10b981' },
         ],
-        data: [],
+        data: [{ x: 'Jan', revenue: 100, profit: 50 }],
       };
       const colors = extractColorsFromSeriesData(data);
       expect(colors).toEqual(['#3b82f6', '#10b981']);
@@ -178,7 +177,7 @@ describe('Data Transformation', () => {
           { name: 'Profit', dataKey: 'profit' }, // No color
           { name: 'Costs', dataKey: 'costs', color: '#ef4444' },
         ],
-        data: [],
+        data: [{ x: 'Jan', revenue: 100, profit: 50, costs: 30 }],
       };
       const colors = extractColorsFromSeriesData(data);
       expect(colors).toEqual(['#3b82f6', '#ef4444']);
@@ -190,7 +189,7 @@ describe('Data Transformation', () => {
           { name: 'Revenue', dataKey: 'revenue' },
           { name: 'Profit', dataKey: 'profit' },
         ],
-        data: [],
+        data: [{ x: 'Jan', revenue: 100, profit: 50 }],
       };
       const colors = extractColorsFromSeriesData(data);
       expect(colors).toBeUndefined();

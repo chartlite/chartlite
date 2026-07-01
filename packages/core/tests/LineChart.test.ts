@@ -214,12 +214,18 @@ describe('LineChart', () => {
       const chart = new LineChart(container, { data, title: 'Original' });
       chart.render();
       const originalSvg = container.querySelector('svg');
+      const originalCircles = container.querySelectorAll('circle').length;
 
       chart.update([{ x: 'A', y: 10 }]);
       const updatedSvg = container.querySelector('svg');
+      const updatedCircles = container.querySelectorAll('circle').length;
 
       expect(updatedSvg).toBeTruthy();
-      expect(updatedSvg).not.toBe(originalSvg);
+      // Element pooling reuses SVG for better performance
+      expect(updatedSvg).toBe(originalSvg);
+      // But content is updated
+      expect(updatedCircles).toBe(1);
+      expect(originalCircles).toBe(data.length);
     });
   });
 
@@ -243,10 +249,9 @@ describe('LineChart', () => {
       expect(svg).toContain('</svg>');
     });
 
-    it('should render before export if not rendered', () => {
+    it('should throw error if toSVG called before render', () => {
       const chart = new LineChart(container, { data });
-      const svg = chart.toSVG();
-      expect(svg).toContain('<svg');
+      expect(() => chart.toSVG()).toThrow('Chart must be rendered before calling toSVG()');
     });
   });
 
@@ -552,7 +557,7 @@ describe('LineChart', () => {
 
         const chart = new LineChart(container, {
           data: multiSeriesData,
-          legend: { show: true, position: 'right' }
+          legend: { show: true, position: 'top' }
         });
         chart.render();
 

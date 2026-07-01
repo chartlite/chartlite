@@ -202,12 +202,18 @@ describe('AreaChart', () => {
       const chart = new AreaChart(container, { data });
       chart.render();
       const originalSvg = container.querySelector('svg');
+      const originalPaths = container.querySelectorAll('path').length;
 
       chart.update([{ x: 'A', y: 10 }]);
       const updatedSvg = container.querySelector('svg');
+      const updatedPaths = container.querySelectorAll('path').length;
 
       expect(updatedSvg).toBeTruthy();
-      expect(updatedSvg).not.toBe(originalSvg);
+      // Element pooling reuses SVG for better performance
+      expect(updatedSvg).toBe(originalSvg);
+      // But content is updated
+      expect(updatedPaths).toBeGreaterThan(0);
+      expect(originalPaths).toBeGreaterThan(0);
     });
   });
 
@@ -231,10 +237,9 @@ describe('AreaChart', () => {
       expect(svg).toContain('</svg>');
     });
 
-    it('should render before export if not rendered', () => {
+    it('should throw error if toSVG called before render', () => {
       const chart = new AreaChart(container, { data });
-      const svg = chart.toSVG();
-      expect(svg).toContain('<svg');
+      expect(() => chart.toSVG()).toThrow('Chart must be rendered before calling toSVG()');
     });
   });
 

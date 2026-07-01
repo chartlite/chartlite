@@ -9,7 +9,6 @@ import {
   createBandScale,
   generateLinePath,
   getThemeColors,
-  calculateNiceTicks,
   getAllXValues,
 } from '../utils';
 
@@ -49,12 +48,21 @@ export class AreaChart extends BaseChart {
     const yMax = Math.max(...stackedData.map(s => Math.max(...s.cumulativeData.map(d => d.y1))));
     const yMin = 0; // Stacked areas always start at 0
 
+    // Set chart bounds for Phase 2 features
+    this.chartBounds = {
+      xMin: 0,
+      xMax: xValues.length - 1,
+      yMin,
+      yMax,
+      xValues,
+    };
+
     // Create scales
     const xScale = createBandScale(xValues, [0, chartWidth], 0);
     const yScale = createLinearScale([yMin, yMax], [chartHeight, 0]);
 
-    // Render axes
-    this.renderAxes(mainGroup, xValues, yMin, yMax, chartWidth, chartHeight, colors);
+    // Render axes using shared method
+    this.renderCategoricalXLinearYAxes(mainGroup, xValues, yMin, yMax, chartWidth, chartHeight, colors);
 
     // Render each series as a stacked area (in reverse order so first series is on top)
     stackedData.forEach((seriesStack) => {
@@ -77,6 +85,15 @@ export class AreaChart extends BaseChart {
       area.setAttribute('fill', seriesStack.color || colors.primary);
       area.setAttribute('opacity', String(this.config.fillOpacity));
       area.classList.add('area-fill');
+      area.classList.add('data-series');
+
+      // ARIA attributes for the area series
+      area.setAttribute('role', 'img');
+      const dataPoints = seriesStack.cumulativeData.length;
+      const seriesLabel = this.seriesData.length > 1 ? `${seriesStack.name}, ` : '';
+      area.setAttribute('aria-label', `${seriesLabel}Area series with ${dataPoints} data points`);
+      area.setAttribute('tabindex', '-1');
+
       mainGroup.appendChild(area);
 
       // Create line path (stroke) for top edge
@@ -89,6 +106,11 @@ export class AreaChart extends BaseChart {
       line.setAttribute('stroke-linecap', 'round');
       line.setAttribute('stroke-linejoin', 'round');
       line.classList.add('area-line');
+
+      // ARIA attributes for the line
+      line.setAttribute('role', 'presentation'); // Decorative - area already has semantics
+      line.setAttribute('aria-hidden', 'true'); // Hide from screen readers (area is sufficient)
+
       mainGroup.appendChild(line);
     });
   }
@@ -147,79 +169,5 @@ export class AreaChart extends BaseChart {
 
     // Combine: top edge + bottom edge + close
     return `${topPath} ${bottomPath.replace('M', 'L')} Z`;
-  }
-
-  private renderAxes(
-    group: SVGGElement,
-    xValues: string[],
-    yMin: number,
-    yMax: number,
-    chartWidth: number,
-    chartHeight: number,
-    colors: ReturnType<typeof getThemeColors>
-  ): void {
-    // Y-axis line
-    const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    yAxis.setAttribute('x1', '0');
-    yAxis.setAttribute('y1', '0');
-    yAxis.setAttribute('x2', '0');
-    yAxis.setAttribute('y2', String(chartHeight));
-    yAxis.setAttribute('stroke', colors.grid);
-    yAxis.setAttribute('stroke-width', '1');
-    group.appendChild(yAxis);
-
-    // X-axis line
-    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    xAxis.setAttribute('x1', '0');
-    xAxis.setAttribute('y1', String(chartHeight));
-    xAxis.setAttribute('x2', String(chartWidth));
-    xAxis.setAttribute('y2', String(chartHeight));
-    xAxis.setAttribute('stroke', colors.grid);
-    xAxis.setAttribute('stroke-width', '1');
-    group.appendChild(xAxis);
-
-    // Y-axis labels and grid lines
-    const yTicks = calculateNiceTicks(yMin, yMax, 5);
-    const yScale = createLinearScale([yMin, yMax], [chartHeight, 0]);
-
-    yTicks.forEach((tick) => {
-      const y = yScale(tick);
-
-      // Grid line
-      const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      gridLine.setAttribute('x1', '0');
-      gridLine.setAttribute('y1', String(y));
-      gridLine.setAttribute('x2', String(chartWidth));
-      gridLine.setAttribute('y2', String(y));
-      gridLine.setAttribute('stroke', colors.grid);
-      gridLine.setAttribute('stroke-width', '1');
-      gridLine.setAttribute('opacity', '0.3');
-      group.appendChild(gridLine);
-
-      // Label
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', '-10');
-      label.setAttribute('y', String(y));
-      label.setAttribute('text-anchor', 'end');
-      label.setAttribute('dominant-baseline', 'middle');
-      label.setAttribute('fill', colors.text);
-      label.setAttribute('font-size', '12');
-      label.textContent = String(tick);
-      group.appendChild(label);
-    });
-
-    // X-axis labels
-    const xScale = createBandScale(xValues, [0, chartWidth], 0);
-    xValues.forEach((value) => {
-      const x = xScale.scale(value) + xScale.bandwidth / 2;
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', String(x));
-      label.setAttribute('y', String(chartHeight + 20));
-      label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('fill', colors.text);
-      label.setAttribute('font-size', '12');
-      label.textContent = value;
-      group.appendChild(label);
-    });
   }
 }

@@ -223,12 +223,18 @@ describe('BarChart', () => {
       const chart = new BarChart(container, { data, title: 'Original' });
       chart.render();
       const originalSvg = container.querySelector('svg');
+      const originalBars = container.querySelectorAll('.bar').length;
 
       chart.update([{ x: 'A', y: 10 }]);
       const updatedSvg = container.querySelector('svg');
+      const updatedBars = container.querySelectorAll('.bar').length;
 
       expect(updatedSvg).toBeTruthy();
-      expect(updatedSvg).not.toBe(originalSvg);
+      // Element pooling reuses SVG for better performance
+      expect(updatedSvg).toBe(originalSvg);
+      // But content is updated
+      expect(updatedBars).toBe(1);
+      expect(originalBars).toBe(data.length);
     });
   });
 
@@ -252,10 +258,9 @@ describe('BarChart', () => {
       expect(svg).toContain('</svg>');
     });
 
-    it('should render before export if not rendered', () => {
+    it('should throw error if toSVG called before render', () => {
       const chart = new BarChart(container, { data });
-      const svg = chart.toSVG();
-      expect(svg).toContain('<svg');
+      expect(() => chart.toSVG()).toThrow('Chart must be rendered before calling toSVG()');
     });
   });
 
