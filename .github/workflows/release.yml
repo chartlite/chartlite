@@ -44,6 +44,12 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
+      # npm Trusted Publishing (OIDC) requires npm >= 11.5.1, newer than the
+      # version bundled with Node 20. No NPM_TOKEN is needed once the package's
+      # trusted publisher is configured on npmjs.com to point at this workflow.
+      - name: Upgrade npm for trusted publishing (OIDC)
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -56,6 +62,6 @@ jobs:
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # No NPM_TOKEN: authentication is via OIDC trusted publishing.
+          # Provenance is emitted automatically by trusted publishing.
           NPM_CONFIG_PROVENANCE: "true"
