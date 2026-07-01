@@ -2,7 +2,7 @@
 
 **Beautiful charts for modern web apps. Lightweight, fast, and developer-friendly.**
 
-[![Bundle Size](https://img.shields.io/badge/bundle-~20KB-success)](https://bundlephobia.com)
+[![Bundle Size](https://img.shields.io/badge/bundle-~13KB_gzipped-success)](https://bundlephobia.com/package/@chartlite/core)
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -27,10 +27,11 @@ For a simple landing page or blog post, this is overkill.
 
 Chartlite gives you **professional charts at 10-15x smaller bundle size**:
 
-- ✅ **~20KB minified** - Lightning-fast page loads
+- ✅ **~13KB gzipped** - Lightning-fast page loads
 - ✅ **Zero dependencies** - No D3, no bloat
 - ✅ **TypeScript-first** - Full type safety
 - ✅ **Multiple data formats** - Maximum flexibility
+- ✅ **Accessible by default** - WCAG-minded ARIA + keyboard navigation
 - ✅ **Beautiful defaults** - Inspired by Tailwind, Material, Nord
 
 ---
@@ -71,11 +72,13 @@ That's it! Your chart is ready.
 
 ### 📊 Chart Types
 
-- **Line Chart** - Perfect for trends over time
+- **Line Chart** - Perfect for trends over time (linear & smooth)
 - **Bar Chart** - Great for comparisons (vertical & horizontal)
 - **Area Chart** - Beautiful filled visualizations
+- **Scatter Chart** - Correlations and distributions
 
-More chart types coming soon!
+Plus **multi-series** support, **reference lines**, **annotations**, and **region
+highlighting** across chart types. More types coming soon (see the [roadmap](docs/V1_ROADMAP.md)).
 
 ### 🎨 Beautiful Themes
 
@@ -119,49 +122,34 @@ data: {
 
 - **Target**: 500-2,000 data points
 - **Render time**: <16ms (60fps)
-- **Bundle size**: ~20KB core, ~25KB with all features
-- **Framework**: Zero dependencies, pure TypeScript
+- **Bundle size**: ~13KB gzipped (~48KB minified), zero dependencies
+- **Built in**: automatic downsampling (LTTB) and element pooling for fast updates
 
 ---
 
 ## Roadmap
 
-### ✅ Completed (v0.1.0)
+### ✅ Shipped
 
-- Line, Bar, and Area charts
-- 4 flexible data formats
-- 3 built-in themes
-- Responsive sizing
-- SVG export
-- TypeScript support
+- **Chart types:** Line, Bar, Area, Scatter
+- **Multi-series** support with auto-color assignment and a configurable legend
+- **Annotations, reference lines & region highlighting**
+- **Accessibility:** ARIA roles/descriptions, keyboard navigation, screen-reader data-table fallback
+- **Performance:** automatic LTTB downsampling + element pooling for fast updates
+- **Plugin system** (tree-shakeable tooltip + debug plugins)
+- 4 flexible data formats · 3 built-in themes · responsive sizing · SVG export · TypeScript-first
+- Official **React** wrapper
 
-### 🚧 Coming Soon
+### 🚧 On the way to 1.0
 
-**Phase 1: Multi-Series Support** (Q4 2024)
+- More chart types: **Pie/Donut, Stacked, Combo, Sparklines, Radial/gauge**
+- Pluggable **formatters** (currency/percent/date/abbreviations) & CSS-variable theming
+- First-class **interactivity** (built-in tooltips, crosshair, legend toggle, click/hover callbacks)
+- **Server-side / zero-JS rendering** (`renderToString`) + a declarative chart spec
+- **Agent-native tooling** (MCP server + shippable skill)
+- Additional framework wrappers (Vue next)
 
-- Multiple lines/bars on one chart
-- Static legend
-- Auto-color assignment
-
-**Phase 2: Annotations & Reference Lines** (Q1 2025)
-
-- Mark thresholds and goals
-- Add context to specific points
-- Highlight regions
-
-**Phase 3: Accessibility** (Q1 2025)
-
-- WCAG 2.1 AA compliance
-- Keyboard navigation
-- Screen reader support
-
-**Phase 4: Optional Features** (Q1 2025)
-
-- Tooltips (tree-shakeable)
-- Export utilities
-- Real-time updates
-
-See [ROADMAP.md](docs/ROADMAP.md) for full details.
+See the full, sequenced plan in **[V1_ROADMAP.md](docs/V1_ROADMAP.md)**.
 
 ---
 
@@ -209,7 +197,7 @@ More examples at [examples/](examples/)
 
 | Feature | Chartlite | Recharts | Chart.js | ECharts |
 |---------|-----------|----------|----------|---------|
-| Bundle Size | **~20KB** | ~400KB | ~200KB | ~1000KB |
+| Bundle Size | **~13KB gz** | ~400KB | ~200KB | ~1000KB |
 | Dependencies | **0** | D3 (many) | 0 | ZRender |
 | TypeScript | **Native** | Good | Good | Good |
 | Chart Types | 3-4 | 10+ | 8+ | 50+ |
@@ -297,9 +285,9 @@ Inspired by the best:
 
 - [Documentation](docs/)
 - [Examples](examples/)
-- [Roadmap](docs/ROADMAP.md)
+- [Roadmap](docs/V1_ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)
-- [Issues](https://github.com/yourusername/chartlite/issues)
+- [Issues](https://github.com/chartlite/chartlite/issues)
 
 ---
 

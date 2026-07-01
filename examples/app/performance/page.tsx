@@ -5,12 +5,19 @@ import { LineChart, BarChart } from '@chartlite/react';
 import ExampleCard from '@/components/ExampleCard';
 import { FrameworkProvider } from '@/components/FrameworkContext';
 
+// Deterministic pseudo-random in [0, 1) so demo data is stable across renders.
+// (Using Math.random() during render violates react-hooks/purity.)
+const seededRandom = (i: number) => {
+  const x = Math.sin(i * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+};
+
 export default function PerformancePage() {
   // Data for rapid updates demo
   const [rapidUpdateData, setRapidUpdateData] = useState(
     Array.from({ length: 50 }, (_, i) => ({
       x: `T${i}`,
-      y: Math.random() * 100,
+      y: seededRandom(i) * 100,
     }))
   );
 
@@ -31,13 +38,13 @@ export default function PerformancePage() {
   // Small dataset (no sampling)
   const smallData = Array.from({ length: 100 }, (_, i) => ({
     x: `Point ${i}`,
-    y: Math.sin(i / 10) * 50 + 50 + Math.random() * 10,
+    y: Math.sin(i / 10) * 50 + 50 + seededRandom(i) * 10,
   }));
 
   // Large dataset (auto-sampled to 500 points)
   const largeData = Array.from({ length: 2000 }, (_, i) => ({
     x: `Point ${i}`,
-    y: Math.sin(i / 50) * 50 + 50 + Math.random() * 10,
+    y: Math.sin(i / 50) * 50 + 50 + seededRandom(i) * 10,
   }));
 
   // Performance comparison data

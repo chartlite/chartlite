@@ -57,5 +57,9 @@ export { downsampleLTTB, downsampleEveryNth, autoDownsample } from './utils/samp
 export { TooltipPlugin, type TooltipOptions } from './plugins/TooltipPlugin';
 export { DebugPlugin } from './plugins/DebugPlugin';
 
-// Version
-export const VERSION = '0.2.1';
+// Version — injected at build time from package.json (see tsup.config.ts). The
+// `typeof` guard is safe even when the define is absent (e.g. raw ts-node), because
+// `typeof` on an undeclared identifier yields "undefined" rather than throwing.
+declare const __CHARTLITE_VERSION__: string;
+export const VERSION: string =
+  typeof __CHARTLITE_VERSION__ !== 'undefined' ? __CHARTLITE_VERSION__ : '0.0.0-dev';

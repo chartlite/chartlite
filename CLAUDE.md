@@ -95,12 +95,16 @@ chartlite/
 
 ## Current Feature Set
 
-### ✅ Implemented (v0.0.1)
+### ✅ Implemented (current: v0.2.1)
+
+> The path from here to a stable 1.0 is tracked in [docs/V1_ROADMAP.md](docs/V1_ROADMAP.md),
+> which is the single source of truth for planning and supersedes the phase list below.
 
 **Chart Types:**
 - Line Chart (linear and smooth curves)
 - Bar Chart (vertical and horizontal)
 - Area Chart (filled line charts)
+- Scatter Chart (configurable point shape/size, labels)
 
 **Data Formats:**
 - DataPoint[] - Original: `[{ x: 'Jan', y: 30 }]`
@@ -109,18 +113,21 @@ chartlite/
 - Series-First - Ant Design style: `{ series: [...], data: [...] }`
 
 **Core Features:**
+- Multi-series support with auto-color assignment and configurable legend
+- Reference lines, annotations, and region highlighting
+- Accessibility: ARIA roles/descriptions, keyboard navigation, screen-reader data-table fallback
+- Performance: automatic LTTB downsampling + element pooling for fast updates
+- Plugin system (tree-shakeable tooltip + debug plugins)
 - Responsive sizing (ResizeObserver)
-- Multiple themes (default, midnight, minimal)
-- Smooth animations
-- Custom colors
-- Chart titles
-- SVG export
-- TypeScript support
+- Themes (default, midnight, minimal), custom colors, chart titles, SVG export
+- TypeScript-first
+- Official React wrapper
+
+**Bundle Size (measured):** ~48KB minified, **~13KB gzipped** (zero dependencies)
 
 **Test Coverage:**
-- 90+ comprehensive tests
-- All chart types tested
-- All data formats validated
+- 346 tests passing across 13 files
+- All chart types, data formats, plugins, accessibility, and keyboard nav tested
 - Edge cases covered
 
 ---
