@@ -1,5 +1,13 @@
 # examples
 
+## 0.1.12
+
+### Patch Changes
+
+- Updated dependencies [[`fd806ab`](https://github.com/chartlite/chartlite/commit/fd806ab54bb720d0ca2b7413912b8d2fa1bf12d0)]:
+  - @chartlite/core@1.0.0
+  - @chartlite/react@1.0.0
+
 ## 0.1.11
 
 ### Patch Changes
