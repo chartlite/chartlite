@@ -8,7 +8,7 @@
 
 import { BaseChart } from './BaseChart';
 import type { SparklineConfig, Dimensions } from '../types';
-import { getThemeColors, createLinearScale, generateLinePath } from '../utils';
+import { createLinearScale, generateLinePath } from '../utils';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -42,7 +42,7 @@ export class Sparkline extends BaseChart {
   protected renderChart(): void {
     if (!this.svg) return;
 
-    const colors = getThemeColors(this.config.theme || 'default');
+    const colors = this.themeColors();
     const { margin } = this.dimensions;
     const w = this.dimensions.width - margin.left - margin.right;
     const h = this.dimensions.height - margin.top - margin.bottom;

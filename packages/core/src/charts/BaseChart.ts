@@ -52,6 +52,9 @@ export abstract class BaseChart implements Chart {
   protected data: DataPoint[]; // Legacy: for single-series backward compatibility
   protected seriesData: SeriesData[]; // New: normalized multi-series data
   protected isMultiSeries: boolean;
+  // Resolved (unwrapped) per-series colors, kept so the CSS-variable root tokens
+  // can be emitted even when `seriesData[i].color` is a `var(--cl-series-i, …)` string.
+  protected resolvedSeriesColors: string[] = [];
   private resizeObserver: ResizeObserver | null = null;
   private resizeTimeout: ReturnType<typeof setTimeout> | null = null;
   protected eventListeners: Array<{
@@ -122,17 +125,8 @@ export abstract class BaseChart implements Chart {
       throw new Error('Chart data cannot be empty');
     }
 
-    // Auto-assign colors to series
-    const autoColors = generateSeriesColors(
-      this.seriesData.length,
-      this.config.colors,
-      this.config.theme || 'default'
-    );
-
-    this.seriesData = this.seriesData.map((series, index) => ({
-      ...series,
-      color: series.color || autoColors[index],
-    }));
+    // Auto-assign colors to series (records resolved colors + var-wraps when cssVars)
+    this.assignSeriesColors();
 
     // Automatic data sampling for performance (500+ points)
     // Uses fast 'nth' algorithm for best performance
@@ -354,6 +348,71 @@ export abstract class BaseChart implements Chart {
     }
   }
 
+  /** True when colors should be emitted as `var(--cl-*, fallback)` for CSS theming. */
+  protected get useCssVars(): boolean {
+    return this.config.cssVars === true;
+  }
+
+  /**
+   * Resolve each series' color (explicit per-series > `colors` config > theme
+   * palette), record the resolved values in `resolvedSeriesColors`, and store the
+   * applied color on each series — wrapped as `var(--cl-series-i, resolved)` when
+   * `cssVars` is enabled so it can be overridden with plain CSS.
+   */
+  private assignSeriesColors(): void {
+    const autoColors = generateSeriesColors(
+      this.seriesData.length,
+      this.config.colors,
+      this.config.theme || 'default'
+    );
+
+    this.resolvedSeriesColors = this.seriesData.map(
+      (series, index) => series.color || autoColors[index]
+    );
+
+    this.seriesData = this.seriesData.map((series, index) => ({
+      ...series,
+      color: this.useCssVars
+        ? `var(--cl-series-${index}, ${this.resolvedSeriesColors[index]})`
+        : this.resolvedSeriesColors[index],
+    }));
+  }
+
+  /**
+   * Theme colors for the current config. When `cssVars` is on, the `text`,
+   * `grid`, `primary`, `foreground` and `seriesColors` fields are wrapped as
+   * `var(--cl-*, fallback)` so the whole chart is re-themeable with CSS.
+   * `background` is left raw here; the root token + background var are applied in
+   * {@link createSVG}.
+   */
+  protected themeColors(): ReturnType<typeof getThemeColors> {
+    const colors = getThemeColors(this.config.theme || 'default');
+    if (!this.useCssVars) return colors;
+    return {
+      background: colors.background,
+      foreground: `var(--cl-fg, ${colors.foreground})`,
+      primary: `var(--cl-primary, ${colors.primary})`,
+      grid: `var(--cl-grid, ${colors.grid})`,
+      text: `var(--cl-text, ${colors.text})`,
+      seriesColors: colors.seriesColors.map(
+        (color, i) => `var(--cl-series-${i}, ${color})`
+      ),
+    };
+  }
+
+  /** Emit the theme's CSS custom properties on the SVG root (cssVars mode only). */
+  private applyThemeVars(svg: SVGSVGElement): void {
+    const colors = getThemeColors(this.config.theme || 'default');
+    svg.style.setProperty('--cl-bg', colors.background);
+    svg.style.setProperty('--cl-fg', colors.foreground);
+    svg.style.setProperty('--cl-primary', colors.primary);
+    svg.style.setProperty('--cl-grid', colors.grid);
+    svg.style.setProperty('--cl-text', colors.text);
+    this.resolvedSeriesColors.forEach((color, i) =>
+      svg.style.setProperty(`--cl-series-${i}`, color)
+    );
+  }
+
   /**
    * Create the SVG element with accessibility attributes
    */
@@ -364,9 +423,15 @@ export abstract class BaseChart implements Chart {
     svg.setAttribute('viewBox', `0 0 ${this.dimensions.width} ${this.dimensions.height}`);
     svg.style.fontFamily = 'system-ui, -apple-system, sans-serif';
 
-    // Apply theme background
+    // Apply theme background. In cssVars mode, publish the theme tokens on the
+    // root and reference the background through `--cl-bg` so CSS can override it.
     const colors = getThemeColors(this.config.theme || 'default');
-    svg.style.backgroundColor = colors.background;
+    if (this.useCssVars) {
+      this.applyThemeVars(svg);
+      svg.style.backgroundColor = `var(--cl-bg, ${colors.background})`;
+    } else {
+      svg.style.backgroundColor = colors.background;
+    }
 
     // ARIA role and label for accessibility
     svg.setAttribute('role', 'img');
@@ -641,17 +706,8 @@ export abstract class BaseChart implements Chart {
     this.seriesData = normalizeToSeriesData(dataInput);
     this.data = this.seriesData[0]?.data || [];
 
-    // Re-assign colors
-    const autoColors = generateSeriesColors(
-      this.seriesData.length,
-      this.config.colors,
-      this.config.theme || 'default'
-    );
-
-    this.seriesData = this.seriesData.map((series, index) => ({
-      ...series,
-      color: series.color || autoColors[index],
-    }));
+    // Re-assign colors (records resolved colors + var-wraps when cssVars)
+    this.assignSeriesColors();
 
     // Automatic data sampling for performance (500+ points)
     this.seriesData = this.seriesData.map(series => {
