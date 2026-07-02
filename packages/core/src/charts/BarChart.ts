@@ -3,7 +3,7 @@
  */
 
 import { BaseChart } from './BaseChart';
-import type { BarChartConfig } from '../types';
+import type { BarChartConfig, DataPoint, SeriesData } from '../types';
 import {
   createLinearScale,
   createBandScale,
@@ -13,6 +13,8 @@ import {
 } from '../utils';
 import { setDataPointAttrs } from '../render/dataAttrs';
 
+type ThemeColors = ReturnType<typeof getThemeColors>;
+
 export class BarChart extends BaseChart {
   protected config: BarChartConfig;
 
@@ -21,6 +23,7 @@ export class BarChart extends BaseChart {
 
     this.config = {
       orientation: 'vertical',
+      stacked: false,
       ...config,
     };
   }
@@ -45,15 +48,93 @@ export class BarChart extends BaseChart {
     }
   }
 
+  /** True when the chart should stack series rather than group them. */
+  private get isStacked(): boolean {
+    return this.config.stacked === true && this.seriesData.length > 1;
+  }
+
+  /** Per-category stacked total (sum of non-negative series values). */
+  private stackedTotal(xValue: string): number {
+    return this.seriesData.reduce((sum, series) => {
+      const point = series.data.find((d) => String(d.x) === xValue);
+      return sum + Math.max(0, point?.y ?? 0);
+    }, 0);
+  }
+
+  /**
+   * Append a single bar rectangle with accessibility attributes, the data-*
+   * contract, and the hover effect. Shared by grouped/stacked and both orientations.
+   */
+  private appendBar(
+    group: SVGGElement,
+    rect: { x: number; y: number; width: number; height: number; rx: number },
+    color: string,
+    meta: {
+      series: SeriesData;
+      seriesIndex: number;
+      index: number;
+      d: DataPoint;
+      cx: number;
+      cy: number;
+    }
+  ): void {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    el.setAttribute('x', String(rect.x));
+    el.setAttribute('y', String(rect.y));
+    el.setAttribute('width', String(Math.abs(rect.width)));
+    el.setAttribute('height', String(Math.abs(rect.height)));
+    el.setAttribute('fill', color);
+    el.setAttribute('rx', String(rect.rx));
+    el.classList.add('bar');
+    el.classList.add('data-point');
+
+    // ARIA attributes for accessibility
+    el.setAttribute('role', 'img');
+    const seriesLabel = this.seriesData.length > 1 ? `${meta.series.name}, ` : '';
+    el.setAttribute('aria-label', `${seriesLabel}Bar: ${meta.d.x}, value ${meta.d.y}`);
+    el.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
+    setDataPointAttrs(el, {
+      x: meta.d.x,
+      y: meta.d.y,
+      seriesName: meta.series.name,
+      seriesIndex: meta.seriesIndex,
+      index: meta.index,
+      cx: meta.cx,
+      cy: meta.cy,
+    });
+
+    // Add hover effect with tracked listeners
+    el.style.transition = 'opacity 0.2s';
+    this.addEventListenerTracked(el, 'mouseenter', () => {
+      el.style.opacity = '0.8';
+    });
+    this.addEventListenerTracked(el, 'mouseleave', () => {
+      el.style.opacity = '1';
+    });
+
+    group.appendChild(el);
+  }
+
   private renderVerticalBars(
     group: SVGGElement,
     chartWidth: number,
     chartHeight: number,
-    colors: ReturnType<typeof getThemeColors>
+    colors: ThemeColors
   ): void {
-    // Get all unique x values and combined y range
     const xValues = getAllXValues(this.seriesData).map(String);
-    const { min: yMin, max: yMax } = getCombinedYRange(this.seriesData);
+    const stacked = this.isStacked;
+
+    // Y range: stacked sums to per-category totals from 0; grouped uses the combined range.
+    let yMin: number;
+    let yMax: number;
+    if (stacked) {
+      yMin = 0;
+      yMax = Math.max(1, ...xValues.map((x) => this.stackedTotal(x)));
+    } else {
+      const range = getCombinedYRange(this.seriesData);
+      yMin = range.min;
+      yMax = range.max;
+    }
 
     // Set chart bounds for Phase 2 features
     this.chartBounds = {
@@ -71,56 +152,54 @@ export class BarChart extends BaseChart {
     // Render axes using shared method
     this.renderCategoricalXLinearYAxes(group, xValues, yMin, yMax, chartWidth, chartHeight, colors);
 
+    const groupPadding = 0.1;
+
+    if (stacked) {
+      const drawnWidth = xScale.bandwidth * (1 - groupPadding);
+      const cumulative = new Map<string, number>();
+      xValues.forEach((x) => cumulative.set(x, 0));
+
+      this.seriesData.forEach((series, seriesIndex) => {
+        series.data.forEach((d, index) => {
+          const xKey = String(d.x);
+          const value = Math.max(0, d.y);
+          const y0 = cumulative.get(xKey) ?? 0;
+          const y1 = y0 + value;
+          cumulative.set(xKey, y1);
+
+          const barX = xScale.scale(xKey) + (xScale.bandwidth - drawnWidth) / 2;
+          const yTop = yScale(y1);
+          const segHeight = yScale(y0) - yScale(y1);
+
+          this.appendBar(
+            group,
+            { x: barX, y: yTop, width: drawnWidth, height: segHeight, rx: 2 },
+            series.color || colors.primary,
+            { series, seriesIndex, index, d, cx: barX + drawnWidth / 2, cy: yTop }
+          );
+        });
+      });
+      return;
+    }
+
+    // Grouped bars (side-by-side)
     const seriesCount = this.seriesData.length;
-    const groupPadding = 0.1; // Padding between bar groups
     const barWidth = xScale.bandwidth / seriesCount;
 
-    // Render bars for each series
     this.seriesData.forEach((series, seriesIndex) => {
       series.data.forEach((d, index) => {
         const groupX = xScale.scale(String(d.x));
         const barX = groupX + seriesIndex * barWidth;
-        const barHeight = chartHeight - yScale(d.y);
         const y = yScale(d.y);
+        const barHeight = chartHeight - y;
         const drawnWidth = barWidth * (1 - groupPadding);
 
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', String(barX));
-        rect.setAttribute('y', String(y));
-        rect.setAttribute('width', String(drawnWidth));
-        rect.setAttribute('height', String(Math.abs(barHeight)));
-        rect.setAttribute('fill', series.color || colors.primary);
-        rect.setAttribute('rx', '4'); // Rounded corners
-        rect.classList.add('bar');
-        rect.classList.add('data-point');
-
-        // ARIA attributes for accessibility
-        rect.setAttribute('role', 'img');
-        const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
-        rect.setAttribute('aria-label', `${seriesLabel}Bar: ${d.x}, value ${d.y}`);
-        rect.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
-        setDataPointAttrs(rect, {
-          x: d.x,
-          y: d.y,
-          seriesName: series.name,
-          seriesIndex,
-          index,
-          cx: barX + drawnWidth / 2,
-          cy: y,
-        });
-
-        // Add hover effect with tracked listeners
-        rect.style.transition = 'opacity 0.2s';
-        const handleMouseEnter = () => {
-          rect.style.opacity = '0.8';
-        };
-        const handleMouseLeave = () => {
-          rect.style.opacity = '1';
-        };
-        this.addEventListenerTracked(rect, 'mouseenter', handleMouseEnter);
-        this.addEventListenerTracked(rect, 'mouseleave', handleMouseLeave);
-
-        group.appendChild(rect);
+        this.appendBar(
+          group,
+          { x: barX, y, width: drawnWidth, height: barHeight, rx: 4 },
+          series.color || colors.primary,
+          { series, seriesIndex, index, d, cx: barX + drawnWidth / 2, cy: y }
+        );
       });
     });
   }
@@ -129,11 +208,21 @@ export class BarChart extends BaseChart {
     group: SVGGElement,
     chartWidth: number,
     chartHeight: number,
-    colors: ReturnType<typeof getThemeColors>
+    colors: ThemeColors
   ): void {
-    // Get all unique y values (categories) and combined x range
     const yValues = getAllXValues(this.seriesData).map(String);
-    const { min: xMin, max: xMax } = getCombinedYRange(this.seriesData);
+    const stacked = this.isStacked;
+
+    let xMin: number;
+    let xMax: number;
+    if (stacked) {
+      xMin = 0;
+      xMax = Math.max(1, ...yValues.map((y) => this.stackedTotal(y)));
+    } else {
+      const range = getCombinedYRange(this.seriesData);
+      xMin = range.min;
+      xMax = range.max;
+    }
 
     this.chartBounds = {
       xMin,
@@ -150,11 +239,40 @@ export class BarChart extends BaseChart {
     // Render axes using shared method
     this.renderLinearXCategoricalYAxes(group, yValues, xMin, xMax, chartWidth, chartHeight, colors);
 
-    const seriesCount = this.seriesData.length;
     const groupPadding = 0.1;
+
+    if (stacked) {
+      const drawnHeight = yScale.bandwidth * (1 - groupPadding);
+      const cumulative = new Map<string, number>();
+      yValues.forEach((y) => cumulative.set(y, 0));
+
+      this.seriesData.forEach((series, seriesIndex) => {
+        series.data.forEach((d, index) => {
+          const cat = String(d.x);
+          const value = Math.max(0, d.y);
+          const x0 = cumulative.get(cat) ?? 0;
+          const x1 = x0 + value;
+          cumulative.set(cat, x1);
+
+          const barY = yScale.scale(cat) + (yScale.bandwidth - drawnHeight) / 2;
+          const barX = xScale(x0);
+          const segWidth = xScale(x1) - xScale(x0);
+
+          this.appendBar(
+            group,
+            { x: barX, y: barY, width: segWidth, height: drawnHeight, rx: 2 },
+            series.color || colors.primary,
+            { series, seriesIndex, index, d, cx: barX + segWidth, cy: barY + drawnHeight / 2 }
+          );
+        });
+      });
+      return;
+    }
+
+    // Grouped bars
+    const seriesCount = this.seriesData.length;
     const barHeight = yScale.bandwidth / seriesCount;
 
-    // Render bars for each series
     this.seriesData.forEach((series, seriesIndex) => {
       series.data.forEach((d, index) => {
         const groupY = yScale.scale(String(d.x));
@@ -162,43 +280,12 @@ export class BarChart extends BaseChart {
         const barWidth = xScale(d.y);
         const drawnHeight = barHeight * (1 - groupPadding);
 
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', '0');
-        rect.setAttribute('y', String(barY));
-        rect.setAttribute('width', String(Math.abs(barWidth)));
-        rect.setAttribute('height', String(drawnHeight));
-        rect.setAttribute('fill', series.color || colors.primary);
-        rect.setAttribute('rx', '4'); // Rounded corners
-        rect.classList.add('bar');
-        rect.classList.add('data-point');
-
-        // ARIA attributes for accessibility
-        rect.setAttribute('role', 'img');
-        const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
-        rect.setAttribute('aria-label', `${seriesLabel}Bar: ${d.x}, value ${d.y}`);
-        rect.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
-        setDataPointAttrs(rect, {
-          x: d.x,
-          y: d.y,
-          seriesName: series.name,
-          seriesIndex,
-          index,
-          cx: Math.abs(barWidth),
-          cy: barY + drawnHeight / 2,
-        });
-
-        // Add hover effect with tracked listeners
-        rect.style.transition = 'opacity 0.2s';
-        const handleMouseEnter = () => {
-          rect.style.opacity = '0.8';
-        };
-        const handleMouseLeave = () => {
-          rect.style.opacity = '1';
-        };
-        this.addEventListenerTracked(rect, 'mouseenter', handleMouseEnter);
-        this.addEventListenerTracked(rect, 'mouseleave', handleMouseLeave);
-
-        group.appendChild(rect);
+        this.appendBar(
+          group,
+          { x: 0, y: barY, width: barWidth, height: drawnHeight, rx: 4 },
+          series.color || colors.primary,
+          { series, seriesIndex, index, d, cx: barWidth, cy: barY + drawnHeight / 2 }
+        );
       });
     });
   }

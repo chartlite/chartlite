@@ -77,7 +77,9 @@ jobs:
           # Gzipped size is what users actually download, so that's what we budget.
           RAW=$(stat -c%s dist/index.js)
           GZIP=$(gzip -c dist/index.js | wc -c)
-          BUDGET=15360  # 15 KB gzipped hard ceiling (current: ~12.7 KB)
+          BUDGET=20480  # 20 KB gzipped ceiling — room for the full core chart-type set
+                        # while staying 10-25x smaller than Recharts/Chart.js/ECharts.
+                        # Deliberately chosen (not to be raised casually); keep actual low.
           echo "Core bundle: raw ${RAW} B, gzipped ${GZIP} B (budget ${BUDGET} B)"
           if [ "$GZIP" -gt "$BUDGET" ]; then
             echo "::error::Gzipped bundle ${GZIP} B exceeds budget ${BUDGET} B"
