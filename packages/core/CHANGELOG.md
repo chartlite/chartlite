@@ -1,5 +1,29 @@
 # @chartlite/core
 
+## 0.10.0
+
+### Minor Changes
+
+- [#27](https://github.com/chartlite/chartlite/pull/27) [`4107668`](https://github.com/chartlite/chartlite/commit/41076686a984514f91ca9978b7efd0f68da5a56c) Thanks [@CanadaApollo6](https://github.com/CanadaApollo6)! - Add opt-in CSS-variable theming (`cssVars`)
+
+  Set `cssVars: true` on any chart to publish the theme as CSS custom properties
+  (`--cl-bg`, `--cl-fg`, `--cl-text`, `--cl-grid`, `--cl-primary`, `--cl-series-0..N`)
+  on the SVG root and render every color as `var(--cl-*, <fallback>)`. The chart
+  then becomes fully re-themeable with plain CSS — including dark mode via
+  `@media (prefers-color-scheme: dark)` — with **no JavaScript**.
+
+  This pairs with server-side rendering: `renderToString({ ...spec, cssVars: true })`
+  produces a themeable SVG you can drop into a page and restyle entirely in CSS, so
+  light/dark theming needs zero client runtime. The option is exposed in the
+  `ChartSpec` schema, so it also works through the `@chartlite/mcp` server.
+
+  Default is `false`, so existing output is unchanged.
+
+- [#25](https://github.com/chartlite/chartlite/pull/25) [`75d1508`](https://github.com/chartlite/chartlite/commit/75d1508e83a4d9cdfa56a9eea14b98061530d31b) Thanks [@CanadaApollo6](https://github.com/CanadaApollo6)! - Polish: gradient area fills + reduced-motion support
+
+  - **Area charts now fill with a vertical gradient by default** — the series color fades from `fillOpacity` at the top to transparent at the bottom, the classic "beautiful area" look. Opt out with `gradient: false` for a flat fill. Each series gets its own `<linearGradient>` with collision-safe ids, and the option is exposed in the `ChartSpec` schema (so it works through SSR and the MCP server).
+  - **The entrance animation now respects `prefers-reduced-motion`.** The fade-in is gated behind `@media (prefers-reduced-motion: no-preference)`, so users who ask their OS to reduce motion never see it (WCAG 2.3.3).
+
 ## 0.9.0
 
 ### Minor Changes
