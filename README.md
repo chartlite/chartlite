@@ -84,12 +84,13 @@ highlighting** across chart types. More types coming soon (see the [roadmap](doc
 ### 🎨 Beautiful Themes
 
 ```typescript
-theme: 'default'    // Clean, professional (Tailwind-inspired)
-theme: 'midnight'   // Dark mode
-theme: 'minimal'    // Black & white, print-ready
-theme: 'material'   // Material Design 3 (coming soon)
-theme: 'tailwind'   // Tailwind CSS colors (coming soon)
-theme: 'nord'       // Nord color palette (coming soon)
+theme: 'default'        // Clean, professional (Tailwind-inspired)
+theme: 'midnight'       // Dark mode
+theme: 'minimal'        // Black & white, print-ready
+theme: 'tailwind'       // Tailwind CSS colors
+theme: 'nord'           // Nord color palette (dark)
+theme: 'high-contrast'  // Maximum contrast (accessibility)
+theme: 'material'       // Material Design 3 (coming soon)
 ```
 
 ### 📦 Flexible Data Formats

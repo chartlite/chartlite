@@ -187,6 +187,57 @@ export function getThemeColors(theme: string): {
         '#8a8a8a', // gray-450 (3.62:1) ✅
       ],
     },
+    tailwind: {
+      background: '#ffffff',
+      foreground: '#f8fafc', // slate-50
+      primary: '#4f46e5', // indigo-600
+      grid: '#e2e8f0', // slate-200 (decorative)
+      text: '#0f172a', // slate-900
+      seriesColors: [
+        '#4f46e5', // indigo-600
+        '#059669', // emerald-600
+        '#d97706', // amber-600
+        '#e11d48', // rose-600
+        '#0284c7', // sky-600
+        '#7c3aed', // violet-600
+        '#0d9488', // teal-600
+        '#ea580c', // orange-600
+      ],
+    },
+    nord: {
+      background: '#2e3440', // nord0 (polar night)
+      foreground: '#3b4252', // nord1
+      primary: '#88c0d0', // nord8 (frost)
+      grid: '#434c5e', // nord2 (decorative)
+      text: '#eceff4', // nord6 (snow storm)
+      seriesColors: [
+        '#88c0d0', // frost
+        '#a3be8c', // aurora green
+        '#ebcb8b', // aurora yellow
+        '#bf616a', // aurora red
+        '#b48ead', // aurora purple
+        '#81a1c1', // frost blue
+        '#8fbcbb', // frost teal
+        '#d08770', // aurora orange
+      ],
+    },
+    'high-contrast': {
+      background: '#ffffff',
+      foreground: '#ffffff',
+      primary: '#000000',
+      grid: '#767676', // minimum 3:1 on white (visible, not decorative)
+      text: '#000000',
+      seriesColors: [
+        '#000000', // black (21:1)
+        '#1d4ed8', // blue-700 (~6.3:1)
+        '#b91c1c', // red-700 (~5.9:1)
+        '#15803d', // green-700 (~4.5:1)
+        '#6b21a8', // purple-800 (~8:1)
+        '#a16207', // yellow-700 (~4.7:1)
+        '#0e7490', // cyan-700 (~4.8:1)
+        '#c2410c', // orange-700 (~4.6:1)
+      ],
+    },
   };
 
   return themes[theme as keyof typeof themes] || themes.default;

@@ -1,4 +1,10 @@
-export type Theme = 'default' | 'midnight' | 'minimal';
+export type Theme =
+  | 'default'
+  | 'midnight'
+  | 'minimal'
+  | 'tailwind'
+  | 'nord'
+  | 'high-contrast';
 
 export interface DataPoint {
   x: string | number;
