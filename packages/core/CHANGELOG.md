@@ -1,5 +1,14 @@
 # @chartlite/core
 
+## 0.5.0
+
+### Minor Changes
+
+- [#11](https://github.com/chartlite/chartlite/pull/11) [`c1914a1`](https://github.com/chartlite/chartlite/commit/c1914a126d4a59d1287c99e8bed5811d640fbc38) Thanks [@CanadaApollo6](https://github.com/CanadaApollo6)! - Add three theme presets: **tailwind**, **nord**, and **high-contrast**. These were
+  advertised in the docs but weren't actually implemented — this makes them real, each
+  with an 8-colour series palette. `high-contrast` is tuned for accessibility (visible
+  gridlines, high-contrast series colours). The `Theme` type is widened accordingly.
+
 ## 0.4.0
 
 ### Minor Changes
