@@ -14,14 +14,21 @@
     "./interactive": {
       "types": "./dist/interactive/index.d.ts",
       "import": "./dist/interactive/index.js"
-    }
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./schema.json": "./schema.json"
   },
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "schema.json"
   ],
   "scripts": {
     "build": "tsup",
+    "gen:schema": "tsx scripts/gen-schema.ts",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
