@@ -11,13 +11,13 @@
   "dependencies": {
     "@chartlite/core": "workspace:*",
     "@chartlite/react": "workspace:*",
-    "next": "^16.0.1",
+    "@gsap/react": "^2.1.2",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.14",
+    "next": "^16.2.10",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-syntax-highlighter": "^15.6.6",
-    "lenis": "^1.1.14",
-    "gsap": "^3.12.5",
-    "@gsap/react": "^2.1.2"
+    "react-syntax-highlighter": "^15.6.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -26,7 +26,7 @@
     "@types/react-dom": "^19",
     "@types/react-syntax-highlighter": "^15.5.13",
     "eslint": "^9",
-    "eslint-config-next": "16.0.1",
+    "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
