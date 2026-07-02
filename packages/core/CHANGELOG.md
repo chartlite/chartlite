@@ -1,5 +1,22 @@
 # @chartlite/core
 
+## 0.12.1
+
+### Patch Changes
+
+- [#35](https://github.com/chartlite/chartlite/pull/35) [`1d657c0`](https://github.com/chartlite/chartlite/commit/1d657c0b36ba42b0ca80601d0b787b915cd02073) Thanks [@CanadaApollo6](https://github.com/CanadaApollo6)! - Fix `cssVars`: theme tokens are now overridable from an ancestor
+
+  Previously, enabling `cssVars` also wrote the `--cl-*` tokens as inline styles on
+  the SVG element itself. Those inline values won over any `--cl-*` set on a parent
+  (`:root`, a wrapper, a dark-mode media query), so external CSS theming silently
+  did nothing — the chart always used its own values.
+
+  Now the chart only emits colors as `var(--cl-*, <fallback>)` and does **not** pin
+  the tokens on the SVG. The fallback is the default, and an ancestor can override
+  any token through the normal CSS cascade — so palette swaps, global dark-mode
+  toggles, and `@media (prefers-color-scheme: dark)` on the SSR output all work as
+  documented.
+
 ## 0.12.0
 
 ## 0.11.0
