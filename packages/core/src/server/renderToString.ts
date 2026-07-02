@@ -20,6 +20,7 @@ import { BarChart } from '../charts/BarChart';
 import { AreaChart } from '../charts/AreaChart';
 import { ScatterChart } from '../charts/ScatterChart';
 import { PieChart } from '../charts/PieChart';
+import { RadialChart } from '../charts/RadialChart';
 import { Sparkline } from '../charts/Sparkline';
 import type {
   LineChartConfig,
@@ -27,12 +28,20 @@ import type {
   AreaChartConfig,
   ScatterChartConfig,
   PieChartConfig,
+  RadialChartConfig,
   SparklineConfig,
 } from '../types';
 import { installDOM } from './dom';
 
 /** The chart types renderable from a declarative spec. */
-export type ChartType = 'line' | 'bar' | 'area' | 'scatter' | 'pie' | 'sparkline';
+export type ChartType =
+  | 'line'
+  | 'bar'
+  | 'area'
+  | 'scatter'
+  | 'pie'
+  | 'radial'
+  | 'sparkline';
 
 /**
  * A single declarative chart description: a `type` discriminator plus that
@@ -45,6 +54,7 @@ export type ChartSpec =
   | ({ type: 'area' } & AreaChartConfig)
   | ({ type: 'scatter' } & ScatterChartConfig)
   | ({ type: 'pie' } & PieChartConfig)
+  | ({ type: 'radial' } & RadialChartConfig)
   | ({ type: 'sparkline' } & SparklineConfig);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,6 +66,7 @@ const REGISTRY: Record<ChartType, ChartCtor> = {
   area: AreaChart,
   scatter: ScatterChart,
   pie: PieChart,
+  radial: RadialChart,
   sparkline: Sparkline,
 };
 

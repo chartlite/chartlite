@@ -18,6 +18,7 @@
         "area",
         "scatter",
         "pie",
+        "radial",
         "sparkline"
       ]
     },
@@ -184,6 +185,26 @@
         "square",
         "triangle"
       ]
+    },
+    "stacked": {
+      "type": "boolean"
+    },
+    "max": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "startAngle": {
+      "type": "number"
+    },
+    "endAngle": {
+      "type": "number"
+    },
+    "thickness": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "showValue": {
+      "type": "boolean"
     }
   },
   "additionalProperties": true

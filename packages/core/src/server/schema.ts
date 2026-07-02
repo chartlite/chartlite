@@ -90,6 +90,13 @@ export const chartSpecSchema = {
     showLabels: { type: 'boolean' },
     pointSize: { type: 'number', exclusiveMinimum: 0 },
     pointShape: { type: 'string', enum: ['circle', 'square', 'triangle'] },
+    stacked: { type: 'boolean' },
+    // radial / gauge
+    max: { type: 'number', exclusiveMinimum: 0 },
+    startAngle: { type: 'number' },
+    endAngle: { type: 'number' },
+    thickness: { type: 'number', exclusiveMinimum: 0 },
+    showValue: { type: 'boolean' },
   },
   additionalProperties: true,
 } as const;
