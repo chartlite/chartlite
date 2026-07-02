@@ -1,6 +1,6 @@
 {
   "name": "@chartlite/mcp",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Model Context Protocol server for Chartlite — render charts to SVG from a JSON spec. Zero-dependency, ~13KB core, agent-native.",
   "type": "module",
   "main": "./dist/index.js",
