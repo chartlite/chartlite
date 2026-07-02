@@ -93,6 +93,8 @@ export const chartSpecSchema = {
     showPoints: { type: 'boolean' },
     fillOpacity: { type: 'number', minimum: 0, maximum: 1 },
     gradient: { type: 'boolean' },
+    // combo: default render type for series that don't set one via series-first data
+    defaultType: { type: 'string', enum: ['line', 'bar', 'area'] },
     innerRadius: { type: 'number', minimum: 0, maximum: 1 },
     showLabels: { type: 'boolean' },
     pointSize: { type: 'number', exclusiveMinimum: 0 },

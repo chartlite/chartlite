@@ -265,6 +265,7 @@ export function normalizeToSeriesData(
     return series.map(s => ({
       name: s.name,
       color: s.color,
+      type: s.type,
       data: records.map(record => ({
         x: record[xAxisKey],
         y: record[s.dataKey],
@@ -284,6 +285,7 @@ export function normalizeToSeriesData(
       return {
         name: definition?.name || key,
         color: definition?.color,
+        type: definition?.type,
         data: x.map((xVal, i) => ({
           x: xVal,
           y: values[i],

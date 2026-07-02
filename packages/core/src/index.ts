@@ -26,6 +26,7 @@ export type {
   AreaChartConfig,
   PieChartConfig,
   RadialChartConfig,
+  ComboChartConfig,
   ScatterChartConfig,
   SparklineConfig,
   Chart,
@@ -42,6 +43,7 @@ export { AreaChart } from './charts/AreaChart';
 export { ScatterChart } from './charts/ScatterChart';
 export { PieChart } from './charts/PieChart';
 export { RadialChart } from './charts/RadialChart';
+export { ComboChart } from './charts/ComboChart';
 export { Sparkline } from './charts/Sparkline';
 
 // Export utilities (for advanced users)

@@ -43,6 +43,19 @@ describe('renderToString', () => {
       { type: 'scatter', data: [{ x: 1, y: 2 }, { x: 3, y: 4 }] },
       { type: 'pie', data: [{ x: 'A', y: 30 }, { x: 'B', y: 70 }] },
       { type: 'radial', data: [{ x: 'Score', y: 72 }], max: 100 },
+      {
+        type: 'combo',
+        data: {
+          series: [
+            { name: 'Rev', dataKey: 'rev', type: 'bar' },
+            { name: 'Trend', dataKey: 'trend', type: 'line' },
+          ],
+          data: [
+            { x: 'Jan', rev: 10, trend: 4 },
+            { x: 'Feb', rev: 20, trend: 8 },
+          ],
+        },
+      },
       { type: 'sparkline', data: [1, 2, 3, 2, 4] },
     ];
     for (const spec of specs) {
