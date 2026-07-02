@@ -81,14 +81,14 @@ describe('renderToString', () => {
     expect(svg).toContain('class="data-point"');
   });
 
-  it('emits CSS custom properties + var() colors when cssVars is set (zero-JS theming)', () => {
+  it('emits var() colors when cssVars is set (zero-JS, override-ready theming)', () => {
     const svg = renderToString({ type: 'line', data: lineData, cssVars: true });
-    // Root tokens are published so CSS (e.g. a dark-mode media query) can override them.
-    expect(svg).toContain('--cl-bg:');
-    expect(svg).toContain('--cl-series-0:');
+    // Colors reference `var(--cl-*, fallback)` — the fallback is the default and an
+    // ancestor (e.g. a dark-mode media query on :root) overrides it with no JS.
     expect(svg).toContain('background-color: var(--cl-bg,');
-    // Colors reference the tokens, so the server-rendered SVG is re-themeable with no JS.
     expect(svg).toMatch(/stroke="var\(--cl-series-0,/);
+    // The tokens must NOT be pinned on the SVG, or overrides would be inert.
+    expect(svg).not.toMatch(/--cl-series-0:/);
   });
 
   it('respects width, height and theme', () => {

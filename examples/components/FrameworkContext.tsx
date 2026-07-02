@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-type FrameworkType = 'vanilla' | 'react' | 'vue' | 'svelte' | 'angular';
+type FrameworkType = 'vanilla' | 'react' | 'vue' | 'svelte';
 
 interface FrameworkContextType {
   selectedFramework: FrameworkType;
@@ -16,7 +16,8 @@ export function FrameworkProvider({ children }: { children: ReactNode }) {
 
   return (
     <FrameworkContext.Provider value={{ selectedFramework, setSelectedFramework }}>
-      {children}
+      {/* Shared shell for example pages: clears the fixed nav and constrains width. */}
+      <div className="mx-auto max-w-6xl px-6 pt-32 pb-24">{children}</div>
     </FrameworkContext.Provider>
   );
 }

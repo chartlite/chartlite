@@ -13,24 +13,30 @@ interface ExampleCardProps {
 
 export default function ExampleCard({ title, description, children, code, badge }: ExampleCardProps) {
   return (
-    <div className="bg-white rounded-2xl p-8 shadow-2xl hover:shadow-3xl transition-shadow duration-300">
+    <div className="border-glow relative rounded-2xl glass p-6 sm:p-8">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <h2 className="text-2xl font-semibold text-gray-900">{title}</h2>
+        <div className="mb-2 flex items-center gap-3">
+          <h2 className="font-display text-2xl font-semibold text-mist-100">{title}</h2>
           {badge && (
-            <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full uppercase">
+            <span className="rounded-full border border-glow-cyan/30 bg-glow-cyan/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-glow-cyan">
               {badge}
             </span>
           )}
         </div>
-        <p className="text-gray-600">{description}</p>
+        <p className="text-mist-500">{description}</p>
       </div>
 
-      {/* Chart Display */}
-      <div className="mb-6 min-h-[300px]">{children}</div>
+      {/* Chart panel — follows the global chart theme (dark by default, light via
+          the nav toggle). Charts inside use `cssVars` so they re-theme with it. */}
+      <div
+        className="mb-6 min-h-[280px] rounded-xl p-4"
+        style={{ background: 'var(--chart-slab)', border: '1px solid var(--chart-slab-border)' }}
+      >
+        {children}
+      </div>
 
-      {/* Code Viewer */}
+      {/* Code */}
       <CodeViewer code={code} />
     </div>
   );

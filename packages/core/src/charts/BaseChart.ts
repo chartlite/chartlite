@@ -400,19 +400,6 @@ export abstract class BaseChart implements Chart {
     };
   }
 
-  /** Emit the theme's CSS custom properties on the SVG root (cssVars mode only). */
-  private applyThemeVars(svg: SVGSVGElement): void {
-    const colors = getThemeColors(this.config.theme || 'default');
-    svg.style.setProperty('--cl-bg', colors.background);
-    svg.style.setProperty('--cl-fg', colors.foreground);
-    svg.style.setProperty('--cl-primary', colors.primary);
-    svg.style.setProperty('--cl-grid', colors.grid);
-    svg.style.setProperty('--cl-text', colors.text);
-    this.resolvedSeriesColors.forEach((color, i) =>
-      svg.style.setProperty(`--cl-series-${i}`, color)
-    );
-  }
-
   /**
    * Create the SVG element with accessibility attributes
    */
@@ -423,11 +410,14 @@ export abstract class BaseChart implements Chart {
     svg.setAttribute('viewBox', `0 0 ${this.dimensions.width} ${this.dimensions.height}`);
     svg.style.fontFamily = 'system-ui, -apple-system, sans-serif';
 
-    // Apply theme background. In cssVars mode, publish the theme tokens on the
-    // root and reference the background through `--cl-bg` so CSS can override it.
+    // Apply theme background. In cssVars mode, reference the background through
+    // `var(--cl-bg, …)` and — crucially — do NOT set `--cl-bg` (or any `--cl-*`)
+    // on the SVG itself. The colors are already emitted as `var(--cl-*, fallback)`,
+    // so the fallback is the default and an ancestor (`:root`, a wrapper, a global
+    // theme toggle) can override every token via the normal CSS cascade. Setting
+    // the tokens on the SVG here would win over ancestors and make theming inert.
     const colors = getThemeColors(this.config.theme || 'default');
     if (this.useCssVars) {
-      this.applyThemeVars(svg);
       svg.style.backgroundColor = `var(--cl-bg, ${colors.background})`;
     } else {
       svg.style.backgroundColor = colors.background;

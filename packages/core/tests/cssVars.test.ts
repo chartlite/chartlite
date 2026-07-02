@@ -42,13 +42,14 @@ describe('CSS-variable theming (cssVars)', () => {
   });
 
   describe('enabled', () => {
-    it('publishes theme tokens as custom properties on the SVG root', () => {
+    it('does NOT set the tokens on the SVG (so an ancestor can override them)', () => {
+      // Critical: if the chart set `--cl-*` on the SVG, those inline values would
+      // win over any ancestor override and make CSS theming inert. The defaults
+      // live in the `var(--cl-*, fallback)` references instead.
       new LineChart(container, { data, cssVars: true, theme: 'midnight' }).render();
       const svg = container.querySelector('svg')!;
-      expect(svg.style.getPropertyValue('--cl-bg')).toBe('#0f172a');
-      expect(svg.style.getPropertyValue('--cl-text')).toBe('#f1f5f9');
-      expect(svg.style.getPropertyValue('--cl-grid')).toBe('#334155');
-      expect(svg.style.getPropertyValue('--cl-series-0')).toBeTruthy();
+      expect(svg.style.getPropertyValue('--cl-bg')).toBe('');
+      expect(svg.style.getPropertyValue('--cl-series-0')).toBe('');
     });
 
     it('references the background through var(--cl-bg)', () => {
@@ -63,21 +64,16 @@ describe('CSS-variable theming (cssVars)', () => {
       expect(stroke).toMatch(/^var\(--cl-series-0, #[0-9a-f]{6}\)$/i);
     });
 
-    it('gives each series its own --cl-series-N token and var reference', () => {
+    it('gives each series its own var(--cl-series-N) reference', () => {
       new BarChart(container, { data: multi, cssVars: true }).render();
-      const svg = container.querySelector('svg')!;
-      expect(svg.style.getPropertyValue('--cl-series-0')).toBeTruthy();
-      expect(svg.style.getPropertyValue('--cl-series-1')).toBeTruthy();
       const rects = Array.from(container.querySelectorAll('rect'));
       const fills = rects.map((r) => r.getAttribute('fill')).filter(Boolean);
       expect(fills.some((f) => /^var\(--cl-series-0,/.test(f!))).toBe(true);
       expect(fills.some((f) => /^var\(--cl-series-1,/.test(f!))).toBe(true);
     });
 
-    it('honors a custom color as the --cl-series-N token and fallback', () => {
+    it('uses a custom color as the var fallback', () => {
       new LineChart(container, { data, cssVars: true, colors: ['#ff0000'] }).render();
-      const svg = container.querySelector('svg')!;
-      expect(svg.style.getPropertyValue('--cl-series-0')).toBe('#ff0000');
       expect(container.querySelector('path')?.getAttribute('stroke')).toBe(
         'var(--cl-series-0, #ff0000)'
       );

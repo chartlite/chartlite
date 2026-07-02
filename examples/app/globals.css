@@ -1,13 +1,219 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------ *
+ * Chartlite — dark cinematic design system
+ * ------------------------------------------------------------------ */
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-inter), sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+
+  /* Ink scale (near-black canvas) */
+  --color-ink-950: #050509;
+  --color-ink-900: #0a0a12;
+  --color-ink-850: #0e0e18;
+  --color-ink-800: #14141f;
+  --color-ink-700: #1c1c2b;
+  --color-ink-600: #2a2a3d;
+
+  /* Text */
+  --color-mist-100: #f4f4fb;
+  --color-mist-300: #c8c8d8;
+  --color-mist-500: #8b8ba7;
+  --color-mist-600: #6a6a85;
+
+  /* Luminous accents */
+  --color-glow-cyan: #22d3ee;
+  --color-glow-blue: #6366f1;
+  --color-glow-violet: #a855f7;
+  --color-glow-pink: #ec4899;
+}
+
 :root {
-  --gradient-from: #667eea;
-  --gradient-to: #764ba2;
+  --accent: var(--color-glow-cyan);
+  --accent-2: var(--color-glow-violet);
+  color-scheme: dark;
+
+  /* Global Chartlite theme — inherited by every chart rendered with `cssVars`.
+     The nav toggle flips `data-chart-theme` to re-theme them all at once. */
+  --cl-bg: transparent;
+  --cl-text: #8b8ba7;
+  --cl-grid: rgba(255, 255, 255, 0.08);
+  --cl-primary: #22d3ee;
+  --cl-series-0: #22d3ee;
+  --cl-series-1: #a855f7;
+  --cl-series-2: #6366f1;
+  --cl-series-3: #ec4899;
+  --cl-series-4: #34d399;
+
+  /* Panel behind charts on example pages (follows the chart theme). */
+  --chart-slab: rgba(255, 255, 255, 0.015);
+  --chart-slab-border: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-chart-theme='light'] {
+  color-scheme: light;
+  --cl-bg: #ffffff;
+  --cl-text: #475569;
+  --cl-grid: rgba(15, 23, 42, 0.08);
+  --cl-primary: #4f46e5;
+  --cl-series-0: #4f46e5;
+  --cl-series-1: #db2777;
+  --cl-series-2: #0891b2;
+  --cl-series-3: #d97706;
+  --cl-series-4: #059669;
+
+  --chart-slab: #ffffff;
+  --chart-slab-border: rgba(15, 23, 42, 0.08);
+}
+
+* {
+  border-color: color-mix(in srgb, var(--color-mist-100) 8%, transparent);
+}
+
+html {
+  /* Lenis drives scrolling; keep native smooth off to avoid conflicts. */
+  scroll-behavior: auto;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background: linear-gradient(135deg, var(--gradient-from) 0%, var(--gradient-to) 100%);
-  min-height: 100vh;
-  padding: 2.5rem 1.25rem;
+  background-color: var(--color-ink-950);
+  color: var(--color-mist-300);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
+
+/* Lenis smooth-scroll hooks */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-glow-cyan) 30%, transparent);
+  color: var(--color-mist-100);
+}
+
+/* Thin luminous scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-ink-950);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-600);
+  border-radius: 999px;
+  border: 3px solid var(--color-ink-950);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-glow-blue) 60%, var(--color-ink-600));
+}
+
+/* ------------------------------------------------------------------ *
+ * Utilities
+ * ------------------------------------------------------------------ */
+
+@layer utilities {
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(
+      120deg,
+      var(--color-mist-100) 0%,
+      var(--color-glow-cyan) 45%,
+      var(--color-glow-violet) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* Glass surface */
+  .glass {
+    background: color-mix(in srgb, var(--color-ink-800) 55%, transparent);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid color-mix(in srgb, var(--color-mist-100) 8%, transparent);
+  }
+
+  /* Gradient hairline border via mask */
+  .border-glow {
+    position: relative;
+  }
+  .border-glow::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      130deg,
+      color-mix(in srgb, var(--color-glow-cyan) 60%, transparent),
+      transparent 40%,
+      transparent 60%,
+      color-mix(in srgb, var(--color-glow-violet) 55%, transparent)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .glow-shadow {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-glow-blue) 20%, transparent),
+      0 20px 70px -20px color-mix(in srgb, var(--color-glow-blue) 45%, transparent);
+  }
+
+  /* Film grain overlay */
+  .grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    will-change: opacity, transform;
+  }
+
+  .container-px {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Give the live library charts the hero's luminous feel — a soft neon glow on
+   strokes and points, but only in the dark chart theme (glow reads badly on
+   white). Purely presentational, scoped to the site. */
+:root:not([data-chart-theme='light']) svg :is(.area-line, .combo-line, path.data-series) {
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.4));
+}
+:root:not([data-chart-theme='light']) svg circle.data-point {
+  filter: drop-shadow(0 0 3px rgba(34, 211, 238, 0.45));
+}
+
