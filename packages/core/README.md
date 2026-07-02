@@ -113,7 +113,7 @@ new LineChart('#chart', {
       { month: 'Mar', revenue: 5200, costs: 3400, profit: 1800 }
     ]
   },
-  showLegend: true,
+  legend: { show: true },
   curve: 'smooth'
 }).render();
 ```
@@ -133,7 +133,7 @@ new BarChart('#chart', {
       { quarter: 'Q2', productA: 520, productB: 420, productC: 310 }
     ]
   },
-  showLegend: true
+  legend: { show: true }
 }).render();
 ```
 
@@ -152,7 +152,7 @@ new AreaChart('#chart', {
       { month: 'Feb', desktop: 3400, mobile: 2300, tablet: 850 }
     ]
   },
-  showLegend: true,
+  legend: { show: true },
   curve: 'smooth'
 }).render();
 ```
@@ -228,15 +228,16 @@ new LineChart('#chart', {
   data: DataPoint[] | FlexibleDataInput,
   width?: number,              // Default: container width
   height?: number,             // Default: 400
-  theme?: 'default' | 'midnight' | 'minimal',
+  theme?: 'default' | 'midnight' | 'minimal' | 'tailwind' | 'nord' | 'high-contrast',
   colors?: string[],           // Custom color palette
-  animate?: boolean,           // Default: true
+  animate?: boolean,           // Default: false (off for performance)
   responsive?: boolean,        // Default: true
+  cssVars?: boolean,           // Emit var(--cl-*) colors for CSS re-theming
   title?: string,
-  showLegend?: boolean,        // Default: false (true for multi-series)
   legend?: {
-    show?: boolean,
-    position?: 'top' | 'right' | 'bottom' | 'left',
+    show?: boolean,            // Default: false
+    position?: 'top' | 'bottom',
+    align?: 'left' | 'center' | 'right',
     layout?: 'horizontal' | 'vertical'
   }
 }

@@ -20,10 +20,13 @@ prefer it over guessing.
 
 ## Chart types
 
-`line`, `bar` (vertical/horizontal), `area` (stacked), `scatter`, `pie` (and donut via
-`innerRadius`), `sparkline` (tiny, axis-less). Pick `sparkline` for inline metrics,
-`pie` for parts-of-a-whole (≤6 slices), `bar` for categorical comparison, `line`/`area`
-for trends over an ordered axis, `scatter` for correlation between two numeric axes.
+Eight types: `line`, `bar` (vertical/horizontal, groupable/stackable), `area` (stacked),
+`scatter`, `pie` (and donut via `innerRadius`), `radial` (progress rings / gauge), `combo`
+(mix bar + line/area series on shared axes), `sparkline` (tiny, axis-less). Pick
+`sparkline` for inline metrics, `pie` for parts-of-a-whole (≤6 slices), `radial` for a
+single KPI or gauge, `bar` for categorical comparison, `combo` for a total plus a trend,
+`line`/`area` for trends over an ordered axis, `scatter` for correlation between two
+numeric axes.
 
 ## Data formats (all accepted anywhere `data` is taken)
 

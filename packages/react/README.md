@@ -198,7 +198,7 @@ function FinancialChart() {
   return (
     <LineChart
       data={data}
-      showLegend={true}
+      legend={{ show: true }}
       curve="smooth"
       showPoints={true}
       title="Financial Overview"
@@ -230,8 +230,7 @@ function ProductSalesChart() {
   return (
     <BarChart
       data={data}
-      showLegend={true}
-      legend={{ position: 'top', layout: 'horizontal' }}
+      legend={{ show: true, position: 'top', layout: 'horizontal' }}
       title="Quarterly Sales by Product"
     />
   );
@@ -260,7 +259,7 @@ function DeviceTrafficChart() {
   return (
     <AreaChart
       data={data}
-      showLegend={true}
+      legend={{ show: true }}
       curve="smooth"
       fillOpacity={0.6}
       title="Traffic by Device Type"
@@ -392,15 +391,16 @@ interface CommonProps {
   data: DataPoint[] | FlexibleDataInput;
   className?: string;
   style?: React.CSSProperties;
-  theme?: 'default' | 'midnight' | 'minimal';
+  theme?: 'default' | 'midnight' | 'minimal' | 'tailwind' | 'nord' | 'high-contrast';
   colors?: string[];
   animate?: boolean;
   responsive?: boolean;
+  cssVars?: boolean;
   title?: string;
-  showLegend?: boolean;
   legend?: {
     show?: boolean;
-    position?: 'top' | 'right' | 'bottom' | 'left';
+    position?: 'top' | 'bottom';
+    align?: 'left' | 'center' | 'right';
     layout?: 'horizontal' | 'vertical';
   };
 }

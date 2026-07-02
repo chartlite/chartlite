@@ -96,7 +96,7 @@ export default function Gallery() {
     <section id="gallery" className="relative mx-auto max-w-6xl px-6 py-24 scroll-mt-24">
       <Reveal className="mb-14 max-w-2xl">
         <p className="mb-3 font-mono text-xs uppercase tracking-[0.2em] text-glow-cyan">
-          Nine chart types
+          Eight chart types
         </p>
         <h2 className="font-display text-4xl font-bold tracking-tight text-mist-100 sm:text-5xl">
           One tiny library, every chart you actually need.

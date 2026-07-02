@@ -37,6 +37,7 @@ export type {
   ScatterChartConfig,
   SparklineConfig,
   LegendPosition,
+  LegendAlign,
   LegendConfig,
   ReferenceLine,
   Annotation,

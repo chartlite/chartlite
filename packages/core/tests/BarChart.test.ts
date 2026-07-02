@@ -382,7 +382,7 @@ describe('BarChart', () => {
           ]
         };
 
-        const chart = new BarChart(container, { data: multiSeriesData, showLegend: true });
+        const chart = new BarChart(container, { data: multiSeriesData, legend: { show: true } });
         chart.render();
 
         const legend = container.querySelector('.chart-legend');

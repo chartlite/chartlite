@@ -30,4 +30,12 @@ export type {
   ComboChartConfig,
   ScatterChartConfig,
   SparklineConfig,
+  LegendPosition,
+  LegendAlign,
+  LegendConfig,
+  ReferenceLine,
+  Annotation,
+  Region,
+  ChartPointEvent,
+  LegendToggleEvent,
 } from '@chartlite/core';

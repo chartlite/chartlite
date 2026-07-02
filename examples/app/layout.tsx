@@ -13,12 +13,12 @@ const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
 export const metadata: Metadata = {
   title: 'Chartlite — beautiful charts, honestly tiny',
   description:
-    'A lightweight, zero-dependency SVG charting library. ~13KB gzipped, 9 chart types, WCAG AA, SSR + agent-native, with React, Vue, Svelte, and web-component wrappers.',
+    'A lightweight, zero-dependency SVG charting library. ~13KB gzipped, 8 chart types, WCAG AA, SSR + agent-native, with React, Vue, Svelte, and web-component wrappers.',
   metadataBase: new URL('https://chartlite.dev'),
   openGraph: {
     title: 'Chartlite — beautiful charts, honestly tiny',
     description:
-      'Zero-dependency SVG charts. ~13KB gzipped, 9 types, SSR + agent-native, React/Vue/Svelte/web-component.',
+      'Zero-dependency SVG charts. ~13KB gzipped, 8 types, SSR + agent-native, React/Vue/Svelte/web-component.',
     type: 'website',
   },
 };

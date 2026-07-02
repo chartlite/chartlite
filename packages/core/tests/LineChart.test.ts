@@ -363,7 +363,7 @@ describe('LineChart', () => {
           ]
         };
 
-        const chart = new LineChart(container, { data: multiSeriesData, showLegend: true });
+        const chart = new LineChart(container, { data: multiSeriesData, legend: { show: true } });
         chart.render();
 
         const legend = container.querySelector('.chart-legend');
@@ -371,7 +371,7 @@ describe('LineChart', () => {
       });
 
       it('should not render legend for single series', () => {
-        const chart = new LineChart(container, { data, showLegend: true });
+        const chart = new LineChart(container, { data, legend: { show: true } });
         chart.render();
 
         const legend = container.querySelector('.chart-legend');

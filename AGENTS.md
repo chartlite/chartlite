@@ -77,5 +77,5 @@ Do not hand-edit versions or `CHANGELOG.md` — Changesets owns them.
   budget. Prefer a small local util.
 - SSR must not touch the real DOM: `src/server/dom.ts` is a shim installed only when
   `document` is absent, and restored after each synchronous render.
-- The legacy `TooltipPlugin` is deprecated in favor of `@chartlite/core/interactive`'s
-  `tooltip()`; don't build on it.
+- Hover tooltips live in `@chartlite/core/interactive` as the tree-shakeable `tooltip()`
+  action; there is no plugin-based tooltip. (The legacy `TooltipPlugin` was removed in 1.0.)

@@ -102,7 +102,6 @@ export abstract class BaseChart implements Chart {
     this.config = {
       // Visual defaults
       theme: 'default',
-      showLegend: false,
       responsive: true,
       // Performance defaults (animations off for speed)
       animate: false,
@@ -207,10 +206,6 @@ export abstract class BaseChart implements Chart {
     if (config.responsive !== undefined && typeof config.responsive !== 'boolean') {
       throw new Error('responsive must be a boolean');
     }
-    if (config.showLegend !== undefined && typeof config.showLegend !== 'boolean') {
-      throw new Error('showLegend must be a boolean');
-    }
-
     // Validate legend config if provided
     if (config.legend) {
       if (config.legend.show !== undefined && typeof config.legend.show !== 'boolean') {
@@ -242,7 +237,7 @@ export abstract class BaseChart implements Chart {
     }
 
     // Legend adds space based on position
-    const showLegend = this.config.legend?.show ?? this.config.showLegend ?? false;
+    const showLegend = this.config.legend?.show ?? false;
     if (showLegend && this.seriesData.length > 1) {
       const legendHeight = CHART_DEFAULTS.LEGEND_FONT_SIZE + CHART_DEFAULTS.LEGEND_PADDING;
 
@@ -568,7 +563,7 @@ export abstract class BaseChart implements Chart {
       this.renderTitle();
     }
 
-    const showLegend = this.config.legend?.show ?? this.config.showLegend ?? false;
+    const showLegend = this.config.legend?.show ?? false;
     if (showLegend && this.seriesData.length > 1) {
       this.renderLegend();
     }

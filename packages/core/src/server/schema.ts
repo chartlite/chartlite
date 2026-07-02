@@ -78,12 +78,15 @@ export const chartSpecSchema = {
     title: { type: 'string' },
     width: { type: 'number', exclusiveMinimum: 0 },
     height: { type: 'number', exclusiveMinimum: 0 },
+    animate: { type: 'boolean' },
+    responsive: { type: 'boolean' },
     legend: {
       type: 'object',
       properties: {
         show: { type: 'boolean' },
         position: { type: 'string', enum: ['top', 'bottom'] },
         align: { type: 'string', enum: ['left', 'center', 'right'] },
+        layout: { type: 'string', enum: ['horizontal', 'vertical'] },
       },
       additionalProperties: false,
     },
@@ -100,12 +103,68 @@ export const chartSpecSchema = {
     pointSize: { type: 'number', exclusiveMinimum: 0 },
     pointShape: { type: 'string', enum: ['circle', 'square', 'triangle'] },
     stacked: { type: 'boolean' },
+    strokeWidth: { type: 'number', exclusiveMinimum: 0 },
+    // scatter labels
+    labelOffset: { type: 'number' },
+    labelPosition: { type: 'string', enum: ['top', 'bottom', 'left', 'right', 'auto'] },
+    // sparkline
+    showEndDot: { type: 'boolean' },
     // radial / gauge
     max: { type: 'number', exclusiveMinimum: 0 },
     startAngle: { type: 'number' },
     endAngle: { type: 'number' },
     thickness: { type: 'number', exclusiveMinimum: 0 },
     showValue: { type: 'boolean' },
+    trackColor: { type: 'string' },
+    // overlays (line/bar/area/scatter/combo)
+    referenceLines: {
+      type: 'array',
+      description: 'Threshold lines drawn across the plot at a fixed axis value.',
+      items: {
+        type: 'object',
+        properties: {
+          axis: { type: 'string', enum: ['x', 'y'] },
+          value: { type: ['number', 'string'] },
+          label: { type: 'string' },
+          color: { type: 'string' },
+          style: { type: 'string', enum: ['solid', 'dashed', 'dotted'] },
+        },
+        required: ['axis', 'value'],
+        additionalProperties: true,
+      },
+    },
+    annotations: {
+      type: 'array',
+      description: 'Text callouts anchored to a data coordinate.',
+      items: {
+        type: 'object',
+        properties: {
+          x: { type: ['number', 'string'] },
+          y: { type: 'number' },
+          text: { type: 'string' },
+          color: { type: 'string' },
+        },
+        required: ['x', 'y', 'text'],
+        additionalProperties: true,
+      },
+    },
+    regions: {
+      type: 'array',
+      description: 'Shaded ranges highlighting a span on the x or y axis.',
+      items: {
+        type: 'object',
+        properties: {
+          axis: { type: 'string', enum: ['x', 'y'] },
+          start: { type: ['number', 'string'] },
+          end: { type: ['number', 'string'] },
+          label: { type: 'string' },
+          color: { type: 'string' },
+          opacity: { type: 'number', minimum: 0, maximum: 1 },
+        },
+        required: ['axis', 'start', 'end'],
+        additionalProperties: true,
+      },
+    },
   },
   additionalProperties: true,
 } as const;

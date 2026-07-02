@@ -1,4 +1,5 @@
 import Reveal from './Reveal';
+import SSRProof from './SSRProof';
 
 const cards = [
   {
@@ -43,6 +44,8 @@ export default function Agents() {
           schemas — so humans and agents build the same charts the same way.
         </p>
       </Reveal>
+
+      <SSRProof />
 
       <Reveal stagger className="grid gap-5 md:grid-cols-3">
         {cards.map((c) => (
