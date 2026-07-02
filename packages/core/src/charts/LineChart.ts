@@ -12,6 +12,7 @@ import {
   getAllXValues,
   getCombinedYRange,
 } from '../utils';
+import { setDataPointAttrs, setSeriesAttrs } from '../render/dataAttrs';
 
 export class LineChart extends BaseChart {
   protected config: LineChartConfig;
@@ -60,7 +61,7 @@ export class LineChart extends BaseChart {
     this.renderCategoricalXLinearYAxes(mainGroup, xValues, yMin, yMax, chartWidth, chartHeight, colors);
 
     // Render each series
-    this.seriesData.forEach((series) => {
+    this.seriesData.forEach((series, seriesIndex) => {
       // Generate line path for this series
       const points = series.data.map((d) => ({
         x: xScale.scale(String(d.x)) + xScale.bandwidth / 2,
@@ -77,6 +78,7 @@ export class LineChart extends BaseChart {
       path.setAttribute('stroke-width', '2');
       path.setAttribute('stroke-linecap', 'round');
       path.setAttribute('stroke-linejoin', 'round');
+      setSeriesAttrs(path, seriesIndex, series.name);
       mainGroup.appendChild(path);
 
       // Render points if enabled
@@ -97,6 +99,15 @@ export class LineChart extends BaseChart {
           circle.setAttribute('aria-label', `${seriesLabel}Data point: ${dataPoint.x}, value ${dataPoint.y}`);
           circle.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
           circle.classList.add('data-point');
+          setDataPointAttrs(circle, {
+            x: dataPoint.x,
+            y: dataPoint.y,
+            seriesName: series.name,
+            seriesIndex,
+            index,
+            cx: point.x,
+            cy: point.y,
+          });
 
           mainGroup.appendChild(circle);
         });

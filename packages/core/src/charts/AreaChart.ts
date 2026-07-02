@@ -11,6 +11,7 @@ import {
   getThemeColors,
   getAllXValues,
 } from '../utils';
+import { setSeriesAttrs } from '../render/dataAttrs';
 
 export class AreaChart extends BaseChart {
   protected config: AreaChartConfig;
@@ -65,7 +66,7 @@ export class AreaChart extends BaseChart {
     this.renderCategoricalXLinearYAxes(mainGroup, xValues, yMin, yMax, chartWidth, chartHeight, colors);
 
     // Render each series as a stacked area (in reverse order so first series is on top)
-    stackedData.forEach((seriesStack) => {
+    stackedData.forEach((seriesStack, seriesIndex) => {
       // Generate points for the top line
       const topPoints = seriesStack.cumulativeData.map((d) => ({
         x: xScale.scale(String(d.x)) + xScale.bandwidth / 2,
@@ -93,6 +94,7 @@ export class AreaChart extends BaseChart {
       const seriesLabel = this.seriesData.length > 1 ? `${seriesStack.name}, ` : '';
       area.setAttribute('aria-label', `${seriesLabel}Area series with ${dataPoints} data points`);
       area.setAttribute('tabindex', '-1');
+      setSeriesAttrs(area, seriesIndex, seriesStack.name);
 
       mainGroup.appendChild(area);
 
@@ -110,6 +112,7 @@ export class AreaChart extends BaseChart {
       // ARIA attributes for the line
       line.setAttribute('role', 'presentation'); // Decorative - area already has semantics
       line.setAttribute('aria-hidden', 'true'); // Hide from screen readers (area is sufficient)
+      setSeriesAttrs(line, seriesIndex, seriesStack.name);
 
       mainGroup.appendChild(line);
     });

@@ -10,6 +10,7 @@ import {
   getAllXValues,
   getCombinedYRange,
 } from '../utils';
+import { setDataPointAttrs, type DataPointAttrs } from '../render/dataAttrs';
 
 export class ScatterChart extends BaseChart {
   protected config: ScatterChartConfig;
@@ -65,16 +66,24 @@ export class ScatterChart extends BaseChart {
     this.renderLinearXLinearYAxes(mainGroup, xMin, xMax, yMin, yMax, chartWidth, chartHeight, colors);
 
     // Render each series
-    this.seriesData.forEach((series) => {
+    this.seriesData.forEach((series, seriesIndex) => {
       // Render points for this series
-      series.data.forEach((d) => {
+      series.data.forEach((d, index) => {
         const x = xScale(typeof d.x === 'number' ? d.x : parseFloat(String(d.x)));
         const y = yScale(d.y);
 
         // Render point with ARIA label
         const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
         const ariaLabel = `${seriesLabel}Point: x=${d.x}, y=${d.y}${d.label ? `, ${d.label}` : ''}`;
-        this.renderPoint(mainGroup, x, y, series.color || colors.primary, colors, ariaLabel);
+        this.renderPoint(mainGroup, x, y, series.color || colors.primary, colors, ariaLabel, {
+          x: d.x,
+          y: d.y,
+          seriesName: series.name,
+          seriesIndex,
+          index,
+          cx: x,
+          cy: y,
+        });
 
         // Render label if enabled and label exists
         if (this.config.showLabels && d.label) {
@@ -93,7 +102,8 @@ export class ScatterChart extends BaseChart {
     y: number,
     color: string,
     colors: ReturnType<typeof getThemeColors>,
-    ariaLabel: string
+    ariaLabel: string,
+    attrs: DataPointAttrs
   ): void {
     const size = this.config.pointSize || 6;
     const shape = this.config.pointShape || 'circle';
@@ -113,6 +123,7 @@ export class ScatterChart extends BaseChart {
         circle.setAttribute('role', 'img');
         circle.setAttribute('aria-label', ariaLabel);
         circle.setAttribute('tabindex', '-1');
+        setDataPointAttrs(circle, attrs);
 
         group.appendChild(circle);
         break;
@@ -132,6 +143,7 @@ export class ScatterChart extends BaseChart {
         rect.setAttribute('role', 'img');
         rect.setAttribute('aria-label', ariaLabel);
         rect.setAttribute('tabindex', '-1');
+        setDataPointAttrs(rect, attrs);
 
         group.appendChild(rect);
         break;
@@ -154,6 +166,7 @@ export class ScatterChart extends BaseChart {
         triangle.setAttribute('role', 'img');
         triangle.setAttribute('aria-label', ariaLabel);
         triangle.setAttribute('tabindex', '-1');
+        setDataPointAttrs(triangle, attrs);
 
         group.appendChild(triangle);
         break;

@@ -18,6 +18,8 @@ export type {
   ReferenceLine,
   Annotation,
   Region,
+  ChartPointEvent,
+  LegendToggleEvent,
   BaseChartConfig,
   LineChartConfig,
   BarChartConfig,

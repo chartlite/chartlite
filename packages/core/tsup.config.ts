@@ -9,7 +9,9 @@ const pkg = JSON.parse(
 );
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  // Separate entry points so bundlers tree-shake interactivity independently of
+  // core — importing '@chartlite/core' never pulls in the /interactive bytes.
+  entry: ['src/index.ts', 'src/interactive/index.ts'],
   format: ['esm'],
   dts: true,
   splitting: false,
