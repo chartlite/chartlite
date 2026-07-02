@@ -53,6 +53,16 @@ export {
 // Export data transformation utilities
 export { normalizeData, extractColorsFromSeriesData } from './utils/dataTransform';
 
+// Export value formatters for axis labels (tree-shakeable)
+export {
+  formatters,
+  abbreviate,
+  currency,
+  percent,
+  number,
+  type ValueFormatter,
+} from './utils/formatters';
+
 // Export performance utilities (tree-shakeable)
 export { downsampleLTTB, downsampleEveryNth, autoDownsample } from './utils/sampling';
 

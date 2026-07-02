@@ -11,6 +11,9 @@ import { CHART_DEFAULTS } from './constants';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 type ThemeColors = ReturnType<typeof getThemeColors>;
+type ValueFormat = (value: number) => string;
+
+const defaultFormat: ValueFormat = (v) => String(v);
 
 /** Categorical X-axis with linear Y-axis (LineChart, BarChart, AreaChart). */
 export function renderCategoricalXLinearYAxes(
@@ -20,7 +23,8 @@ export function renderCategoricalXLinearYAxes(
   yMax: number,
   chartWidth: number,
   chartHeight: number,
-  colors: ThemeColors
+  colors: ThemeColors,
+  formatValue: ValueFormat = defaultFormat
 ): void {
   // Y-axis line
   const yAxis = document.createElementNS(SVG_NS, 'line');
@@ -68,7 +72,7 @@ export function renderCategoricalXLinearYAxes(
     label.setAttribute('dominant-baseline', 'middle');
     label.setAttribute('fill', colors.text);
     label.setAttribute('font-size', String(CHART_DEFAULTS.AXIS_LABEL_FONT_SIZE));
-    label.textContent = String(tick);
+    label.textContent = formatValue(tick);
     group.appendChild(label);
   });
 
@@ -96,7 +100,8 @@ export function renderLinearXLinearYAxes(
   yMax: number,
   chartWidth: number,
   chartHeight: number,
-  colors: ThemeColors
+  colors: ThemeColors,
+  formatValue: ValueFormat = defaultFormat
 ): void {
   // Y-axis line
   const yAxis = document.createElementNS(SVG_NS, 'line');
@@ -144,7 +149,7 @@ export function renderLinearXLinearYAxes(
     label.setAttribute('dominant-baseline', 'middle');
     label.setAttribute('fill', colors.text);
     label.setAttribute('font-size', String(CHART_DEFAULTS.AXIS_LABEL_FONT_SIZE));
-    label.textContent = String(tick);
+    label.textContent = formatValue(tick);
     group.appendChild(label);
   });
 
@@ -173,7 +178,7 @@ export function renderLinearXLinearYAxes(
     label.setAttribute('text-anchor', 'middle');
     label.setAttribute('fill', colors.text);
     label.setAttribute('font-size', String(CHART_DEFAULTS.AXIS_LABEL_FONT_SIZE));
-    label.textContent = String(tick);
+    label.textContent = formatValue(tick);
     group.appendChild(label);
   });
 }
@@ -186,7 +191,8 @@ export function renderLinearXCategoricalYAxes(
   xMax: number,
   chartWidth: number,
   chartHeight: number,
-  colors: ThemeColors
+  colors: ThemeColors,
+  formatValue: ValueFormat = defaultFormat
 ): void {
   // Y-axis line
   const yAxis = document.createElementNS(SVG_NS, 'line');
@@ -233,7 +239,7 @@ export function renderLinearXCategoricalYAxes(
     label.setAttribute('text-anchor', 'middle');
     label.setAttribute('fill', colors.text);
     label.setAttribute('font-size', String(CHART_DEFAULTS.AXIS_LABEL_FONT_SIZE));
-    label.textContent = String(tick);
+    label.textContent = formatValue(tick);
     group.appendChild(label);
   });
 
