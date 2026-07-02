@@ -19,6 +19,7 @@
         "scatter",
         "pie",
         "radial",
+        "combo",
         "sparkline"
       ]
     },
@@ -172,6 +173,14 @@
     },
     "gradient": {
       "type": "boolean"
+    },
+    "defaultType": {
+      "type": "string",
+      "enum": [
+        "line",
+        "bar",
+        "area"
+      ]
     },
     "innerRadius": {
       "type": "number",

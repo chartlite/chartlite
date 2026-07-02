@@ -21,6 +21,7 @@ import { AreaChart } from '../charts/AreaChart';
 import { ScatterChart } from '../charts/ScatterChart';
 import { PieChart } from '../charts/PieChart';
 import { RadialChart } from '../charts/RadialChart';
+import { ComboChart } from '../charts/ComboChart';
 import { Sparkline } from '../charts/Sparkline';
 import type {
   LineChartConfig,
@@ -29,6 +30,7 @@ import type {
   ScatterChartConfig,
   PieChartConfig,
   RadialChartConfig,
+  ComboChartConfig,
   SparklineConfig,
 } from '../types';
 import { installDOM } from './dom';
@@ -41,6 +43,7 @@ export type ChartType =
   | 'scatter'
   | 'pie'
   | 'radial'
+  | 'combo'
   | 'sparkline';
 
 /**
@@ -55,6 +58,7 @@ export type ChartSpec =
   | ({ type: 'scatter' } & ScatterChartConfig)
   | ({ type: 'pie' } & PieChartConfig)
   | ({ type: 'radial' } & RadialChartConfig)
+  | ({ type: 'combo' } & ComboChartConfig)
   | ({ type: 'sparkline' } & SparklineConfig);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,6 +71,7 @@ const REGISTRY: Record<ChartType, ChartCtor> = {
   scatter: ScatterChart,
   pie: PieChart,
   radial: RadialChart,
+  combo: ComboChart,
   sparkline: Sparkline,
 };
 

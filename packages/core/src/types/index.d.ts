@@ -56,6 +56,11 @@ export type FlexibleDataInput =
 export interface SeriesData {
   name: string;
   color?: string;
+  /**
+   * Per-series render type, carried through from {@link SeriesDefinition.type}.
+   * Consumed by the combo chart to mix bars and lines; ignored by single-type charts.
+   */
+  type?: 'line' | 'bar' | 'area';
   data: DataPoint[];
 }
 
@@ -318,6 +323,24 @@ export interface RadialChartConfig extends BaseChartConfig {
   showValue?: boolean;
   /** Color of the unfilled track (default: theme grid color). */
   trackColor?: string;
+}
+
+/**
+ * Combo chart configuration — mixes bar and line (and area) series on one set of
+ * axes. Series declare their own render type via the series-first data format
+ * (`series: [{ name, dataKey, type: 'bar' }, { name, dataKey, type: 'line' }]`);
+ * any series without a `type` falls back to `defaultType`.
+ */
+export interface ComboChartConfig extends BaseChartConfig {
+  data: FlexibleDataInput;
+  /** Render type for series that don't specify one (default: 'bar'). */
+  defaultType?: 'line' | 'bar' | 'area';
+  /** Line curve style for line/area series (default: 'linear'). */
+  curve?: 'linear' | 'smooth';
+  /** Draw points on line/area series (default: true). */
+  showPoints?: boolean;
+  /** Fill opacity for area-type series (default: 0.25). */
+  fillOpacity?: number;
 }
 
 export interface ScatterChartConfig extends BaseChartConfig {
