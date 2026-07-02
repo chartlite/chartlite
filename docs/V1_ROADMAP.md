@@ -1,7 +1,7 @@
 # Chartlite → v1.0 Roadmap
 
 **Status:** In progress
-**Current published version:** `0.5.0` (core + react, published to npm via OIDC trusted publishing)
+**Current published version:** `0.7.0` (core + react, published to npm via OIDC trusted publishing)
 **Author:** planning pass, 2026-07
 
 ### Progress so far
@@ -15,9 +15,18 @@
   `PieChartConfig`.
 - **0.5.0** — **tailwind**, **nord**, and **high-contrast** theme presets (previously marketed
   but unimplemented).
+- **0.6.0** — **Sparkline** micro-chart + locale-aware **value formatters** (abbreviate /
+  currency / percent / number), exported tree-shakeably.
+- **0.7.0** — **Interactivity** as a tree-shakeable `@chartlite/core/interactive` entry
+  (tooltip, crosshair, legendToggle, callbacks) on a new `data-*` point contract. Core bundle
+  unchanged; first fully hands-off release via the auto Version PR.
+- **0.8.0** — **SSR / zero-JS**: `@chartlite/core/server` with a zero-dep SVG DOM shim,
+  `renderToString(spec)`, the declarative `ChartSpec` type, and a published `schema.json`
+  (see design decision 1 in [DESIGN_TO_1.0.md](DESIGN_TO_1.0.md)). Unblocks the agent milestone.
 
-Test suite: **375 passing**. Remaining milestones below (renderer abstraction/SSR, more chart
-types, formatters, interactivity, agent tooling) are unchanged.
+Test suite: **417 passing**. Design for the critical path (SSR shim + interactivity delivery)
+is locked in [DESIGN_TO_1.0.md](DESIGN_TO_1.0.md). Remaining: agent tooling (0.9.0), breadth &
+theming polish, second wrapper, API freeze (0.10.0).
 
 This document is the single source of truth for the path from today's `0.2.1` to a
 credible, stable `1.0.0`. It supersedes the roadmap sections in `README.md` and
