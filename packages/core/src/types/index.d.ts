@@ -179,6 +179,11 @@ export interface BaseChartConfig {
   regions?: Region[];
   /** Plugins to extend chart functionality */
   plugins?: ChartPlugin[];
+  /**
+   * Format numeric axis tick labels (y-axis, and numeric x-axis on scatter charts).
+   * Use a built-in from `formatters` (e.g. `formatters.abbreviate`) or your own.
+   */
+  valueFormatter?: (value: number) => string;
 }
 
 export interface LineChartConfig extends BaseChartConfig {

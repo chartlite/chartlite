@@ -772,7 +772,16 @@ export abstract class BaseChart implements Chart {
     chartHeight: number,
     colors: ReturnType<typeof getThemeColors>
   ): void {
-    drawCategoricalXLinearYAxes(group, xValues, yMin, yMax, chartWidth, chartHeight, colors);
+    drawCategoricalXLinearYAxes(
+      group,
+      xValues,
+      yMin,
+      yMax,
+      chartWidth,
+      chartHeight,
+      colors,
+      this.config.valueFormatter
+    );
   }
 
   /**
@@ -788,7 +797,17 @@ export abstract class BaseChart implements Chart {
     chartHeight: number,
     colors: ReturnType<typeof getThemeColors>
   ): void {
-    drawLinearXLinearYAxes(group, xMin, xMax, yMin, yMax, chartWidth, chartHeight, colors);
+    drawLinearXLinearYAxes(
+      group,
+      xMin,
+      xMax,
+      yMin,
+      yMax,
+      chartWidth,
+      chartHeight,
+      colors,
+      this.config.valueFormatter
+    );
   }
 
   /**
@@ -803,7 +822,16 @@ export abstract class BaseChart implements Chart {
     chartHeight: number,
     colors: ReturnType<typeof getThemeColors>
   ): void {
-    drawLinearXCategoricalYAxes(group, yValues, xMin, xMax, chartWidth, chartHeight, colors);
+    drawLinearXCategoricalYAxes(
+      group,
+      yValues,
+      xMin,
+      xMax,
+      chartWidth,
+      chartHeight,
+      colors,
+      this.config.valueFormatter
+    );
   }
 
   /**
