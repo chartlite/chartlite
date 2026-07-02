@@ -2,10 +2,13 @@
 
 **Beautiful charts for modern web apps. Lightweight, fast, and developer-friendly.**
 
+[![npm](https://img.shields.io/npm/v/@chartlite/core?label=%40chartlite%2Fcore)](https://www.npmjs.com/package/@chartlite/core)
 [![Bundle Size](https://img.shields.io/badge/bundle-~13KB_gzipped-success)](https://bundlephobia.com/package/@chartlite/core)
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+**🚀 Now stable at 1.0** · **[chartlite.dev →](https://chartlite.dev)** for live demos and docs.
 
 ---
 
@@ -48,6 +51,15 @@ pnpm add @chartlite/core
 yarn add @chartlite/core
 ```
 
+Using a framework? Install the matching wrapper instead — each exposes all 8 charts:
+
+```bash
+npm install @chartlite/react    # React
+npm install @chartlite/vue      # Vue 3
+npm install @chartlite/svelte   # Svelte
+npm install @chartlite/element  # <chart-lite> web component (any framework / none)
+```
+
 ### Basic Usage
 
 ```typescript
@@ -73,13 +85,17 @@ That's it! Your chart is ready.
 ### 📊 Chart Types
 
 - **Line Chart** - Perfect for trends over time (linear & smooth)
-- **Bar Chart** - Great for comparisons (vertical & horizontal)
-- **Area Chart** - Beautiful filled visualizations
+- **Bar Chart** - Great for comparisons (vertical & horizontal, grouped & stacked)
+- **Area Chart** - Beautiful filled visualizations (gradient & stacked)
 - **Scatter Chart** - Correlations and distributions
 - **Pie / Donut Chart** - Part-to-whole breakdowns
+- **Radial Chart** - Progress rings and gauges
+- **Combo Chart** - Bars plus a trend line/area on shared axes
+- **Sparkline** - Tiny, axis-less inline metrics
 
 Plus **multi-series** support, **reference lines**, **annotations**, and **region
-highlighting** across chart types. More types coming soon (see the [roadmap](docs/V1_ROADMAP.md)).
+highlighting** across chart types — all eight rendering identically in the browser,
+on the server, and through every framework wrapper.
 
 ### 🎨 Beautiful Themes
 
@@ -131,27 +147,27 @@ data: {
 
 ## Roadmap
 
-### ✅ Shipped
+### ✅ Shipped in 1.0
 
-- **Chart types:** Line, Bar, Area, Scatter, Pie/Donut
+- **8 chart types:** Line, Bar (grouped/stacked), Area (gradient/stacked), Scatter, Pie/Donut, Radial/gauge, Combo, Sparkline
 - **Multi-series** support with auto-color assignment and a configurable legend
 - **Annotations, reference lines & region highlighting**
-- **Accessibility:** ARIA roles/descriptions, keyboard navigation, screen-reader data-table fallback
-- **Performance:** automatic LTTB downsampling + element pooling for fast updates
-- **Plugin system** (tree-shakeable tooltip + debug plugins)
-- 4 flexible data formats · 3 built-in themes · responsive sizing · SVG export · TypeScript-first
-- Official **React** wrapper
-
-### 🚧 On the way to 1.0
-
-- More chart types: **Pie/Donut, Stacked, Combo, Sparklines, Radial/gauge**
-- Pluggable **formatters** (currency/percent/date/abbreviations) & CSS-variable theming
-- First-class **interactivity** (built-in tooltips, crosshair, legend toggle, click/hover callbacks)
+- **Accessibility:** ARIA roles/descriptions, keyboard navigation, screen-reader data-table fallback (WCAG 2.1 AA)
+- **Interactivity** (opt-in, tree-shakeable): tooltips, crosshair, legend toggle, click/hover callbacks
 - **Server-side / zero-JS rendering** (`renderToString`) + a declarative chart spec
-- **Agent-native tooling** (MCP server + shippable skill)
-- Additional framework wrappers (Vue next)
+- **Agent-native tooling:** `@chartlite/mcp` server, published JSON Schema, and `llms.txt`
+- **CSS-variable theming** (`cssVars`) & pluggable **formatters** (currency/percent/abbreviate)
+- **Performance:** automatic LTTB downsampling + element pooling for fast updates
+- 4 flexible data formats · 6 built-in themes · responsive sizing · SVG export · TypeScript-first
+- Official wrappers for **React, Vue, Svelte** + a **`<chart-lite>`** web component
 
-See the full, sequenced plan in **[V1_ROADMAP.md](docs/V1_ROADMAP.md)**.
+### 🔭 Post-1.0 ideas
+
+- More design-system themes (Material 3, GitHub)
+- An Angular wrapper
+- Additional chart types as demand warrants
+
+The road to 1.0 is archived in **[V1_ROADMAP.md](docs/V1_ROADMAP.md)**.
 
 ---
 
@@ -191,7 +207,20 @@ function App() {
 </script>
 ```
 
-More examples at [examples/](examples/)
+### Server-side / agents (zero client JS)
+
+```typescript
+import { renderToString } from '@chartlite/core/server';
+
+// Runs in Node/Bun/edge — no browser, no jsdom. Drop the string straight into HTML.
+const svg = renderToString({ type: 'line', data: [1, 2, 3], theme: 'tailwind' });
+```
+
+The object passed to `renderToString` is a **ChartSpec** — the same shape the
+[`@chartlite/mcp`](packages/mcp) server's `render_chart` tool accepts, described by a
+published JSON Schema. AI agents and your server build charts the exact same way.
+
+More examples at [examples/](examples/) · live at **[chartlite.dev](https://chartlite.dev)**
 
 ---
 
@@ -202,7 +231,7 @@ More examples at [examples/](examples/)
 | Bundle Size | **~13KB gz** | ~400KB | ~200KB | ~1000KB |
 | Dependencies | **0** | D3 (many) | 0 | ZRender |
 | TypeScript | **Native** | Good | Good | Good |
-| Chart Types | 3-4 | 10+ | 8+ | 50+ |
+| Chart Types | 8 | 10+ | 8+ | 50+ |
 | Data Formats | **4** | 1 | 1 | 2 |
 | Learning Curve | **Low** | Medium | Low | High |
 | **Best For** | **Fast pages** | React apps | Simple charts | Dashboards |
@@ -259,10 +288,10 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 **Priority areas:**
 
-- Design system themes (Material, Tailwind, Nord)
+- Design system themes (Material 3, GitHub)
 - Accessibility improvements
 - Documentation and examples
-- Framework wrappers (Vue, Svelte, Angular)
+- An Angular wrapper (React, Vue, Svelte, and the web component are shipped)
 
 ---
 

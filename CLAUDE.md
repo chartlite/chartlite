@@ -95,16 +95,20 @@ chartlite/
 
 ## Current Feature Set
 
-### ✅ Implemented (current: v0.2.1)
+### ✅ Implemented (current: v1.0.0 — API frozen)
 
-> The path from here to a stable 1.0 is tracked in [docs/V1_ROADMAP.md](docs/V1_ROADMAP.md),
-> which is the single source of truth for planning and supersedes the phase list below.
+> The public API is stable and follows semver as of 1.0.0. The road to 1.0 is
+> archived in [docs/V1_ROADMAP.md](docs/V1_ROADMAP.md).
 
-**Chart Types:**
+**Chart Types (8):**
 - Line Chart (linear and smooth curves)
-- Bar Chart (vertical and horizontal)
-- Area Chart (filled line charts)
+- Bar Chart (vertical/horizontal, grouped and stacked)
+- Area Chart (filled, gradient fills, stacked)
 - Scatter Chart (configurable point shape/size, labels)
+- Pie / Donut Chart (via `innerRadius`)
+- Radial Chart (progress rings and gauges)
+- Combo Chart (mixes bar + line/area series on shared axes)
+- Sparkline (tiny, axis-less inline metric charts)
 
 **Data Formats:**
 - DataPoint[] - Original: `[{ x: 'Jan', y: 30 }]`
@@ -117,17 +121,21 @@ chartlite/
 - Reference lines, annotations, and region highlighting
 - Accessibility: ARIA roles/descriptions, keyboard navigation, screen-reader data-table fallback
 - Performance: automatic LTTB downsampling + element pooling for fast updates
-- Plugin system (tree-shakeable tooltip + debug plugins)
-- Responsive sizing (ResizeObserver)
-- Themes (default, midnight, minimal), custom colors, chart titles, SVG export
+- Opt-in, tree-shakeable interactivity (`@chartlite/core/interactive`): tooltip, crosshair, legend toggle, click/hover callbacks
+- Server-side / zero-JS rendering: `renderToString(spec)` (`@chartlite/core/server`), no DOM/jsdom needed
+- Agent-native: `@chartlite/mcp` MCP server, published chart-spec JSON Schema, and `llms.txt`
+- CSS-variable theming (`cssVars`) for dark mode / re-theming with plain CSS
+- Value formatters (currency/percent/abbreviate) — tree-shakeable
+- Responsive sizing (ResizeObserver), custom colors, chart titles, SVG export
+- Themes: default, midnight, minimal, tailwind, nord, high-contrast
 - TypeScript-first
-- Official React wrapper
+- Official wrappers for **React, Vue, Svelte**, plus a `<chart-lite>` web component
 
-**Bundle Size (measured):** ~48KB minified, **~13KB gzipped** (zero dependencies)
+**Bundle Size (measured):** **~13KB gzipped** (zero dependencies)
 
 **Test Coverage:**
-- 346 tests passing across 13 files
-- All chart types, data formats, plugins, accessibility, and keyboard nav tested
+- 452 core tests across 25 files, plus per-wrapper test suites
+- All chart types, data formats, plugins, SSR, accessibility, and keyboard nav tested
 - Edge cases covered
 
 ---
