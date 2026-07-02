@@ -246,6 +246,11 @@ export interface BarChartConfig extends BaseChartConfig {
   data: FlexibleDataInput;
   /** Bar orientation */
   orientation?: 'vertical' | 'horizontal';
+  /**
+   * Stack multiple series on top of each other instead of grouping them
+   * side-by-side (default: false). Only affects multi-series data.
+   */
+  stacked?: boolean;
 }
 
 export interface AreaChartConfig extends BaseChartConfig {
