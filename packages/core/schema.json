@@ -125,6 +125,12 @@
       "type": "number",
       "exclusiveMinimum": 0
     },
+    "animate": {
+      "type": "boolean"
+    },
+    "responsive": {
+      "type": "boolean"
+    },
     "legend": {
       "type": "object",
       "properties": {
@@ -144,6 +150,13 @@
             "left",
             "center",
             "right"
+          ]
+        },
+        "layout": {
+          "type": "string",
+          "enum": [
+            "horizontal",
+            "vertical"
           ]
         }
       },
@@ -205,6 +218,26 @@
     "stacked": {
       "type": "boolean"
     },
+    "strokeWidth": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "labelOffset": {
+      "type": "number"
+    },
+    "labelPosition": {
+      "type": "string",
+      "enum": [
+        "top",
+        "bottom",
+        "left",
+        "right",
+        "auto"
+      ]
+    },
+    "showEndDot": {
+      "type": "boolean"
+    },
     "max": {
       "type": "number",
       "exclusiveMinimum": 0
@@ -221,6 +254,125 @@
     },
     "showValue": {
       "type": "boolean"
+    },
+    "trackColor": {
+      "type": "string"
+    },
+    "referenceLines": {
+      "type": "array",
+      "description": "Threshold lines drawn across the plot at a fixed axis value.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "axis": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y"
+            ]
+          },
+          "value": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "solid",
+              "dashed",
+              "dotted"
+            ]
+          }
+        },
+        "required": [
+          "axis",
+          "value"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "annotations": {
+      "type": "array",
+      "description": "Text callouts anchored to a data coordinate.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "y": {
+            "type": "number"
+          },
+          "text": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "text"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "regions": {
+      "type": "array",
+      "description": "Shaded ranges highlighting a span on the x or y axis.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "axis": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y"
+            ]
+          },
+          "start": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "end": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "opacity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "axis",
+          "start",
+          "end"
+        ],
+        "additionalProperties": true
+      }
     }
   },
   "additionalProperties": true

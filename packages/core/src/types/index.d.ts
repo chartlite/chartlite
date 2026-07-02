@@ -201,8 +201,6 @@ export interface BaseChartConfig {
   colors?: string[];
   /** Chart title */
   title?: string;
-  /** Whether to show legend (deprecated: use legend.show) */
-  showLegend?: boolean;
   /** Legend configuration */
   legend?: LegendConfig;
   /** Whether to animate on initial load (animations are disabled by default for performance) */

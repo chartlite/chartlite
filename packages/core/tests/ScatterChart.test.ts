@@ -402,7 +402,7 @@ describe('ScatterChart', () => {
 
         const chart = new ScatterChart(container, {
           data: multiSeriesData,
-          showLegend: true
+          legend: { show: true }
         });
         chart.render();
 

@@ -211,13 +211,13 @@ export default function Examples() {
             title="Grouped bars with legend"
             description="Series-first data renders grouped bars with an automatic legend."
             code={{
-              vanilla: `new BarChart('#chart', { data: seriesFirstData }).render();`,
-              react: `<BarChart data={data} showLegend />`,
-              vue: `<BarChart :data="data" show-legend />`,
-              svelte: `<div use:chart={{ type: 'bar', data, showLegend: true }} />`,
+              vanilla: `new BarChart('#chart', { data: seriesFirstData, legend: { show: true } }).render();`,
+              react: `<BarChart data={data} legend={{ show: true }} />`,
+              vue: `<BarChart :data="data" :legend="{ show: true }" />`,
+              svelte: `<div use:chart={{ type: 'bar', data, legend: { show: true } }} />`,
             }}
           >
-            <BarChart data={barData} showLegend cssVars height={260} />
+            <BarChart data={barData} legend={{ show: true }} cssVars height={260} />
           </ExampleCard>
         </div>
       </div>

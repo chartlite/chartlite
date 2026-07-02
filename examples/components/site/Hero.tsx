@@ -104,7 +104,7 @@ export default function Hero() {
         <div>
           <div className="hero-cta mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-ink-800/60 px-3.5 py-1.5 text-xs text-mist-300">
             <span className="h-1.5 w-1.5 rounded-full bg-glow-cyan shadow-[0_0_8px_2px] shadow-glow-cyan/60" />
-            v0.12 · 9 chart types · SSR + agent-native
+            v1.0 · 8 chart types · SSR + agent-native
           </div>
 
           <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight text-mist-100 sm:text-6xl md:text-7xl">
@@ -147,7 +147,7 @@ export default function Hero() {
             {[
               { to: 13, dec: 0, suffix: 'KB', label: 'gzipped' },
               { to: 0, dec: 0, suffix: '', label: 'deps' },
-              { to: 9, dec: 0, suffix: '', label: 'chart types' },
+              { to: 8, dec: 0, suffix: '', label: 'chart types' },
               { to: 100, dec: 0, suffix: '%', label: 'WCAG AA' },
             ].map((s) => (
               <div key={s.label} className="hero-stat">

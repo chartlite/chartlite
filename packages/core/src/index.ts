@@ -73,7 +73,6 @@ export {
 export { downsampleLTTB, downsampleEveryNth, autoDownsample } from './utils/sampling';
 
 // Export plugins (tree-shakeable - only included when explicitly imported)
-export { TooltipPlugin, type TooltipOptions } from './plugins/TooltipPlugin';
 export { DebugPlugin } from './plugins/DebugPlugin';
 
 // Version — injected at build time from package.json (see tsup.config.ts). The
