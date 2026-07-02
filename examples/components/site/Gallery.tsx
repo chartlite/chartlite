@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import {
-  LineChart,
   BarChart,
   ComboChart,
   PieChart,
