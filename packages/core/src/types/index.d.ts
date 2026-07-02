@@ -211,6 +211,23 @@ export interface PieChartConfig extends BaseChartConfig {
   showLabels?: boolean;
 }
 
+/**
+ * Sparkline configuration — a tiny, axis-less inline chart for metrics.
+ */
+export interface SparklineConfig extends BaseChartConfig {
+  data: FlexibleDataInput;
+  /** Sparkline style (default: 'line') */
+  type?: 'line' | 'area';
+  /** Line curve style (default: 'linear') */
+  curve?: 'linear' | 'smooth';
+  /** Draw a dot at the last data point (default: true) */
+  showEndDot?: boolean;
+  /** Stroke width in pixels (default: 1.5) */
+  strokeWidth?: number;
+  /** Fill opacity for the 'area' type (default: 0.15) */
+  fillOpacity?: number;
+}
+
 export interface ScatterChartConfig extends BaseChartConfig {
   data: FlexibleDataInput;
   /** Point size in pixels (default: 6) */

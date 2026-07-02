@@ -24,6 +24,7 @@ export type {
   AreaChartConfig,
   PieChartConfig,
   ScatterChartConfig,
+  SparklineConfig,
   Chart,
   Dimensions,
   Scale,
@@ -37,6 +38,7 @@ export { BarChart } from './charts/BarChart';
 export { AreaChart } from './charts/AreaChart';
 export { ScatterChart } from './charts/ScatterChart';
 export { PieChart } from './charts/PieChart';
+export { Sparkline } from './charts/Sparkline';
 
 // Export utilities (for advanced users)
 export {
