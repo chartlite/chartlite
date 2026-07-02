@@ -257,8 +257,13 @@ export interface AreaChartConfig extends BaseChartConfig {
   data: FlexibleDataInput;
   /** Line curve style */
   curve?: 'linear' | 'smooth';
-  /** Fill opacity (0-1) */
+  /** Fill opacity (0-1). With `gradient`, this is the opacity at the top of the fade. */
   fillOpacity?: number;
+  /**
+   * Fill each area with a vertical gradient fading from the series color down to
+   * transparent (default: true). Set to false for a flat fill.
+   */
+  gradient?: boolean;
 }
 
 export interface PieChartConfig extends BaseChartConfig {

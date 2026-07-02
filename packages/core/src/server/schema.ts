@@ -86,6 +86,7 @@ export const chartSpecSchema = {
     orientation: { type: 'string', enum: ['vertical', 'horizontal'] },
     showPoints: { type: 'boolean' },
     fillOpacity: { type: 'number', minimum: 0, maximum: 1 },
+    gradient: { type: 'boolean' },
     innerRadius: { type: 'number', minimum: 0, maximum: 1 },
     showLabels: { type: 'boolean' },
     pointSize: { type: 'number', exclusiveMinimum: 0 },

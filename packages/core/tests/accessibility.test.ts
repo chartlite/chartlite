@@ -406,4 +406,25 @@ describe('Accessibility - ARIA Labels and Roles', () => {
       expect(styles.length).toBe(1);
     });
   });
+
+  describe('Reduced motion', () => {
+    it('gates the entrance animation behind prefers-reduced-motion: no-preference', () => {
+      const chart = new LineChart(container, {
+        data: [{ x: 'A', y: 10 }, { x: 'B', y: 20 }],
+        animate: true,
+      });
+      chart.render();
+
+      const svg = container.querySelector('svg');
+      const styleEl = svg?.querySelector('style');
+      expect(styleEl?.textContent).toContain('@media (prefers-reduced-motion: no-preference)');
+      // The animation must live inside the media query, so reduced-motion users
+      // never receive the `animation` declaration.
+      const css = styleEl?.textContent || '';
+      const mediaIndex = css.indexOf('@media (prefers-reduced-motion: no-preference)');
+      const animIndex = css.indexOf('animation:');
+      expect(mediaIndex).toBeGreaterThanOrEqual(0);
+      expect(animIndex).toBeGreaterThan(mediaIndex);
+    });
+  });
 });

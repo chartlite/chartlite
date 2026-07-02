@@ -166,6 +166,9 @@
       "minimum": 0,
       "maximum": 1
     },
+    "gradient": {
+      "type": "boolean"
+    },
     "innerRadius": {
       "type": "number",
       "minimum": 0,
