@@ -1,6 +1,11 @@
 /**
  * Tooltip Plugin
  *
+ * @deprecated Use `tooltip()` from `@chartlite/core/interactive` instead. That
+ * version reads the current `.data-point` `data-*` contract (this class's
+ * `[data-x][data-y]` selector no longer matches the rendered points) and is part
+ * of the maintained interactivity layer. This export will be removed in 1.0.
+ *
  * Adds interactive tooltips to chart data points on hover.
  * Tree-shakeable - only included when explicitly imported and used.
  *

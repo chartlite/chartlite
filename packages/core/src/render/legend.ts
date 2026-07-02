@@ -32,8 +32,13 @@ export function renderLegend(
   const itemWidths: number[] = [];
 
   // First pass: render items and measure their actual widths
-  seriesData.forEach((series) => {
+  seriesData.forEach((series, seriesIndex) => {
     const itemGroup = createGroup(currentX, 0);
+    // Tag each item so the tree-shakeable legendToggle() plugin can bind clicks
+    // and match the item to its series. Purely additive; no effect when unused.
+    itemGroup.classList.add('legend-item');
+    itemGroup.setAttribute('data-series-index', String(seriesIndex));
+    itemGroup.setAttribute('data-series', series.name);
 
     // Color indicator (square)
     const rect = document.createElementNS(SVG_NS, 'rect');

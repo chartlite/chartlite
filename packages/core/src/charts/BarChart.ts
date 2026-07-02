@@ -11,6 +11,7 @@ import {
   getAllXValues,
   getCombinedYRange,
 } from '../utils';
+import { setDataPointAttrs } from '../render/dataAttrs';
 
 export class BarChart extends BaseChart {
   protected config: BarChartConfig;
@@ -76,16 +77,17 @@ export class BarChart extends BaseChart {
 
     // Render bars for each series
     this.seriesData.forEach((series, seriesIndex) => {
-      series.data.forEach((d) => {
+      series.data.forEach((d, index) => {
         const groupX = xScale.scale(String(d.x));
         const barX = groupX + seriesIndex * barWidth;
         const barHeight = chartHeight - yScale(d.y);
         const y = yScale(d.y);
+        const drawnWidth = barWidth * (1 - groupPadding);
 
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('x', String(barX));
         rect.setAttribute('y', String(y));
-        rect.setAttribute('width', String(barWidth * (1 - groupPadding)));
+        rect.setAttribute('width', String(drawnWidth));
         rect.setAttribute('height', String(Math.abs(barHeight)));
         rect.setAttribute('fill', series.color || colors.primary);
         rect.setAttribute('rx', '4'); // Rounded corners
@@ -97,6 +99,15 @@ export class BarChart extends BaseChart {
         const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
         rect.setAttribute('aria-label', `${seriesLabel}Bar: ${d.x}, value ${d.y}`);
         rect.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
+        setDataPointAttrs(rect, {
+          x: d.x,
+          y: d.y,
+          seriesName: series.name,
+          seriesIndex,
+          index,
+          cx: barX + drawnWidth / 2,
+          cy: y,
+        });
 
         // Add hover effect with tracked listeners
         rect.style.transition = 'opacity 0.2s';
@@ -145,16 +156,17 @@ export class BarChart extends BaseChart {
 
     // Render bars for each series
     this.seriesData.forEach((series, seriesIndex) => {
-      series.data.forEach((d) => {
+      series.data.forEach((d, index) => {
         const groupY = yScale.scale(String(d.x));
         const barY = groupY + seriesIndex * barHeight;
         const barWidth = xScale(d.y);
+        const drawnHeight = barHeight * (1 - groupPadding);
 
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('x', '0');
         rect.setAttribute('y', String(barY));
         rect.setAttribute('width', String(Math.abs(barWidth)));
-        rect.setAttribute('height', String(barHeight * (1 - groupPadding)));
+        rect.setAttribute('height', String(drawnHeight));
         rect.setAttribute('fill', series.color || colors.primary);
         rect.setAttribute('rx', '4'); // Rounded corners
         rect.classList.add('bar');
@@ -165,6 +177,15 @@ export class BarChart extends BaseChart {
         const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
         rect.setAttribute('aria-label', `${seriesLabel}Bar: ${d.x}, value ${d.y}`);
         rect.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
+        setDataPointAttrs(rect, {
+          x: d.x,
+          y: d.y,
+          seriesName: series.name,
+          seriesIndex,
+          index,
+          cx: Math.abs(barWidth),
+          cy: barY + drawnHeight / 2,
+        });
 
         // Add hover effect with tracked listeners
         rect.style.transition = 'opacity 0.2s';

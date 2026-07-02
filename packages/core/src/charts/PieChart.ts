@@ -9,6 +9,7 @@
 import { BaseChart } from './BaseChart';
 import type { PieChartConfig } from '../types';
 import { getThemeColors } from '../utils';
+import { setDataPointAttrs } from '../render/dataAttrs';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const FULL_CIRCLE = Math.PI * 2;
@@ -79,6 +80,12 @@ export class PieChart extends BaseChart {
       path.setAttribute('aria-label', `${slice.label ?? slice.x}: ${slice.y} (${percent}%)`);
       path.setAttribute('tabindex', '-1');
       path.classList.add('data-point');
+      setDataPointAttrs(path, {
+        x: slice.label ?? slice.x,
+        y: slice.y,
+        seriesIndex: 0,
+        index,
+      });
       mainGroup.appendChild(path);
 
       // Optional percentage label at the slice mid-angle

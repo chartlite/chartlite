@@ -148,6 +148,39 @@ export interface Region {
 }
 
 /**
+ * Payload passed to interactivity callbacks (onPointClick / onHover). Read from the
+ * `data-*` attributes on the hovered/clicked element by the `@chartlite/core/interactive`
+ * plugins, so the values match the source data.
+ */
+export interface ChartPointEvent {
+  /** The x value of the point (category or numeric). */
+  x: string | number;
+  /** The y value of the point. */
+  y: number;
+  /** Series display name, if present. */
+  seriesName?: string;
+  /** Zero-based series index. */
+  seriesIndex: number;
+  /** Zero-based index of the point within its series. */
+  index: number;
+  /** The originating SVG element (the `.data-point`). */
+  element: Element;
+  /** The underlying DOM event. */
+  originalEvent: Event;
+}
+
+/**
+ * Payload passed to the onLegendToggle callback when a legend item is clicked
+ * (requires the tree-shakeable `legendToggle()` plugin).
+ */
+export interface LegendToggleEvent {
+  seriesName: string;
+  seriesIndex: number;
+  /** True if the series is now hidden. */
+  hidden: boolean;
+}
+
+/**
  * Note: All performance optimizations are now automatic and handled internally.
  * No configuration needed - charts are fast by default!
  */
@@ -184,6 +217,21 @@ export interface BaseChartConfig {
    * Use a built-in from `formatters` (e.g. `formatters.abbreviate`) or your own.
    */
   valueFormatter?: (value: number) => string;
+  /**
+   * Called when a data point is clicked. Requires the tree-shakeable `callbacks()`
+   * (or `interactive()`) plugin from `@chartlite/core/interactive`.
+   */
+  onPointClick?: (event: ChartPointEvent) => void;
+  /**
+   * Called on point hover (and with `null` on mouse-out). Requires the `callbacks()`
+   * (or `interactive()`) plugin from `@chartlite/core/interactive`.
+   */
+  onHover?: (event: ChartPointEvent | null) => void;
+  /**
+   * Called when a legend item is toggled. Requires the `legendToggle()` (or
+   * `interactive()`) plugin from `@chartlite/core/interactive`.
+   */
+  onLegendToggle?: (event: LegendToggleEvent) => void;
 }
 
 export interface LineChartConfig extends BaseChartConfig {
