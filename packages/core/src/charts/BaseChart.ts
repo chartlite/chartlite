@@ -175,7 +175,7 @@ export abstract class BaseChart implements Chart {
     }
 
     // Validate theme
-    const validThemes = ['default', 'midnight', 'minimal'];
+    const validThemes = ['default', 'midnight', 'minimal', 'tailwind', 'nord', 'high-contrast'];
     if (config.theme && !validThemes.includes(config.theme)) {
       throw new Error(`Invalid theme: ${config.theme}. Must be one of: ${validThemes.join(', ')}`);
     }
