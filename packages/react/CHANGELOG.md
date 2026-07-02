@@ -1,5 +1,12 @@
 # @chartlite/react
 
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [[`c1914a1`](https://github.com/chartlite/chartlite/commit/c1914a126d4a59d1287c99e8bed5811d640fbc38)]:
+  - @chartlite/core@0.5.0
+
 ## 0.4.0
 
 ### Patch Changes
