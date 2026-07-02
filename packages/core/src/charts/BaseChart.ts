@@ -32,35 +32,9 @@ import {
 } from '../a11y/descriptions';
 import { injectAccessibilityStyles } from '../a11y/styles';
 import { KeyboardNavigator } from '../a11y/keyboard';
-
-/**
- * Default constants for chart rendering
- */
-const CHART_DEFAULTS = {
-  // Title
-  TITLE_FONT_SIZE: 18,
-  TITLE_TOP_PADDING: 5,
-  TITLE_BOTTOM_PADDING: 10,
-
-  // Legend
-  LEGEND_FONT_SIZE: 12,
-  LEGEND_PADDING: 15,
-  LEGEND_ICON_SIZE: 12,
-  LEGEND_ICON_MARGIN: 6,
-  LEGEND_ITEM_SPACING: 20,
-
-  // Axes
-  AXIS_LABEL_FONT_SIZE: 12,
-  AXIS_LABEL_OFFSET: 10,
-  AXIS_LABEL_BOTTOM_OFFSET: 20,
-
-  // Resize
-  RESIZE_DEBOUNCE_MS: 150,
-
-  // Default dimensions
-  DEFAULT_WIDTH: 600,
-  DEFAULT_HEIGHT: 400,
-} as const;
+import { CHART_DEFAULTS } from '../render/constants';
+import { renderTitle as drawTitle } from '../render/title';
+import { renderLegend as drawLegend } from '../render/legend';
 
 export abstract class BaseChart implements Chart {
   protected container: HTMLElement;
@@ -611,22 +585,7 @@ export abstract class BaseChart implements Chart {
    */
   protected renderTitle(): void {
     if (!this.svg) return;
-
-    const colors = getThemeColors(this.config.theme || 'default');
-
-    // Position title near the top of SVG
-    const titleY = CHART_DEFAULTS.TITLE_FONT_SIZE + CHART_DEFAULTS.TITLE_TOP_PADDING;
-
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', String(this.dimensions.width / 2));
-    text.setAttribute('y', String(titleY));
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('fill', colors.text);
-    text.setAttribute('font-size', String(CHART_DEFAULTS.TITLE_FONT_SIZE));
-    text.setAttribute('font-weight', '600');
-    text.textContent = this.config.title || '';
-
-    this.svg.appendChild(text);
+    drawTitle(this.svg, this.config, this.dimensions);
   }
 
   /**
@@ -634,105 +593,7 @@ export abstract class BaseChart implements Chart {
    */
   protected renderLegend(): void {
     if (!this.svg || this.seriesData.length <= 1) return;
-
-    const colors = getThemeColors(this.config.theme || 'default');
-    const position = this.config.legend?.position || 'top';
-
-    // Create legend group
-    const legendGroup = this.createGroup();
-    legendGroup.classList.add('chart-legend');
-
-    // Calculate legend item dimensions
-    const itemSpacing = CHART_DEFAULTS.LEGEND_ITEM_SPACING;
-    const iconSize = CHART_DEFAULTS.LEGEND_ICON_SIZE;
-    const iconMargin = CHART_DEFAULTS.LEGEND_ICON_MARGIN;
-
-    // Render horizontal legend (only layout supported)
-    let currentX = 0;
-    const itemWidths: number[] = [];
-
-    // First pass: render items and measure their actual widths
-    this.seriesData.forEach((series) => {
-      const itemGroup = this.createGroup(currentX, 0);
-
-      // Color indicator (square)
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('width', String(iconSize));
-      rect.setAttribute('height', String(iconSize));
-      rect.setAttribute('fill', series.color || colors.primary);
-      rect.setAttribute('rx', '2');
-      itemGroup.appendChild(rect);
-
-      // Label
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', String(iconSize + iconMargin));
-      label.setAttribute('y', String(iconSize / 2));
-      label.setAttribute('dominant-baseline', 'middle');
-      label.setAttribute('fill', colors.text);
-      label.setAttribute('font-size', String(CHART_DEFAULTS.LEGEND_FONT_SIZE));
-      label.textContent = series.name;
-      itemGroup.appendChild(label);
-
-      legendGroup.appendChild(itemGroup);
-
-      // Measure actual text width using getBBox()
-      // Temporarily append to SVG to measure
-      this.svg!.appendChild(legendGroup);
-      let textWidth: number;
-      try {
-        const bbox = label.getBBox();
-        textWidth = bbox.width;
-      } catch (e) {
-        // getBBox not available (e.g., in test environment or SSR)
-        // Fallback to estimation: ~7px per character
-        textWidth = series.name.length * 7;
-      }
-      const itemWidth = iconSize + iconMargin + textWidth;
-      itemWidths.push(itemWidth);
-      this.svg!.removeChild(legendGroup);
-
-      currentX += itemWidth + itemSpacing;
-    });
-
-    // Calculate total width
-    const totalWidth = itemWidths.reduce((sum, w) => sum + w, 0) + itemSpacing * (this.seriesData.length - 1);
-
-    // Calculate horizontal position based on alignment
-    const align = this.config.legend?.align || 'left';
-    const chartWidth = this.dimensions.width - this.dimensions.margin.left - this.dimensions.margin.right;
-
-    let legendX: number;
-    if (align === 'center') {
-      legendX = this.dimensions.margin.left + (chartWidth - totalWidth) / 2;
-    } else if (align === 'right') {
-      legendX = this.dimensions.margin.left + chartWidth - totalWidth;
-    } else {
-      legendX = this.dimensions.margin.left;
-    }
-
-    // Position legend in the expanded margin area (outside data area)
-    if (position === 'top') {
-      let legendY: number;
-
-      if (this.config.title) {
-        // Title is present - position legend below title
-        const titleY = CHART_DEFAULTS.TITLE_FONT_SIZE + CHART_DEFAULTS.TITLE_TOP_PADDING;
-        legendY = titleY + CHART_DEFAULTS.TITLE_BOTTOM_PADDING;
-      } else {
-        // No title - position legend near top of SVG
-        legendY = CHART_DEFAULTS.LEGEND_FONT_SIZE + CHART_DEFAULTS.TITLE_TOP_PADDING;
-      }
-
-      legendGroup.setAttribute('transform', `translate(${legendX}, ${legendY})`);
-    } else {
-      // Position legend in the bottom margin area
-      const baseDims = getDefaultDimensions(this.dimensions.width, CHART_DEFAULTS.DEFAULT_HEIGHT);
-      const dataAreaBottom = this.dimensions.height - this.dimensions.margin.bottom + baseDims.margin.bottom;
-      const legendY = dataAreaBottom + CHART_DEFAULTS.LEGEND_FONT_SIZE;
-      legendGroup.setAttribute('transform', `translate(${legendX}, ${legendY})`);
-    }
-
-    this.svg.appendChild(legendGroup);
+    drawLegend(this.svg, this.config, this.dimensions, this.seriesData);
   }
 
   /**
