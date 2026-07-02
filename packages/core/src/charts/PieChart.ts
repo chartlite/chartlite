@@ -8,7 +8,6 @@
 
 import { BaseChart } from './BaseChart';
 import type { PieChartConfig } from '../types';
-import { getThemeColors } from '../utils';
 import { setDataPointAttrs } from '../render/dataAttrs';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -30,7 +29,7 @@ export class PieChart extends BaseChart {
   protected renderChart(): void {
     if (!this.svg) return;
 
-    const colors = getThemeColors(this.config.theme || 'default');
+    const colors = this.themeColors();
     const { margin } = this.dimensions;
     const chartWidth = this.dimensions.width - margin.left - margin.right;
     const chartHeight = this.dimensions.height - margin.top - margin.bottom;

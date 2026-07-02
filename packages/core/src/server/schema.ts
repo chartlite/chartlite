@@ -69,6 +69,12 @@ export const chartSpecSchema = {
       enum: ['default', 'midnight', 'minimal', 'tailwind', 'nord', 'high-contrast'],
     },
     colors: { type: 'array', items: { type: 'string' } },
+    cssVars: {
+      type: 'boolean',
+      description:
+        'Emit theme colors as CSS custom properties (--cl-*) and render colors as ' +
+        'var(--cl-*, fallback), so the chart can be re-themed (e.g. dark mode) with plain CSS.',
+    },
     title: { type: 'string' },
     width: { type: 'number', exclusiveMinimum: 0 },
     height: { type: 'number', exclusiveMinimum: 0 },

@@ -204,6 +204,15 @@ export interface BaseChartConfig {
   animate?: boolean;
   /** Whether to resize chart when container size changes */
   responsive?: boolean;
+  /**
+   * Emit theme colors as CSS custom properties (`--cl-bg`, `--cl-text`,
+   * `--cl-grid`, `--cl-primary`, `--cl-series-0..N`) on the SVG root and render
+   * every color as `var(--cl-*, <fallback>)` (default: false). This makes a chart
+   * fully re-themeable with plain CSS — including dark mode via
+   * `@media (prefers-color-scheme: dark)` — with no JavaScript, which pairs with
+   * server-side rendering (`renderToString`) for zero-JS themable charts.
+   */
+  cssVars?: boolean;
   /** Reference lines to draw on the chart */
   referenceLines?: ReferenceLine[];
   /** Annotations to add to the chart */

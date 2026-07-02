@@ -8,7 +8,6 @@ import {
   createLinearScale,
   createBandScale,
   generateLinePath,
-  getThemeColors,
   getAllXValues,
   getCombinedYRange,
 } from '../utils';
@@ -30,7 +29,7 @@ export class LineChart extends BaseChart {
   protected renderChart(): void {
     if (!this.svg) return;
 
-    const colors = getThemeColors(this.config.theme || 'default');
+    const colors = this.themeColors();
     const { margin } = this.dimensions;
     const chartWidth = this.dimensions.width - margin.left - margin.right;
     const chartHeight = this.dimensions.height - margin.top - margin.bottom;

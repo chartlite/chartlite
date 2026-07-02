@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chartlite - server-rendered, themed with pure CSS (zero JS)</title>
+<style>
+  /* These charts were rendered to SVG on the server with { cssVars: true }.
+     There is NO JavaScript on this page. The theme below is applied entirely
+     by overriding the --cl-* custom properties the SVG exposes. Toggle your OS
+     between light and dark mode to watch the same markup re-theme itself. */
+  :root {
+    color-scheme: light dark;
+    --page-bg: #f8fafc;
+    --page-fg: #0f172a;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+  }
+  /* Override Chartlite's tokens - the same variables the SVG references internally. */
+  .chart {
+    --cl-bg: transparent;
+    --cl-text: #475569;
+    --cl-grid: #e2e8f0;
+    --cl-series-0: #4f46e5;
+    --cl-series-1: #06b6d4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #0b1120;
+      --page-fg: #e2e8f0;
+      --card-bg: #0f172a;
+      --card-border: #1e293b;
+    }
+    .chart {
+      --cl-bg: transparent;
+      --cl-text: #94a3b8;
+      --cl-grid: #1e293b;
+      --cl-series-0: #818cf8;
+      --cl-series-1: #22d3ee;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 48px 24px;
+    background: var(--page-bg); color: var(--page-fg);
+    font-family: system-ui, -apple-system, sans-serif;
+    transition: background .3s, color .3s;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin: 0 0 8px; }
+  p.lede { margin: 0 0 32px; color: color-mix(in srgb, var(--page-fg) 70%, transparent); max-width: 60ch; }
+  .grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+  .card {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 14px; padding: 20px; transition: background .3s, border-color .3s;
+  }
+  .card svg { width: 100%; height: auto; }
+  code { background: color-mix(in srgb, var(--page-fg) 12%, transparent); padding: 2px 6px; border-radius: 6px; font-size: .85em; }
+  footer { margin-top: 32px; font-size: .85rem; color: color-mix(in srgb, var(--page-fg) 60%, transparent); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Server-rendered charts, themed with pure CSS</h1>
+    <p class="lede">
+      Both charts below were produced by <code>renderToString(spec)</code> on the server with
+      <code>{ cssVars: true }</code>. This page ships <strong>zero JavaScript</strong> - light/dark
+      theming happens entirely by overriding the <code>--cl-*</code> custom properties in CSS.
+      Switch your OS appearance to see the same markup re-theme instantly.
+    </p>
+    <div class="grid">
+      <div class="card"><div class="chart"><svg width="520" height="328" viewBox="0 0 520 328" role="img" aria-label="it chart: Monthly Revenue with 6 data points" tabindex="0" style="font-family: system-ui, -apple-system, sans-serif; --cl-bg: #ffffff; --cl-fg: #f9fafb; --cl-primary: #3b82f6; --cl-grid: #e5e7eb; --cl-text: #1f2937; --cl-series-0: #3b82f6; background-color: var(--cl-bg, #ffffff)"><title>Monthly Revenue</title><desc>it chart showing data from Jan to Jun. Values range from 4200.00 to 7200.00, with a strong upward trend.</desc><foreignObject width="0" height="0" overflow="hidden">
+        <table class="sr-only" aria-label="Chart data table">
+          <caption>Monthly Revenue - Data Table</caption>
+          <thead>
+            <tr>
+              <th scope="col">Category</th>
+              <th scope="col">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Jan</td><td>4200</td></tr><tr><td>Feb</td><td>4800</td></tr><tr><td>Mar</td><td>5200</td></tr><tr><td>Apr</td><td>4900</td></tr><tr><td>May</td><td>6100</td></tr><tr><td>Jun</td><td>7200</td></tr>
+          </tbody>
+        </table>
+      </foreignObject><g transform="translate(60, 68)" class="chart-main"><line x1="0" y1="0" x2="0" y2="200" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1"></line><line x1="0" y1="200" x2="420" y2="200" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1"></line><line x1="0" y1="200" x2="420" y2="200" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="200" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">0</text><line x1="0" y1="144.44444444444446" x2="420" y2="144.44444444444446" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="144.44444444444446" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">2000</text><line x1="0" y1="88.88888888888889" x2="420" y2="88.88888888888889" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="88.88888888888889" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">4000</text><line x1="0" y1="33.333333333333314" x2="420" y2="33.333333333333314" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="33.333333333333314" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">6000</text><line x1="0" y1="-22.22222222222223" x2="420" y2="-22.22222222222223" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="-22.22222222222223" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">8000</text><text x="35" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Jan</text><text x="105" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Feb</text><text x="175" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Mar</text><text x="245" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Apr</text><text x="315" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">May</text><text x="385" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Jun</text><path d="M 35,83.33333333333333 L 105,66.66666666666669 L 175,55.55555555555557 L 245,63.888888888888886 L 315,30.55555555555557 L 385,0 L 385,200 L 315,200 L 245,200 L 175,200 L 105,200 L 35,200 Z" fill="url(#cl-area-grad-1-0)" role="img" aria-label="Area series with 6 data points" tabindex="-1" data-series-index="0" data-series="Series 1" class="area-fill data-series"></path><path d="M 35,83.33333333333333 L 105,66.66666666666669 L 175,55.55555555555557 L 245,63.888888888888886 L 315,30.55555555555557 L 385,0" fill="none" stroke="var(--cl-series-0, #3b82f6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="presentation" aria-hidden="true" data-series-index="0" data-series="Series 1" class="area-line"></path></g><defs><linearGradient id="cl-area-grad-1-0" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--cl-series-0, #3b82f6)" stop-opacity="0.3"></stop><stop offset="100%" stop-color="var(--cl-series-0, #3b82f6)" stop-opacity="0"></stop></linearGradient></defs><text x="260" y="23" text-anchor="middle" fill="#1f2937" font-size="18" font-weight="600">Monthly Revenue</text></svg></div></div>
+      <div class="card"><div class="chart"><svg width="520" height="328" viewBox="0 0 520 328" role="img" aria-label="rt chart: Traffic by Source with 2 data series and 10 total data points" tabindex="0" style="font-family: system-ui, -apple-system, sans-serif; --cl-bg: #ffffff; --cl-fg: #f9fafb; --cl-primary: #3b82f6; --cl-grid: #e5e7eb; --cl-text: #1f2937; --cl-series-0: #3b82f6; --cl-series-1: #059669; background-color: var(--cl-bg, #ffffff)"><title>Traffic by Source</title><desc>rt chart showing data from Mon to Fri. Values range from 60.00 to 310.00, with a strong upward trend. Chart contains 2 data series: Organic, Referral.</desc><foreignObject width="0" height="0" overflow="hidden">
+        <table class="sr-only" aria-label="Chart data table">
+          <caption>Traffic by Source - Data Table</caption>
+          <thead>
+            <tr>
+              <th scope="col">Category</th>
+              <th scope="col">Organic</th><th scope="col">Referral</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Mon</th><td>120</td><td>60</td></tr><tr><th scope="row">Tue</th><td>200</td><td>90</td></tr><tr><th scope="row">Wed</th><td>170</td><td>110</td></tr><tr><th scope="row">Thu</th><td>260</td><td>130</td></tr><tr><th scope="row">Fri</th><td>310</td><td>180</td></tr>
+          </tbody>
+        </table>
+      </foreignObject><g transform="translate(60, 68)" class="chart-main"><line x1="0" y1="0" x2="0" y2="200" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1"></line><line x1="0" y1="200" x2="420" y2="200" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1"></line><line x1="0" y1="200" x2="420" y2="200" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="200" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">0</text><line x1="0" y1="135.48387096774195" x2="420" y2="135.48387096774195" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="135.48387096774195" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">100</text><line x1="0" y1="70.96774193548387" x2="420" y2="70.96774193548387" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="70.96774193548387" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">200</text><line x1="0" y1="6.451612903225794" x2="420" y2="6.451612903225794" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="6.451612903225794" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">300</text><line x1="0" y1="-58.064516129032256" x2="420" y2="-58.064516129032256" stroke="var(--cl-grid, #e5e7eb)" stroke-width="1" opacity="0.3"></line><text x="-10" y="-58.064516129032256" text-anchor="end" dominant-baseline="middle" fill="var(--cl-text, #1f2937)" font-size="12">400</text><text x="42" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Mon</text><text x="126" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Tue</text><text x="210" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Wed</text><text x="294" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Thu</text><text x="378" y="220" text-anchor="middle" fill="var(--cl-text, #1f2937)" font-size="12">Fri</text><rect x="8.399999999999999" y="122.58064516129032" width="30.240000000000002" height="77.41935483870968" fill="var(--cl-series-0, #3b82f6)" rx="4" role="img" aria-label="Organic, Bar: Mon, value 120" tabindex="-1" data-x="Mon" data-y="120" data-series="Organic" data-series-index="0" data-index="0" data-cx="23.52" data-cy="122.58064516129032" class="bar data-point" style="transition: opacity 0.2s"></rect><rect x="92.4" y="70.96774193548387" width="30.240000000000002" height="129.03225806451613" fill="var(--cl-series-0, #3b82f6)" rx="4" role="img" aria-label="Organic, Bar: Tue, value 200" tabindex="-1" data-x="Tue" data-y="200" data-series="Organic" data-series-index="0" data-index="1" data-cx="107.52000000000001" data-cy="70.96774193548387" class="bar data-point" style="transition: opacity 0.2s"></rect><rect x="176.4" y="90.3225806451613" width="30.240000000000002" height="109.6774193548387" fill="var(--cl-series-0, #3b82f6)" rx="4" role="img" aria-label="Organic, Bar: Wed, value 170" tabindex="-1" data-x="Wed" data-y="170" data-series="Organic" data-series-index="0" data-index="2" data-cx="191.52" data-cy="90.3225806451613" class="bar data-point" style="transition: opacity 0.2s"></rect><rect x="260.4" y="32.258064516129025" width="30.240000000000002" height="167.74193548387098" fill="var(--cl-series-0, #3b82f6)" rx="4" role="img" aria-label="Organic, Bar: Thu, value 260" tabindex="-1" data-x="Thu" data-y="260" data-series="Organic" data-series-index="0" data-index="3" data-cx="275.52" data-cy="32.258064516129025" class="bar data-point" style="transition: opacity 0.2s"></rect><rect x="344.4" y="0" width="30.240000000000002" height="200" fill="var(--cl-series-0, #3b82f6)" rx="4" role="img" aria-label="Organic, Bar: Fri, value 310" tabindex="-1" data-x="Fri" data-y="310" data-series="Organic" data-series-index="0" data-index="4" data-cx="359.52" data-cy="0" class="bar data-point" style="transition: opacity 0.2s"></rect><rect x="42" y="161.29032258064515" width="30.240000000000002" height="38.70967741935485" fill="var(--cl-series-1, #059669)" rx="4" role="img" aria-label="Referral, Bar: Mon, value 60" tabindex="-1" data-x="Mon" data-y="60" data-series="Referral" data-series-index="1" data-index="0" data-cx="57.120000000000005" data-cy="161.29032258064515" class="bar data-point" style="transition: opacity 0.2s"></rect><rect x="126" y="141.93548387096774" width="30.240000000000002" height="58.064516129032256" fill="var(--cl-series-1, #059669)" rx="4" role="img" aria-label="Referral, Bar: Tue, value 90" tabindex="-1" data-x="Tue" data-y="90" data-series="Referral" data-series-index="1" data-index="1" data-cx="141.12" data-cy="141.93548387096774" class="bar data-point" style="transition: opacity 0.2s"></rect><rect x="210" y="129.03225806451613" width="30.240000000000002" height="70.96774193548387" fill="var(--cl-series-1, #059669)" rx="4" role="img" aria-label="Referral, Bar: Wed, value 110" tabindex="-1" data-x="Wed" data-y="110" data-series="Referral" data-series-index="1" data-index="2" data-cx="225.12" data-cy="129.03225806451613" class="bar data-point" style="transition: opacity 0.2s"></rect><rect x="294" y="116.12903225806451" width="30.240000000000002" height="83.87096774193549" fill="var(--cl-series-1, #059669)" rx="4" role="img" aria-label="Referral, Bar: Thu, value 130" tabindex="-1" data-x="Thu" data-y="130" data-series="Referral" data-series-index="1" data-index="3" data-cx="309.12" data-cy="116.12903225806451" class="bar data-point" style="transition: opacity 0.2s"></rect><rect x="378" y="83.87096774193547" width="30.240000000000002" height="116.12903225806453" fill="var(--cl-series-1, #059669)" rx="4" role="img" aria-label="Referral, Bar: Fri, value 180" tabindex="-1" data-x="Fri" data-y="180" data-series="Referral" data-series-index="1" data-index="4" data-cx="393.12" data-cy="83.87096774193547" class="bar data-point" style="transition: opacity 0.2s"></rect></g><text x="260" y="23" text-anchor="middle" fill="#1f2937" font-size="18" font-weight="600">Traffic by Source</text></svg></div></div>
+    </div>
+    <footer>Chartlite &middot; <code>@chartlite/core/server</code> &middot; no client runtime</footer>
+  </div>
+</body>
+</html>
