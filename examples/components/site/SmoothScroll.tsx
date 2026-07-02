@@ -26,8 +26,9 @@ export default function SmoothScroll({ children }: { children: ReactNode }) {
     lenis.on('scroll', ScrollTrigger.update);
 
     const raf = (time: number) => {
-      // Lenis expects milliseconds.
-      lenis.raf(time);
+      // GSAP's ticker reports time in SECONDS; Lenis.raf() wants MILLISECONDS.
+      // Without the *1000, Lenis never advances and the page appears frozen.
+      lenis.raf(time * 1000);
     };
     gsap.ticker.add(raf);
     gsap.ticker.lagSmoothing(0);
