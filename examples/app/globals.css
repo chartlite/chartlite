@@ -34,6 +34,38 @@
   --accent: var(--color-glow-cyan);
   --accent-2: var(--color-glow-violet);
   color-scheme: dark;
+
+  /* Global Chartlite theme — inherited by every chart rendered with `cssVars`.
+     The nav toggle flips `data-chart-theme` to re-theme them all at once. */
+  --cl-bg: transparent;
+  --cl-text: #8b8ba7;
+  --cl-grid: rgba(255, 255, 255, 0.08);
+  --cl-primary: #22d3ee;
+  --cl-series-0: #22d3ee;
+  --cl-series-1: #a855f7;
+  --cl-series-2: #6366f1;
+  --cl-series-3: #ec4899;
+  --cl-series-4: #34d399;
+
+  /* Panel behind charts on example pages (follows the chart theme). */
+  --chart-slab: rgba(255, 255, 255, 0.015);
+  --chart-slab-border: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-chart-theme='light'] {
+  color-scheme: light;
+  --cl-bg: #ffffff;
+  --cl-text: #475569;
+  --cl-grid: rgba(15, 23, 42, 0.08);
+  --cl-primary: #4f46e5;
+  --cl-series-0: #4f46e5;
+  --cl-series-1: #db2777;
+  --cl-series-2: #0891b2;
+  --cl-series-3: #d97706;
+  --cl-series-4: #059669;
+
+  --chart-slab: #ffffff;
+  --chart-slab-border: rgba(15, 23, 42, 0.08);
 }
 
 * {
@@ -174,3 +206,14 @@ html.lenis body {
     transform: none !important;
   }
 }
+
+/* Give the live library charts the hero's luminous feel — a soft neon glow on
+   strokes and points, but only in the dark chart theme (glow reads badly on
+   white). Purely presentational, scoped to the site. */
+:root:not([data-chart-theme='light']) svg :is(.area-line, .combo-line, path.data-series) {
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.4));
+}
+:root:not([data-chart-theme='light']) svg circle.data-point {
+  filter: drop-shadow(0 0 3px rgba(34, 211, 238, 0.45));
+}
+

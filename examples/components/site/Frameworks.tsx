@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { ComboChart } from '@chartlite/react';
 import Reveal from './Reveal';
-import { neonOnDark } from './chartTheme';
 
 const comboData = {
   series: [
@@ -93,9 +92,7 @@ export default function Frameworks() {
       <Reveal className="grid items-stretch gap-6 lg:grid-cols-2">
         {/* Live chart */}
         <div className="border-glow relative flex flex-col justify-center rounded-2xl glass p-6">
-          <div style={neonOnDark}>
-            <ComboChart data={comboData} cssVars height={300} />
-          </div>
+          <ComboChart data={comboData} cssVars height={300} />
           <p className="mt-2 text-center text-xs text-mist-600">
             The exact chart every snippet renders — live, right here.
           </p>

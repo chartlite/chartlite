@@ -10,7 +10,6 @@ export interface CodeExample {
   react: string;
   vue?: string;
   svelte?: string;
-  angular?: string;
 }
 
 interface CodeViewerProps {
@@ -26,7 +25,6 @@ export default function CodeViewer({ code }: CodeViewerProps) {
     { id: 'react' as const, label: 'React', available: true },
     { id: 'vue' as const, label: 'Vue', available: !!code.vue },
     { id: 'svelte' as const, label: 'Svelte', available: !!code.svelte },
-    { id: 'angular' as const, label: 'Angular', available: !!code.angular },
   ];
 
   const currentCode = code[selectedFramework] || code.vanilla;

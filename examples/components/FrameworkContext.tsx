@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-type FrameworkType = 'vanilla' | 'react' | 'vue' | 'svelte' | 'angular';
+type FrameworkType = 'vanilla' | 'react' | 'vue' | 'svelte';
 
 interface FrameworkContextType {
   selectedFramework: FrameworkType;

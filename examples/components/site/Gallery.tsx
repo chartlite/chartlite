@@ -11,29 +11,25 @@ import {
   AreaChart,
 } from '@chartlite/react';
 import Reveal from './Reveal';
-import { neonOnDark } from './chartTheme';
 
 function ChartCard({
   title,
   tag,
   children,
-  className = '',
 }: {
   title: string;
   tag: string;
   children: ReactNode;
-  className?: string;
 }) {
   return (
-    <div className={`border-glow group relative overflow-hidden rounded-2xl glass p-5 ${className}`}>
+    <div className="border-glow relative overflow-hidden rounded-2xl glass p-5">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-mist-100">{title}</h3>
         <span className="rounded-full border border-white/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-mist-500">
           {tag}
         </span>
       </div>
-      <div style={neonOnDark}>{children}</div>
-      <div className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100 [background:radial-gradient(400px_circle_at_var(--x,50%)_var(--y,0%),rgba(34,211,238,0.08),transparent_60%)]" />
+      {children}
     </div>
   );
 }
@@ -89,6 +85,12 @@ const scatterData = [
   { x: 60, y: 48 }, { x: 75, y: 65 }, { x: 82, y: 58 }, { x: 90, y: 72 },
 ];
 
+const metrics = [
+  { label: 'Revenue', value: '$72.4k', delta: '+34%', data: [12, 15, 13, 18, 22, 19, 25, 24, 28, 30] },
+  { label: 'Active users', value: '18.2k', delta: '+12%', data: [8, 9, 11, 10, 13, 15, 14, 17, 19, 21] },
+  { label: 'Latency', value: '42ms', delta: '−8%', data: [60, 55, 58, 50, 47, 49, 44, 45, 43, 42] },
+];
+
 export default function Gallery() {
   return (
     <section id="gallery" className="relative mx-auto max-w-6xl px-6 py-24 scroll-mt-24">
@@ -101,7 +103,8 @@ export default function Gallery() {
         </h2>
         <p className="mt-4 text-lg text-mist-500">
           Line, bar, area, scatter, pie &amp; donut, radial gauges, sparklines,
-          and combo — all rendered live below, themed entirely with CSS variables.
+          and combo — all live below, and themed entirely with CSS variables (try
+          the theme toggle up top).
         </p>
       </Reveal>
 
@@ -119,7 +122,7 @@ export default function Gallery() {
         </ChartCard>
 
         <ChartCard title="Donut" tag="pie">
-          <PieChart data={pieData} innerRadius={0.62} showLabels cssVars height={210} />
+          <PieChart data={pieData} innerRadius={0.64} cssVars height={210} />
         </ChartCard>
 
         <ChartCard title="Radial gauge" tag="radial">
@@ -138,20 +141,19 @@ export default function Gallery() {
         </ChartCard>
       </Reveal>
 
+      {/* Sparkline metric strip */}
       <Reveal className="mt-5">
-        <div className="border-glow flex flex-col items-start justify-between gap-4 rounded-2xl glass p-6 sm:flex-row sm:items-center">
-          <div style={neonOnDark} className="flex flex-1 items-center gap-6">
-            <div className="min-w-0 flex-1">
-              <p className="mb-1 text-xs text-mist-600">Sparkline · inline metric</p>
-              <Sparkline data={[12, 15, 13, 18, 22, 19, 25, 24, 28, 30]} type="area" width={260} height={44} />
+        <div className="border-glow grid gap-px overflow-hidden rounded-2xl glass sm:grid-cols-3">
+          {metrics.map((m) => (
+            <div key={m.label} className="flex flex-col gap-2 p-5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs uppercase tracking-widest text-mist-600">{m.label}</span>
+                <span className="text-xs font-semibold text-glow-cyan">{m.delta}</span>
+              </div>
+              <span className="font-display text-2xl font-semibold text-mist-100">{m.value}</span>
+              <Sparkline data={m.data} type="area" cssVars height={36} />
             </div>
-          </div>
-          <a
-            href="/chart-gallery"
-            className="shrink-0 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-mist-100 transition-colors hover:border-white/25"
-          >
-            Full gallery →
-          </a>
+          ))}
         </div>
       </Reveal>
     </section>

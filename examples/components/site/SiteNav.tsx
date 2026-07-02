@@ -2,13 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-
-const links = [
-  { href: '/#gallery', label: 'Charts' },
-  { href: '/#frameworks', label: 'Frameworks' },
-  { href: '/#agents', label: 'Agents' },
-  { href: '/basic-examples', label: 'Examples' },
-];
+import Logo from './Logo';
+import ChartThemeToggle from './ChartThemeToggle';
+import { NAV_LINKS } from './navLinks';
 
 export default function SiteNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -27,18 +23,15 @@ export default function SiteNav() {
           scrolled ? 'glass border-glow glow-shadow' : 'border border-transparent'
         }`}
       >
-        <Link href="/" className="group flex items-center gap-2.5">
-          <span className="relative grid h-8 w-8 place-items-center rounded-lg bg-ink-800 border border-white/10">
-            <span className="text-glow-cyan text-lg leading-none">◔</span>
-            <span className="absolute inset-0 rounded-lg bg-glow-cyan/20 blur-md transition-opacity group-hover:opacity-100 opacity-0" />
-          </span>
+        <Link href="/" className="flex items-center gap-2.5">
+          <Logo className="h-7 w-7" />
           <span className="font-display text-lg font-semibold tracking-tight text-mist-100">
             Chartlite
           </span>
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">
-          {links.map((l) => (
+          {NAV_LINKS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -50,11 +43,12 @@ export default function SiteNav() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ChartThemeToggle />
           <a
             href="https://github.com/chartlite/chartlite"
             target="_blank"
             rel="noreferrer"
-            className="hidden rounded-lg px-3 py-1.5 text-sm text-mist-500 transition-colors hover:text-mist-100 sm:block"
+            className="hidden rounded-lg px-3 py-1.5 text-sm text-mist-500 transition-colors hover:text-mist-100 lg:block"
           >
             GitHub
           </a>

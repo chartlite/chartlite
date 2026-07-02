@@ -27,8 +27,14 @@ export default function ExampleCard({ title, description, children, code, badge 
         <p className="text-mist-500">{description}</p>
       </div>
 
-      {/* Chart panel — a clean light slab so charts read crisply against the dark card */}
-      <div className="mb-6 min-h-[300px] rounded-xl bg-white/95 p-4 shadow-inner">{children}</div>
+      {/* Chart panel — follows the global chart theme (dark by default, light via
+          the nav toggle). Charts inside use `cssVars` so they re-theme with it. */}
+      <div
+        className="mb-6 min-h-[280px] rounded-xl p-4"
+        style={{ background: 'var(--chart-slab)', border: '1px solid var(--chart-slab-border)' }}
+      >
+        {children}
+      </div>
 
       {/* Code */}
       <CodeViewer code={code} />
