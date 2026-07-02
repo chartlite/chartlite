@@ -1,5 +1,20 @@
 # @chartlite/core
 
+## 0.6.0
+
+### Minor Changes
+
+- [#14](https://github.com/chartlite/chartlite/pull/14) [`df04cbe`](https://github.com/chartlite/chartlite/commit/df04cbe00c7618eb9c8be8e8e5ccba80fde8455e) Thanks [@CanadaApollo6](https://github.com/CanadaApollo6)! - Add **value formatters** for axis labels. A new `valueFormatter?: (value: number) =>
+string` config option formats numeric axis ticks, plus a set of tree-shakeable built-ins
+  exported as `formatters` (and individually): `abbreviate` (1.5K / 2.3M), `currency`,
+  `percent`, and `number` — all `Intl`-based and locale-aware. This is what makes charts
+  usable with real-world currency/percentage/large-number data.
+
+- [#13](https://github.com/chartlite/chartlite/pull/13) [`1343f7e`](https://github.com/chartlite/chartlite/commit/1343f7e52cdcbfb900e9e18777d1f941c02552e7) Thanks [@CanadaApollo6](https://github.com/CanadaApollo6)! - Add **Sparkline** — a tiny, axis-less inline chart for the "live metric on a landing
+  page" use case. Strips axes/title/legend/margins and draws just the data shape (line or
+  filled `area`), with an optional dot on the latest point (`showEndDot`), `linear`/`smooth`
+  curves, and a small default size. Handles flat series and single-point data.
+
 ## 0.5.0
 
 ### Minor Changes
