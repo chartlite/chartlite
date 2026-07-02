@@ -1,26 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 /**
  * Flips the global `data-chart-theme` on <html>, which swaps the `--cl-*` tokens
- * defined in globals.css — re-theming every `cssVars` chart on the page at once,
- * with no redraw. Persisted to localStorage. Default is dark (matches the site).
+ * in globals.css — re-theming every `cssVars` chart at once, no redraw. The
+ * initial attribute is set pre-hydration by a small inline script in the root
+ * layout (so returning light-mode visitors don't flash), and this button reads
+ * that as its initial state. Persisted to localStorage.
  */
-export default function ChartThemeToggle() {
-  const [light, setLight] = useState(false);
+function initialLight(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.dataset.chartTheme === 'light';
+}
 
-  useEffect(() => {
-    const isLight = localStorage.getItem('cl-chart-theme') === 'light';
-    setLight(isLight);
-    document.documentElement.dataset.chartTheme = isLight ? 'light' : 'dark';
-  }, []);
+export default function ChartThemeToggle() {
+  const [light, setLight] = useState<boolean>(initialLight);
 
   const toggle = () => {
     const next = !light;
     setLight(next);
     document.documentElement.dataset.chartTheme = next ? 'light' : 'dark';
-    localStorage.setItem('cl-chart-theme', next ? 'light' : 'dark');
+    try {
+      localStorage.setItem('cl-chart-theme', next ? 'light' : 'dark');
+    } catch {
+      /* ignore storage failures */
+    }
   };
 
   return (
@@ -28,6 +33,7 @@ export default function ChartThemeToggle() {
       onClick={toggle}
       title="Toggle chart theme (light/dark)"
       aria-label="Toggle chart theme"
+      suppressHydrationWarning
       className="flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-sm text-mist-500 transition-colors hover:border-white/25 hover:text-mist-100"
     >
       {light ? (
