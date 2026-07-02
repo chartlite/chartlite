@@ -5,10 +5,18 @@
     { "repo": "chartlite/chartlite" }
   ],
   "commit": false,
-  "fixed": [["@chartlite/core", "@chartlite/react"]],
+  "fixed": [
+    [
+      "@chartlite/core",
+      "@chartlite/react",
+      "@chartlite/vue",
+      "@chartlite/svelte",
+      "@chartlite/element"
+    ]
+  ],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@chartlite/vue", "@chartlite/svelte", "@chartlite/angular", "@chartlite/element"]
+  "ignore": ["@chartlite/angular"]
 }
