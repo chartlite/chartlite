@@ -1,5 +1,15 @@
 # @chartlite/core
 
+## 0.4.0
+
+### Minor Changes
+
+- [`3bde49c`](https://github.com/chartlite/chartlite/commit/3bde49ca2824217d5d458b59ac207a451769fda1) Thanks [@CanadaApollo6](https://github.com/CanadaApollo6)! - Add **PieChart** (pie and donut). Renders a single series as angular slices with
+  per-slice accessibility (focusable `.data-point` elements + ARIA labels), optional
+  donut mode via `innerRadius`, and optional percentage labels via `showLabels`. This
+  implements the previously-declared `PieChartConfig` type, closing a long-standing gap
+  between the public types and the runtime.
+
 ## 0.3.0
 
 ### Minor Changes
