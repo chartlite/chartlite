@@ -59,6 +59,23 @@ export default function Home() {
         </Link>
 
         <Link
+          href="/chart-gallery"
+          className="group bg-white rounded-2xl p-8 shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-300"
+        >
+          <div className="text-5xl mb-4">🎨</div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
+            Chart Gallery
+          </h2>
+          <p className="text-gray-600">
+            Pie &amp; donut, radial gauges, sparklines, and combo charts — with
+            React, Vue, and Svelte snippets.
+          </p>
+          <span className="inline-block mt-4 px-4 py-2 bg-purple-100 text-purple-700 text-sm font-semibold rounded-full">
+            NEW
+          </span>
+        </Link>
+
+        <Link
           href="/multi-series"
           className="group bg-white rounded-2xl p-8 shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-300"
         >
