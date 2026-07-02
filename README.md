@@ -76,6 +76,7 @@ That's it! Your chart is ready.
 - **Bar Chart** - Great for comparisons (vertical & horizontal)
 - **Area Chart** - Beautiful filled visualizations
 - **Scatter Chart** - Correlations and distributions
+- **Pie / Donut Chart** - Part-to-whole breakdowns
 
 Plus **multi-series** support, **reference lines**, **annotations**, and **region
 highlighting** across chart types. More types coming soon (see the [roadmap](docs/V1_ROADMAP.md)).
@@ -131,7 +132,7 @@ data: {
 
 ### ✅ Shipped
 
-- **Chart types:** Line, Bar, Area, Scatter
+- **Chart types:** Line, Bar, Area, Scatter, Pie/Donut
 - **Multi-series** support with auto-color assignment and a configurable legend
 - **Annotations, reference lines & region highlighting**
 - **Accessibility:** ARIA roles/descriptions, keyboard navigation, screen-reader data-table fallback
