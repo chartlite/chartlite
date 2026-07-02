@@ -1,6 +1,6 @@
 {
   "name": "@chartlite/react",
-  "version": "0.12.1",
+  "version": "1.0.0",
   "description": "React wrapper for chartlite",
   "type": "module",
   "main": "./dist/index.js",
