@@ -1,8 +1,23 @@
 # Chartlite → v1.0 Roadmap
 
-**Status:** Proposed (for review)
-**Current actual version:** `0.2.1` (core + react); `0.1.0` (vue/svelte/angular stubs)
+**Status:** In progress
+**Current published version:** `0.5.0` (core + react, published to npm via OIDC trusted publishing)
 **Author:** planning pass, 2026-07
+
+### Progress so far
+- **0.3.0** — Foundation & Truth: Changesets, honest bundle size (~13 KB gz), corrected docs,
+  gzipped CI budget, and the previously-unreleased features (scatter, multi-series, plugins,
+  a11y, overlays) finally published. Release pipeline moved to **npm OIDC trusted publishing**
+  (no long-lived token).
+- **0.4.0** — Architecture: `BaseChart` decomposed from **1,920 → 812 lines** into focused
+  `src/a11y/` and `src/render/` modules (behaviour-preserving, guarded by the full test suite).
+  Plus the new **PieChart** (pie/donut) with full a11y parity — closing the dangling
+  `PieChartConfig`.
+- **0.5.0** — **tailwind**, **nord**, and **high-contrast** theme presets (previously marketed
+  but unimplemented).
+
+Test suite: **375 passing**. Remaining milestones below (renderer abstraction/SSR, more chart
+types, formatters, interactivity, agent tooling) are unchanged.
 
 This document is the single source of truth for the path from today's `0.2.1` to a
 credible, stable `1.0.0`. It supersedes the roadmap sections in `README.md` and
