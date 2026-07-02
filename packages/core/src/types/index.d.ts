@@ -286,6 +286,26 @@ export interface SparklineConfig extends BaseChartConfig {
   fillOpacity?: number;
 }
 
+/**
+ * Radial progress / gauge configuration. Each data point becomes a concentric
+ * arc filled in proportion to `max`.
+ */
+export interface RadialChartConfig extends BaseChartConfig {
+  data: FlexibleDataInput;
+  /** Value represented by a full arc (default: 100). */
+  max?: number;
+  /** Start angle in degrees, 0 = top, clockwise (default: 0). */
+  startAngle?: number;
+  /** End angle in degrees defining the track sweep (default: 360; use 180 for a gauge). */
+  endAngle?: number;
+  /** Ring thickness in pixels (default: auto from radius and ring count). */
+  thickness?: number;
+  /** Show the value in the center for a single-ring chart (default: true). */
+  showValue?: boolean;
+  /** Color of the unfilled track (default: theme grid color). */
+  trackColor?: string;
+}
+
 export interface ScatterChartConfig extends BaseChartConfig {
   data: FlexibleDataInput;
   /** Point size in pixels (default: 6) */

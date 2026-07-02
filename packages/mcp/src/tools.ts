@@ -19,6 +19,7 @@ export const CHART_TYPE_TUPLE = [
   'area',
   'scatter',
   'pie',
+  'radial',
   'sparkline',
 ] as const;
 
