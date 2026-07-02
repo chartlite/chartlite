@@ -2,16 +2,58 @@
   "name": "@chartlite/vue",
   "version": "0.0.0",
   "private": true,
-  "description": "Vue wrapper for chartlite (planned — not yet available)",
+  "description": "Vue 3 wrapper for Chartlite — beautiful, lightweight charts",
   "type": "module",
-  "scripts": {
-    "build": "echo 'Vue package - coming soon'"
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "charts",
+    "vue",
+    "vue3",
+    "visualization",
+    "chartlite"
+  ],
+  "author": "Riel St. Amand",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chartlite/chartlite.git",
+    "directory": "packages/vue"
+  },
+  "bugs": {
+    "url": "https://github.com/chartlite/chartlite/issues"
+  },
+  "homepage": "https://github.com/chartlite/chartlite#readme",
   "peerDependencies": {
-    "vue": "^3.0.0"
+    "vue": "^3.3.0"
   },
   "dependencies": {
     "@chartlite/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^25.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "vue": "^3.4.0"
   }
 }
