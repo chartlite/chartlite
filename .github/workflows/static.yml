@@ -1,12 +1,11 @@
-# Simple workflow for deploying static content to GitHub Pages
+# Legacy GitHub Pages deploy. The site now deploys on Vercel (full Next.js /
+# SSR), so this no longer runs on push — the app is no longer a static export,
+# so `examples/out/` won't exist. Kept as manual-only for emergency fallback;
+# to use it again, restore `output: 'export'` + `basePath` in next.config.ts.
 name: Deploy static content to Pages
 
 on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
+  # Manual only — Vercel is the production deployer.
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages

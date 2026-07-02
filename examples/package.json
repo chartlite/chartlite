@@ -14,7 +14,10 @@
     "next": "^16.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-syntax-highlighter": "^15.6.6"
+    "react-syntax-highlighter": "^15.6.6",
+    "lenis": "^1.1.14",
+    "gsap": "^3.12.5",
+    "@gsap/react": "^2.1.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
