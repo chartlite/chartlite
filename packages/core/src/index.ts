@@ -36,6 +36,7 @@ export { LineChart } from './charts/LineChart';
 export { BarChart } from './charts/BarChart';
 export { AreaChart } from './charts/AreaChart';
 export { ScatterChart } from './charts/ScatterChart';
+export { PieChart } from './charts/PieChart';
 
 // Export utilities (for advanced users)
 export {
