@@ -49,6 +49,52 @@ function App() {
 }
 ```
 
+## Two ways to use it
+
+**Named components** — when you know the chart type at author time. Each is
+tree-shakeable (importing `LineChart` won't bundle the other chart types):
+
+```tsx
+import { LineChart, BarChart, AreaChart, ScatterChart,
+         PieChart, RadialChart, ComboChart, Sparkline } from '@chartlite/react';
+```
+
+**Generic `<Chart>`** — when the type comes from data (a `ChartSpec` from an
+agent, CMS, or the `@chartlite/mcp` server). It's the React mirror of the core's
+`renderToString(spec)`:
+
+```tsx
+import { Chart } from '@chartlite/react';
+
+function FromSpec({ spec }) {
+  // spec = { type: 'combo', data: {…}, theme: 'tailwind', … }
+  return <Chart {...spec} style={{ width: '100%', height: 360 }} />;
+}
+```
+
+All eight chart types are available through either API: `line`, `bar`, `area`,
+`scatter`, `pie`/donut, `radial`/gauge, `combo` (bars + trend line), and
+`sparkline`.
+
+### Combo chart (bars + trend line)
+
+```tsx
+import { ComboChart } from '@chartlite/react';
+
+<ComboChart
+  data={{
+    series: [
+      { name: 'Revenue', dataKey: 'revenue', type: 'bar' },
+      { name: 'Growth',  dataKey: 'growth',  type: 'line' },
+    ],
+    data: [
+      { month: 'Jan', revenue: 4200, growth: 12 },
+      { month: 'Feb', revenue: 4800, growth: 18 },
+    ],
+  }}
+/>
+```
+
 ## Chart Components
 
 ### LineChart
@@ -301,12 +347,31 @@ Chartlite React supports multiple data formats:
 
 ## Themes
 
-Choose from three built-in themes:
+Choose from six built-in themes:
 
 ```tsx
-<LineChart data={data} theme="default" />   {/* Clean, professional */}
-<LineChart data={data} theme="midnight" />  {/* Dark mode */}
-<LineChart data={data} theme="minimal" />   {/* Black & white */}
+<LineChart data={data} theme="default" />        {/* Clean, professional */}
+<LineChart data={data} theme="midnight" />       {/* Dark mode */}
+<LineChart data={data} theme="minimal" />        {/* Black & white */}
+<LineChart data={data} theme="tailwind" />       {/* Tailwind palette */}
+<LineChart data={data} theme="nord" />           {/* Nord palette */}
+<LineChart data={data} theme="high-contrast" />  {/* Max contrast (a11y) */}
+```
+
+### Theme with CSS (zero-JS dark mode)
+
+Pass `cssVars` to emit the theme as CSS custom properties (`--cl-bg`, `--cl-text`,
+`--cl-series-0…`, …) and render every color as `var(--cl-*, …)`. You can then
+re-theme — including dark mode — entirely in CSS, no re-render needed:
+
+```tsx
+<LineChart data={data} cssVars className="chart" />
+```
+
+```css
+@media (prefers-color-scheme: dark) {
+  .chart { --cl-text: #94a3b8; --cl-grid: #1e293b; --cl-series-0: #818cf8; }
+}
 ```
 
 ### Custom Colors
