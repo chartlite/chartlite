@@ -13,8 +13,16 @@ import {
 } from '../utils';
 import { setSeriesAttrs } from '../render/dataAttrs';
 
+/**
+ * Module-level sequence so every chart instance gets gradient ids that are
+ * unique across the page (avoids `<linearGradient>` id collisions when several
+ * area charts share a document) while staying stable across a chart's re-renders.
+ */
+let areaInstanceSeq = 0;
+
 export class AreaChart extends BaseChart {
   protected config: AreaChartConfig;
+  private readonly instanceId = ++areaInstanceSeq;
 
   constructor(container: HTMLElement | string, config: AreaChartConfig) {
     super(container, config, config.data);
@@ -22,6 +30,7 @@ export class AreaChart extends BaseChart {
     this.config = {
       curve: 'linear',
       fillOpacity: 0.3,
+      gradient: true,
       ...config,
     };
   }
@@ -65,6 +74,14 @@ export class AreaChart extends BaseChart {
     // Render axes using shared method
     this.renderCategoricalXLinearYAxes(mainGroup, xValues, yMin, yMax, chartWidth, chartHeight, colors);
 
+    // Gradient fills need a <defs> to hold the <linearGradient> definitions.
+    const useGradient = this.config.gradient !== false;
+    let defs: SVGDefsElement | null = null;
+    if (useGradient) {
+      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      this.svg.appendChild(defs);
+    }
+
     // Render each series as a stacked area (in reverse order so first series is on top)
     stackedData.forEach((seriesStack, seriesIndex) => {
       // Generate points for the top line
@@ -80,11 +97,20 @@ export class AreaChart extends BaseChart {
       })).reverse();
 
       // Create area path (fill)
+      const seriesColor = seriesStack.color || colors.primary;
       const areaPath = this.generateStackedAreaPath(topPoints, bottomPoints);
       const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       area.setAttribute('d', areaPath);
-      area.setAttribute('fill', seriesStack.color || colors.primary);
-      area.setAttribute('opacity', String(this.config.fillOpacity));
+      if (useGradient && defs) {
+        // Vertical fade from the series color (at fillOpacity) down to transparent —
+        // the classic "beautiful area" look. Stops carry the alpha, so no flat opacity.
+        const gradientId = `cl-area-grad-${this.instanceId}-${seriesIndex}`;
+        defs.appendChild(this.createFillGradient(gradientId, seriesColor));
+        area.setAttribute('fill', `url(#${gradientId})`);
+      } else {
+        area.setAttribute('fill', seriesColor);
+        area.setAttribute('opacity', String(this.config.fillOpacity));
+      }
       area.classList.add('area-fill');
       area.classList.add('data-series');
 
@@ -172,5 +198,37 @@ export class AreaChart extends BaseChart {
 
     // Combine: top edge + bottom edge + close
     return `${topPath} ${bottomPath.replace('M', 'L')} Z`;
+  }
+
+  /**
+   * Build a vertical `<linearGradient>` fading `color` from `fillOpacity` at the
+   * top to fully transparent at the bottom.
+   */
+  private createFillGradient(id: string, color: string): SVGLinearGradientElement {
+    const topOpacity = this.config.fillOpacity ?? 0.3;
+    const gradient = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'linearGradient'
+    );
+    gradient.setAttribute('id', id);
+    // Gradient runs top→bottom in the element's own coordinate box.
+    gradient.setAttribute('x1', '0');
+    gradient.setAttribute('y1', '0');
+    gradient.setAttribute('x2', '0');
+    gradient.setAttribute('y2', '1');
+
+    const stopTop = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    stopTop.setAttribute('offset', '0%');
+    stopTop.setAttribute('stop-color', color);
+    stopTop.setAttribute('stop-opacity', String(topOpacity));
+    gradient.appendChild(stopTop);
+
+    const stopBottom = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    stopBottom.setAttribute('offset', '100%');
+    stopBottom.setAttribute('stop-color', color);
+    stopBottom.setAttribute('stop-opacity', '0');
+    gradient.appendChild(stopBottom);
+
+    return gradient;
   }
 }

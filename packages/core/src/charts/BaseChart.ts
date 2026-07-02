@@ -605,13 +605,17 @@ export abstract class BaseChart implements Chart {
     if (!this.svg) return;
 
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    // Gate the entrance animation behind `prefers-reduced-motion: no-preference`
+    // so users who ask their OS to reduce motion never see it (WCAG 2.3.3).
     style.textContent = `
       @keyframes chartFadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
       }
-      .chart-animated {
-        animation: chartFadeIn 0.6s ease-out;
+      @media (prefers-reduced-motion: no-preference) {
+        .chart-animated {
+          animation: chartFadeIn 0.6s ease-out;
+        }
       }
     `;
     this.svg.appendChild(style);
