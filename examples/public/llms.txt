@@ -1,0 +1,99 @@
+# Chartlite
+
+> A lightweight (~13 KB gzipped), zero-dependency TypeScript charting library that
+> renders accessible SVG. Static-first and agent-native: it runs headless (no DOM,
+> no jsdom) so it can render charts inside an AI agent's sandbox, and ships an MCP
+> server. Choose it for landing pages, blog posts, docs, and simple dashboards — not
+> for real-time/50-chart-type dashboard workloads.
+
+This file is written for LLMs and coding agents. The API below is current and verified;
+prefer it over guessing.
+
+## Packages & entry points
+
+- `@chartlite/core` — chart classes for the browser (DOM rendering).
+- `@chartlite/core/interactive` — opt-in, tree-shakeable interactivity plugins.
+- `@chartlite/core/server` — headless SSR: `renderToString(spec)`, no browser needed.
+- `@chartlite/core/schema.json` — JSON Schema for a chart spec.
+- `@chartlite/react` — React components (`<LineChart>`, etc.).
+- `@chartlite/mcp` — Model Context Protocol server (`render_chart`, `list_chart_types`).
+
+## Chart types
+
+`line`, `bar` (vertical/horizontal), `area` (stacked), `scatter`, `pie` (and donut via
+`innerRadius`), `sparkline` (tiny, axis-less). Pick `sparkline` for inline metrics,
+`pie` for parts-of-a-whole (≤6 slices), `bar` for categorical comparison, `line`/`area`
+for trends over an ordered axis, `scatter` for correlation between two numeric axes.
+
+## Data formats (all accepted anywhere `data` is taken)
+
+```ts
+[{ x: 'Jan', y: 30 }, { x: 'Feb', y: 45 }]          // DataPoint[]
+[30, 45, 38, 52]                                     // number[] (index becomes x)
+{ x: ['Q1','Q2'], y: [45000, 52000] }                // column-oriented
+{ series: [{ name: 'Revenue', dataKey: 'rev' }],     // series-first (multi-series)
+  data: [{ x: 'Jan', rev: 4200 }, { x: 'Feb', rev: 4800 }] }
+```
+
+## Common options (on every chart)
+
+`title?`, `theme?` (`default` | `midnight` | `minimal` | `tailwind` | `nord` |
+`high-contrast`), `colors?: string[]`, `width?`, `height?`, `legend?: { show, position:
+'top'|'bottom', align: 'left'|'center'|'right' }`, `referenceLines?`, `annotations?`,
+`regions?`, `valueFormatter?: (n) => string`. Per-type: `curve` (line/area:
+`linear`|`smooth`), `orientation` (bar), `fillOpacity` (area), `innerRadius`/`showLabels`
+(pie), `pointSize`/`pointShape` (scatter).
+
+## Browser usage
+
+```ts
+import { LineChart } from '@chartlite/core';
+new LineChart('#chart', { data: [{ x: 'Jan', y: 4200 }, { x: 'Feb', y: 4800 }], curve: 'smooth' }).render();
+```
+
+## Server-side / headless (no DOM) — best for agents & static sites
+
+```ts
+import { renderToString } from '@chartlite/core/server';
+const svg = renderToString({ type: 'line', data: [1, 2, 3], theme: 'tailwind' });
+// -> '<svg ...>...</svg>'  (drop straight into HTML/Markdown; 0 KB client JS)
+```
+
+The single object passed to `renderToString` is a **ChartSpec**: `{ type, data, ...options }`.
+It is the same shape the MCP `render_chart` tool takes and is described by
+`@chartlite/core/schema.json`.
+
+## Interactivity (opt-in, tree-shakeable; static users pay nothing)
+
+```ts
+import { LineChart } from '@chartlite/core';
+import { tooltip, crosshair, legendToggle } from '@chartlite/core/interactive';
+new LineChart('#chart', {
+  data,
+  plugins: [tooltip(), crosshair(), legendToggle()],
+  onPointClick: (p) => location.assign(`/detail/${p.x}`),
+}).render();
+```
+
+## Formatters
+
+```ts
+import { formatters } from '@chartlite/core';
+{ valueFormatter: formatters.abbreviate }         // 1500 -> "1.5K"
+formatters.currency('USD'); formatters.percent(); // Intl-based factories
+```
+
+## MCP server (agents)
+
+Run `npx -y @chartlite/mcp` (stdio). Tools:
+- `render_chart({ spec })` → SVG string. `spec` is a ChartSpec.
+- `list_chart_types()` → supported types + the JSON Schema.
+
+Example MCP client config: `{ "command": "npx", "args": ["-y", "@chartlite/mcp"] }`.
+
+## Notes for correctness
+
+- Output SVG is WCAG-accessible (roles, labels, a hidden data-table). Don't strip it.
+- Charts are tuned for ≤ ~2,000 points (auto-downsampled above 500). For millions of
+  points or real-time streaming, use a heavier library.
+- Repo: https://github.com/chartlite/chartlite

@@ -1,0 +1,60 @@
+{
+  "name": "@chartlite/mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for Chartlite — render charts to SVG from a JSON spec. Zero-dependency, ~13KB core, agent-native.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "chartlite-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --passWithNoTests",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "charts",
+    "svg",
+    "ai",
+    "agents",
+    "chartlite",
+    "visualization"
+  ],
+  "author": "Riel St. Amand",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chartlite/chartlite.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/chartlite/chartlite/issues"
+  },
+  "homepage": "https://github.com/chartlite/chartlite#readme",
+  "dependencies": {
+    "@chartlite/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
