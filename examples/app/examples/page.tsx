@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LineChart,
   BarChart,
@@ -33,8 +33,9 @@ function SectionHeading({ id, kicker, title, blurb }: { id: string; kicker: stri
 
 /** A gentle, smooth live-updating chart demonstrating element pooling. */
 function PerfDemo() {
-  const seed = useRef(Array.from({ length: 24 }, (_, i) => ({ x: `${i}`, y: 40 + Math.round(18 * Math.sin(i / 2)) })));
-  const [data, setData] = useState(seed.current);
+  const [data, setData] = useState(() =>
+    Array.from({ length: 24 }, (_, i) => ({ x: `${i}`, y: 40 + Math.round(18 * Math.sin(i / 2)) }))
+  );
 
   useEffect(() => {
     let v = 50;

@@ -26,6 +26,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} ${display.variable} ${mono.variable}`}>
+      <head>
+        {/* Apply the persisted chart theme before hydration to avoid a flash. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('cl-chart-theme');document.documentElement.dataset.chartTheme=t==='light'?'light':'dark';}catch(e){}",
+          }}
+        />
+      </head>
       <body className="grain antialiased">
         <Aurora />
         <SmoothScroll>
