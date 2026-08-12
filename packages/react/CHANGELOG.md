@@ -1,5 +1,14 @@
 # @chartlite/react
 
+## 1.0.1
+
+### Patch Changes
+
+- [`020fb4a`](https://github.com/chartlite/chartlite/commit/020fb4aa20b69a234c2491e9adc5607538192d6b) Thanks [@CanadaApollo6](https://github.com/CanadaApollo6)! - Fix negative and flat-value rendering, refresh accessibility metadata on updates, harden SSR and runtime data validation, and restore keyboard interaction parity. Reduce the core install and gzip size, make wrapper imports tree-shakeable, repair performance and bundle checks, and update vulnerable dependencies.
+
+- Updated dependencies [[`020fb4a`](https://github.com/chartlite/chartlite/commit/020fb4aa20b69a234c2491e9adc5607538192d6b)]:
+  - @chartlite/core@1.0.1
+
 ## 1.0.0
 
 ### Major Changes

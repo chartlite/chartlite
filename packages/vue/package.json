@@ -1,6 +1,6 @@
 {
   "name": "@chartlite/vue",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vue 3 wrapper for Chartlite — beautiful, lightweight charts",
   "type": "module",
   "main": "./dist/index.js",
