@@ -1,6 +1,6 @@
 {
   "name": "@chartlite/element",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Framework-agnostic <chart-lite> web component for Chartlite",
   "type": "module",
   "main": "./dist/index.js",

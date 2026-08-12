@@ -1,6 +1,6 @@
 {
   "name": "@chartlite/svelte",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Svelte wrapper for Chartlite — beautiful, lightweight charts",
   "type": "module",
   "main": "./dist/index.js",
