@@ -45,10 +45,11 @@ jobs:
           cache: "pnpm"
 
       # npm Trusted Publishing (OIDC) requires npm >= 11.5.1, newer than the
-      # version bundled with Node 20. No NPM_TOKEN is needed once the package's
-      # trusted publisher is configured on npmjs.com to point at this workflow.
+      # version bundled with Node 20. Keep this on npm 11: npm 12 requires a
+      # newer Node runtime and would make an unpinned install fail before the
+      # release action runs.
       - name: Upgrade npm for trusted publishing (OIDC)
-        run: npm install -g npm@latest
+        run: npm install -g npm@11.6.2
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
