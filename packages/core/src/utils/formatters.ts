@@ -68,7 +68,7 @@ export function number(
  * `formatters.currency('EUR')` after a single import.
  */
 export const formatters = {
-  abbreviate: (value: number) => abbreviate(value),
+  abbreviate,
   currency,
   percent,
   number,

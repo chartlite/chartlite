@@ -16,14 +16,15 @@ import {
 import { defineChartComponent } from './ChartFrame';
 import type { ChartConstructor } from './useChart';
 
+/* @__NO_SIDE_EFFECTS__ */
 const named = (name: string, ctor: unknown) =>
   defineChartComponent(name, () => ctor as ChartConstructor);
 
-export const LineChart = named('LineChart', CoreLine);
-export const BarChart = named('BarChart', CoreBar);
-export const AreaChart = named('AreaChart', CoreArea);
-export const ScatterChart = named('ScatterChart', CoreScatter);
-export const PieChart = named('PieChart', CorePie);
-export const RadialChart = named('RadialChart', CoreRadial);
-export const ComboChart = named('ComboChart', CoreCombo);
-export const Sparkline = named('Sparkline', CoreSparkline);
+export const LineChart = /* @__PURE__ */ named('LineChart', CoreLine);
+export const BarChart = /* @__PURE__ */ named('BarChart', CoreBar);
+export const AreaChart = /* @__PURE__ */ named('AreaChart', CoreArea);
+export const ScatterChart = /* @__PURE__ */ named('ScatterChart', CoreScatter);
+export const PieChart = /* @__PURE__ */ named('PieChart', CorePie);
+export const RadialChart = /* @__PURE__ */ named('RadialChart', CoreRadial);
+export const ComboChart = /* @__PURE__ */ named('ComboChart', CoreCombo);
+export const Sparkline = /* @__PURE__ */ named('Sparkline', CoreSparkline);

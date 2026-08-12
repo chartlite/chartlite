@@ -6,11 +6,11 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@chartlite/react)](https://bundlephobia.com/package/@chartlite/react)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-React components for Chartlite, a high-performance charting library with ~20KB bundle size and zero dependencies.
+React components for Chartlite, a high-performance charting library with a ~14.5KB gzipped core and zero dependencies.
 
 ## Why Chartlite for React?
 
-- 🚀 **Tiny bundle** - ~20KB core + minimal React wrapper
+- 🚀 **Tiny bundle** - ~14.5KB gzipped core + minimal React wrapper
 - ⚛️ **React-friendly** - Hooks-based, automatic cleanup, reactive updates
 - 💪 **TypeScript-first** - Full type safety with intelligent autocomplete
 - 🎨 **Beautiful defaults** - Professional themes out of the box
@@ -542,4 +542,4 @@ MIT © [Riel St. Amand](https://github.com/chartlite)
 - [GitHub Repository](https://github.com/chartlite/chartlite)
 - [Issue Tracker](https://github.com/chartlite/chartlite/issues)
 - [Changelog](https://github.com/chartlite/chartlite/blob/main/docs/CHANGELOG.md)
-- [Roadmap](https://github.com/chartlite/chartlite/blob/main/docs/ROADMAP.md)
+- [Road to 1.0](https://github.com/chartlite/chartlite/blob/main/docs/V1_ROADMAP.md)

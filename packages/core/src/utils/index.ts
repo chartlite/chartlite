@@ -46,6 +46,11 @@ export function createLinearScale(
   const domainSpan = domainMax - domainMin;
   const rangeSpan = rangeMax - rangeMin;
 
+  if (domainSpan === 0) {
+    const midpoint = rangeMin + rangeSpan / 2;
+    return () => midpoint;
+  }
+
   return (value: number) => {
     const normalized = (value - domainMin) / domainSpan;
     return rangeMin + normalized * rangeSpan;
@@ -63,12 +68,16 @@ export function createBandScale(
   const [rangeMin, rangeMax] = range;
   const rangeSpan = rangeMax - rangeMin;
   const count = domain.length;
+  if (count === 0) {
+    return { scale: () => rangeMin, bandwidth: 0 };
+  }
   const step = rangeSpan / count;
   const bandwidth = step * (1 - padding);
   const offset = (step - bandwidth) / 2;
+  const indexes = new Map(domain.map((value, index) => [value, index]));
 
   const scale = (value: string) => {
-    const index = domain.indexOf(value);
+    const index = indexes.get(value) ?? -1;
     return rangeMin + index * step + offset;
   };
 
@@ -124,18 +133,8 @@ export function generateLinePath(
   return path;
 }
 
-/**
- * Get theme colors
- */
-export function getThemeColors(theme: string): {
-  background: string;
-  foreground: string;
-  primary: string;
-  grid: string;
-  text: string;
-  seriesColors: string[];
-} {
-  const themes = {
+/** Theme values are allocated once rather than rebuilt on every chart render. */
+const THEMES = {
     default: {
       background: '#ffffff',
       foreground: '#f9fafb',
@@ -238,9 +237,10 @@ export function getThemeColors(theme: string): {
         '#c2410c', // orange-700 (~4.6:1)
       ],
     },
-  };
+};
 
-  return themes[theme as keyof typeof themes] || themes.default;
+export function getThemeColors(theme: string): typeof THEMES.default {
+  return THEMES[theme as keyof typeof THEMES] || THEMES.default;
 }
 
 /**
@@ -275,74 +275,26 @@ export function calculateNiceTicks(
   max: number,
   count: number = 5
 ): number[] {
-  // Validate inputs
-  if (!isFinite(min) || !isFinite(max)) {
-    throw new Error('calculateNiceTicks: min and max must be finite numbers');
+  if (!Number.isFinite(min) || !Number.isFinite(max)) throw new Error('min and max must be finite numbers');
+  if (count <= 1) return [min, max];
+  if (min === max) {
+    const spread = Math.abs(min) * 0.1 || 1;
+    return calculateNiceTicks(min - spread, max + spread, count);
   }
 
-  if (count <= 1) {
-    // Return just the endpoints
-    return [min, max];
-  }
+  const roughStep = (max - min) / (count - 1);
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const normalized = roughStep / magnitude;
+  const step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude;
+  if (!Number.isFinite(step) || step <= 0) return [min, max];
 
-  // Handle edge case where min === max
-  if (Math.abs(max - min) < Number.EPSILON) {
-    // If they're equal, create ticks around that value
-    const value = min;
-    const spread = Math.abs(value) * 0.1 || 1; // 10% spread or 1 if value is 0
-    return calculateNiceTicks(value - spread, value + spread, count);
-  }
-
-  const range = max - min;
-
-  // Handle very small ranges (prevent precision issues)
-  if (range < 1e-10) {
-    // Use simple linear interpolation for very small ranges
-    const ticks: number[] = [];
-    for (let i = 0; i < count; i++) {
-      ticks.push(min + (range * i) / (count - 1));
-    }
-    return ticks;
-  }
-
-  const roughStep = range / (count - 1);
-
-  // Find the power of 10
-  const power = Math.floor(Math.log10(roughStep));
-  const magnitude = Math.pow(10, power);
-
-  // Normalize the step
-  const normalizedStep = roughStep / magnitude;
-  let niceStep: number;
-
-  if (normalizedStep <= 1) niceStep = 1;
-  else if (normalizedStep <= 2) niceStep = 2;
-  else if (normalizedStep <= 5) niceStep = 5;
-  else niceStep = 10;
-
-  const step = niceStep * magnitude;
-  const niceMin = Math.floor(min / step) * step;
-  const niceMax = Math.ceil(max / step) * step;
-
+  const start = Math.floor(min / step) * step;
+  const end = Math.ceil(max / step) * step;
   const ticks: number[] = [];
-  let currentTick = niceMin;
-
-  // Prevent infinite loops with a maximum iteration count
-  const maxIterations = count * 3; // Allow some overflow
-  let iterations = 0;
-
-  while (currentTick <= niceMax && iterations < maxIterations) {
-    ticks.push(currentTick);
-    currentTick += step;
-    iterations++;
+  for (let value = start; value <= end && ticks.length < count * 3; value += step) {
+    ticks.push(value);
   }
-
-  // Ensure we have at least 2 ticks
-  if (ticks.length < 2) {
-    return [min, max];
-  }
-
-  return ticks;
+  return ticks.length > 1 ? ticks : [min, max];
 }
 
 // Export data sampling utilities
@@ -351,6 +303,3 @@ export {
   downsampleEveryNth,
   autoDownsample,
 } from './sampling';
-
-// Export element pool
-export { ElementPool, globalElementPool } from './elementPool';

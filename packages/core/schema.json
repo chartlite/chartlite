@@ -28,6 +28,7 @@
       "oneOf": [
         {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
             "properties": {
@@ -53,6 +54,7 @@
         },
         {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "number"
           }
@@ -62,34 +64,91 @@
           "properties": {
             "x": {
               "type": "array",
+              "minItems": 1,
               "items": {
                 "type": [
                   "string",
                   "number"
                 ]
               }
+            },
+            "y": {
+              "oneOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                }
+              ]
             }
           },
           "required": [
-            "x"
+            "x",
+            "y"
           ],
-          "additionalProperties": true
+          "additionalProperties": false
         },
         {
           "type": "object",
           "properties": {
             "series": {
-              "type": "array"
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "dataKey": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "line",
+                      "bar",
+                      "area"
+                    ]
+                  },
+                  "color": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "dataKey"
+                ],
+                "additionalProperties": false
+              }
             },
             "data": {
-              "type": "array"
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object"
+              }
+            },
+            "xKey": {
+              "type": "string"
             }
           },
           "required": [
             "series",
             "data"
           ],
-          "additionalProperties": true
+          "additionalProperties": false
         }
       ]
     },

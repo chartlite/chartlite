@@ -31,9 +31,16 @@ export const CHART_DEFAULTS = {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/** Create a typed SVG element without repeating the namespace at every call site. */
+export function createSVGElement<K extends keyof SVGElementTagNameMap>(
+  tagName: K
+): SVGElementTagNameMap[K] {
+  return document.createElementNS(SVG_NS, tagName);
+}
+
 /** Create an SVG `<g>`, translated to (x, y) only when non-zero. */
 export function createGroup(x = 0, y = 0): SVGGElement {
-  const g = document.createElementNS(SVG_NS, 'g');
+  const g = createSVGElement('g');
   if (x !== 0 || y !== 0) {
     g.setAttribute('transform', `translate(${x}, ${y})`);
   }

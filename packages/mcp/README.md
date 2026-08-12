@@ -2,7 +2,7 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that renders
 [Chartlite](https://github.com/chartlite/chartlite) charts to **accessible SVG** from a
-single JSON spec. Zero-dependency core (~13 KB), runs headless — ideal inside an agent
+single JSON spec. Zero-dependency core (~15 KB), runs headless — ideal inside an agent
 sandbox.
 
 ## Run

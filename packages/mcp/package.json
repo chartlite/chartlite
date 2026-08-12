@@ -1,7 +1,7 @@
 {
   "name": "@chartlite/mcp",
   "version": "0.3.3",
-  "description": "Model Context Protocol server for Chartlite — render charts to SVG from a JSON spec. Zero-dependency, ~13KB core, agent-native.",
+  "description": "Model Context Protocol server for Chartlite — render charts to SVG from a JSON spec. Zero-dependency, ~15KB core, agent-native.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -23,7 +23,7 @@
     "dev": "tsup --watch",
     "test": "vitest run --passWithNoTests",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "keywords": [
     "mcp",
@@ -48,13 +48,13 @@
   "homepage": "https://github.com/chartlite/chartlite#readme",
   "dependencies": {
     "@chartlite/core": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
+    "vitest": "^4.1.10"
   }
 }

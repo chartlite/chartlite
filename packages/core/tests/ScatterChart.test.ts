@@ -281,7 +281,7 @@ describe('ScatterChart', () => {
       const updatedCircles = container.querySelectorAll('circle').length;
 
       expect(updatedSvg).toBeTruthy();
-      // Element pooling reuses SVG for better performance
+      // Updates reuse the SVG root.
       expect(updatedSvg).toBe(originalSvg);
       // But content is updated
       expect(updatedCircles).toBe(1);

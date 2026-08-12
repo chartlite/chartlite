@@ -31,7 +31,7 @@ function SectionHeading({ id, kicker, title, blurb }: { id: string; kicker: stri
   );
 }
 
-/** A gentle, smooth live-updating chart demonstrating element pooling. */
+/** A gentle, smooth live-updating chart demonstrating efficient SVG-root reuse. */
 function PerfDemo() {
   const [data, setData] = useState(() =>
     Array.from({ length: 24 }, (_, i) => ({ x: `${i}`, y: 40 + Math.round(18 * Math.sin(i / 2)) }))
@@ -243,10 +243,10 @@ export default function Examples() {
 
       {/* Performance */}
       <div className="mt-20">
-        <SectionHeading id="performance" kicker="Fast by default" title="Live updates & element pooling" blurb="Chartlite reuses DOM elements between renders (element pooling) for smooth, allocation-free updates. This chart updates every ~1s." />
+        <SectionHeading id="performance" kicker="Fast by default" title="Live updates & SVG reuse" blurb="Chartlite keeps the SVG root stable across updates while rebuilding current chart content. This chart updates every ~1s." />
         <div className="grid grid-cols-1 gap-8">
           <ExampleCard
-            title="Streaming line (element pooling)"
+            title="Streaming line (SVG reuse)"
             description="A rolling window updated on an interval — no flicker, no churn."
             code={{
               vanilla: `const chart = new LineChart('#chart', { data, curve: 'smooth' });\nchart.render();\n\nsetInterval(() => chart.update(nextWindow()), 1000);`,

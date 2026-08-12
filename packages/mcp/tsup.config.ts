@@ -14,7 +14,8 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   clean: true,
-  sourcemap: true,
+  sourcemap: false,
+  minify: true,
   target: 'node18',
   // The published binary must be directly executable.
   banner: { js: '#!/usr/bin/env node' },

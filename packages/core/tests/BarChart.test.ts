@@ -230,7 +230,7 @@ describe('BarChart', () => {
       const updatedBars = container.querySelectorAll('.bar').length;
 
       expect(updatedSvg).toBeTruthy();
-      // Element pooling reuses SVG for better performance
+      // Updates reuse the SVG root.
       expect(updatedSvg).toBe(originalSvg);
       // But content is updated
       expect(updatedBars).toBe(1);

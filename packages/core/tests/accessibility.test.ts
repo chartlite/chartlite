@@ -389,6 +389,7 @@ describe('Accessibility - ARIA Labels and Roles', () => {
       expect(style).toBeTruthy();
       expect(style?.textContent).toContain('.sr-only');
       expect(style?.textContent).toContain('focus-visible');
+      expect(style?.textContent).toContain('.bar:hover{opacity:.8}');
     });
 
     it('should only inject styles once (not duplicate)', () => {

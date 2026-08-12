@@ -20,8 +20,8 @@ import {
   getCombinedYRange,
 } from '../utils';
 import { setDataPointAttrs, setSeriesAttrs } from '../render/dataAttrs';
+import { createSVGElement } from '../render/constants';
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 type ThemeColors = ReturnType<typeof getThemeColors>;
 type SeriesType = 'line' | 'bar' | 'area';
 
@@ -29,7 +29,7 @@ export class ComboChart extends BaseChart {
   protected config: ComboChartConfig;
 
   constructor(container: HTMLElement | string, config: ComboChartConfig) {
-    super(container, config, config.data);
+    super(container, config, config.data, 'Combo');
 
     this.config = {
       defaultType: 'bar',
@@ -122,7 +122,7 @@ export class ComboChart extends BaseChart {
         const top = Math.min(yVal, baseline);
         const height = Math.abs(baseline - yVal);
 
-        const rect = document.createElementNS(SVG_NS, 'rect');
+        const rect = createSVGElement('rect');
         rect.setAttribute('x', String(barX));
         rect.setAttribute('y', String(top));
         rect.setAttribute('width', String(drawnWidth));
@@ -135,23 +135,7 @@ export class ComboChart extends BaseChart {
         const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
         rect.setAttribute('aria-label', `${seriesLabel}Bar: ${d.x}, value ${d.y}`);
         rect.setAttribute('tabindex', '-1');
-        setDataPointAttrs(rect, {
-          x: d.x,
-          y: d.y,
-          seriesName: series.name,
-          seriesIndex,
-          index,
-          cx: barX + drawnWidth / 2,
-          cy: top,
-        });
-
-        rect.style.transition = 'opacity 0.2s';
-        this.addEventListenerTracked(rect, 'mouseenter', () => {
-          rect.style.opacity = '0.8';
-        });
-        this.addEventListenerTracked(rect, 'mouseleave', () => {
-          rect.style.opacity = '1';
-        });
+        setDataPointAttrs(rect, d.x, d.y, series.name, seriesIndex, index, barX + drawnWidth / 2, top);
 
         group.appendChild(rect);
       });
@@ -182,7 +166,7 @@ export class ComboChart extends BaseChart {
       const first = points[0];
       const last = points[points.length - 1];
       const areaPath = `${linePath} L ${last.x},${baseline} L ${first.x},${baseline} Z`;
-      const area = document.createElementNS(SVG_NS, 'path');
+      const area = createSVGElement('path');
       area.setAttribute('d', areaPath);
       area.setAttribute('fill', color);
       area.setAttribute('opacity', String(this.config.fillOpacity));
@@ -194,7 +178,7 @@ export class ComboChart extends BaseChart {
       group.appendChild(area);
     }
 
-    const path = document.createElementNS(SVG_NS, 'path');
+    const path = createSVGElement('path');
     path.setAttribute('d', linePath);
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke', color);
@@ -208,7 +192,7 @@ export class ComboChart extends BaseChart {
     if (this.config.showPoints) {
       points.forEach((point, index) => {
         const d = series.data[index];
-        const circle = document.createElementNS(SVG_NS, 'circle');
+        const circle = createSVGElement('circle');
         circle.setAttribute('cx', String(point.x));
         circle.setAttribute('cy', String(point.y));
         circle.setAttribute('r', '4');
@@ -220,15 +204,7 @@ export class ComboChart extends BaseChart {
         circle.setAttribute('aria-label', `${seriesLabel}Data point: ${d.x}, value ${d.y}`);
         circle.setAttribute('tabindex', '-1');
         circle.classList.add('data-point');
-        setDataPointAttrs(circle, {
-          x: d.x,
-          y: d.y,
-          seriesName: series.name,
-          seriesIndex,
-          index,
-          cx: point.x,
-          cy: point.y,
-        });
+        setDataPointAttrs(circle, d.x, d.y, series.name, seriesIndex, index, point.x, point.y);
         group.appendChild(circle);
       });
     }

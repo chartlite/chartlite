@@ -4,9 +4,7 @@
 
 import type { BaseChartConfig, Dimensions } from '../types';
 import { getThemeColors } from '../utils';
-import { CHART_DEFAULTS } from './constants';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
+import { CHART_DEFAULTS, createSVGElement } from './constants';
 
 export function renderTitle(
   svg: SVGSVGElement,
@@ -18,7 +16,7 @@ export function renderTitle(
   // Position title near the top of SVG
   const titleY = CHART_DEFAULTS.TITLE_FONT_SIZE + CHART_DEFAULTS.TITLE_TOP_PADDING;
 
-  const text = document.createElementNS(SVG_NS, 'text');
+  const text = createSVGElement('text');
   text.setAttribute('x', String(dimensions.width / 2));
   text.setAttribute('y', String(titleY));
   text.setAttribute('text-anchor', 'middle');

@@ -12,6 +12,7 @@ import {
   getCombinedYRange,
 } from '../utils';
 import { setDataPointAttrs } from '../render/dataAttrs';
+import { createSVGElement } from '../render/constants';
 
 type ThemeColors = ReturnType<typeof getThemeColors>;
 
@@ -19,7 +20,7 @@ export class BarChart extends BaseChart {
   protected config: BarChartConfig;
 
   constructor(container: HTMLElement | string, config: BarChartConfig) {
-    super(container, config, config.data);
+    super(container, config, config.data, 'Bar');
 
     this.config = {
       orientation: 'vertical',
@@ -53,12 +54,24 @@ export class BarChart extends BaseChart {
     return this.config.stacked === true && this.seriesData.length > 1;
   }
 
-  /** Per-category stacked total (sum of non-negative series values). */
-  private stackedTotal(xValue: string): number {
-    return this.seriesData.reduce((sum, series) => {
-      const point = series.data.find((d) => String(d.x) === xValue);
-      return sum + Math.max(0, point?.y ?? 0);
-    }, 0);
+  /** Diverging positive/negative stack extents for each category. */
+  private stackedExtents(categories: string[]): { min: number; max: number } {
+    const positive = new Map(categories.map((category) => [category, 0]));
+    const negative = new Map(categories.map((category) => [category, 0]));
+
+    for (const series of this.seriesData) {
+      for (const point of series.data) {
+        const category = String(point.x);
+        const totals = point.y >= 0 ? positive : negative;
+        totals.set(category, (totals.get(category) ?? 0) + point.y);
+      }
+    }
+
+    let min = 0;
+    let max = 0;
+    for (const value of negative.values()) min = Math.min(min, value);
+    for (const value of positive.values()) max = Math.max(max, value);
+    return min === max ? { min, max: min + 1 } : { min, max };
   }
 
   /**
@@ -74,11 +87,9 @@ export class BarChart extends BaseChart {
       seriesIndex: number;
       index: number;
       d: DataPoint;
-      cx: number;
-      cy: number;
     }
   ): void {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    const el = createSVGElement('rect');
     el.setAttribute('x', String(rect.x));
     el.setAttribute('y', String(rect.y));
     el.setAttribute('width', String(Math.abs(rect.width)));
@@ -93,24 +104,10 @@ export class BarChart extends BaseChart {
     const seriesLabel = this.seriesData.length > 1 ? `${meta.series.name}, ` : '';
     el.setAttribute('aria-label', `${seriesLabel}Bar: ${meta.d.x}, value ${meta.d.y}`);
     el.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
-    setDataPointAttrs(el, {
-      x: meta.d.x,
-      y: meta.d.y,
-      seriesName: meta.series.name,
-      seriesIndex: meta.seriesIndex,
-      index: meta.index,
-      cx: meta.cx,
-      cy: meta.cy,
-    });
-
-    // Add hover effect with tracked listeners
-    el.style.transition = 'opacity 0.2s';
-    this.addEventListenerTracked(el, 'mouseenter', () => {
-      el.style.opacity = '0.8';
-    });
-    this.addEventListenerTracked(el, 'mouseleave', () => {
-      el.style.opacity = '1';
-    });
+    setDataPointAttrs(
+      el, meta.d.x, meta.d.y, meta.series.name, meta.seriesIndex, meta.index,
+      rect.x + rect.width / 2, rect.y + rect.height / 2
+    );
 
     group.appendChild(el);
   }
@@ -124,16 +121,15 @@ export class BarChart extends BaseChart {
     const xValues = getAllXValues(this.seriesData).map(String);
     const stacked = this.isStacked;
 
-    // Y range: stacked sums to per-category totals from 0; grouped uses the combined range.
+    // Bars always include zero; stacked bars use diverging positive/negative totals.
     let yMin: number;
     let yMax: number;
     if (stacked) {
-      yMin = 0;
-      yMax = Math.max(1, ...xValues.map((x) => this.stackedTotal(x)));
+      ({ min: yMin, max: yMax } = this.stackedExtents(xValues));
     } else {
       const range = getCombinedYRange(this.seriesData);
-      yMin = range.min;
-      yMax = range.max;
+      yMin = Math.min(0, range.min);
+      yMax = Math.max(0, range.max);
     }
 
     // Set chart bounds for Phase 2 features
@@ -156,26 +152,28 @@ export class BarChart extends BaseChart {
 
     if (stacked) {
       const drawnWidth = xScale.bandwidth * (1 - groupPadding);
-      const cumulative = new Map<string, number>();
-      xValues.forEach((x) => cumulative.set(x, 0));
+      const positive = new Map(xValues.map((x) => [x, 0]));
+      const negative = new Map(xValues.map((x) => [x, 0]));
 
       this.seriesData.forEach((series, seriesIndex) => {
         series.data.forEach((d, index) => {
           const xKey = String(d.x);
-          const value = Math.max(0, d.y);
+          const cumulative = d.y >= 0 ? positive : negative;
           const y0 = cumulative.get(xKey) ?? 0;
-          const y1 = y0 + value;
+          const y1 = y0 + d.y;
           cumulative.set(xKey, y1);
 
           const barX = xScale.scale(xKey) + (xScale.bandwidth - drawnWidth) / 2;
-          const yTop = yScale(y1);
-          const segHeight = yScale(y0) - yScale(y1);
+          const y0Pixel = yScale(y0);
+          const y1Pixel = yScale(y1);
+          const yTop = Math.min(y0Pixel, y1Pixel);
+          const segHeight = Math.abs(y0Pixel - y1Pixel);
 
           this.appendBar(
             group,
             { x: barX, y: yTop, width: drawnWidth, height: segHeight, rx: 2 },
             series.color || colors.primary,
-            { series, seriesIndex, index, d, cx: barX + drawnWidth / 2, cy: yTop }
+            { series, seriesIndex, index, d }
           );
         });
       });
@@ -186,19 +184,21 @@ export class BarChart extends BaseChart {
     const seriesCount = this.seriesData.length;
     const barWidth = xScale.bandwidth / seriesCount;
 
+    const zeroY = yScale(0);
     this.seriesData.forEach((series, seriesIndex) => {
       series.data.forEach((d, index) => {
         const groupX = xScale.scale(String(d.x));
         const barX = groupX + seriesIndex * barWidth;
-        const y = yScale(d.y);
-        const barHeight = chartHeight - y;
+        const valueY = yScale(d.y);
+        const y = Math.min(valueY, zeroY);
+        const barHeight = Math.abs(zeroY - valueY);
         const drawnWidth = barWidth * (1 - groupPadding);
 
         this.appendBar(
           group,
           { x: barX, y, width: drawnWidth, height: barHeight, rx: 4 },
           series.color || colors.primary,
-          { series, seriesIndex, index, d, cx: barX + drawnWidth / 2, cy: y }
+          { series, seriesIndex, index, d }
         );
       });
     });
@@ -216,12 +216,11 @@ export class BarChart extends BaseChart {
     let xMin: number;
     let xMax: number;
     if (stacked) {
-      xMin = 0;
-      xMax = Math.max(1, ...yValues.map((y) => this.stackedTotal(y)));
+      ({ min: xMin, max: xMax } = this.stackedExtents(yValues));
     } else {
       const range = getCombinedYRange(this.seriesData);
-      xMin = range.min;
-      xMax = range.max;
+      xMin = Math.min(0, range.min);
+      xMax = Math.max(0, range.max);
     }
 
     this.chartBounds = {
@@ -243,26 +242,28 @@ export class BarChart extends BaseChart {
 
     if (stacked) {
       const drawnHeight = yScale.bandwidth * (1 - groupPadding);
-      const cumulative = new Map<string, number>();
-      yValues.forEach((y) => cumulative.set(y, 0));
+      const positive = new Map(yValues.map((y) => [y, 0]));
+      const negative = new Map(yValues.map((y) => [y, 0]));
 
       this.seriesData.forEach((series, seriesIndex) => {
         series.data.forEach((d, index) => {
           const cat = String(d.x);
-          const value = Math.max(0, d.y);
+          const cumulative = d.y >= 0 ? positive : negative;
           const x0 = cumulative.get(cat) ?? 0;
-          const x1 = x0 + value;
+          const x1 = x0 + d.y;
           cumulative.set(cat, x1);
 
           const barY = yScale.scale(cat) + (yScale.bandwidth - drawnHeight) / 2;
-          const barX = xScale(x0);
-          const segWidth = xScale(x1) - xScale(x0);
+          const x0Pixel = xScale(x0);
+          const x1Pixel = xScale(x1);
+          const barX = Math.min(x0Pixel, x1Pixel);
+          const segWidth = Math.abs(x1Pixel - x0Pixel);
 
           this.appendBar(
             group,
             { x: barX, y: barY, width: segWidth, height: drawnHeight, rx: 2 },
             series.color || colors.primary,
-            { series, seriesIndex, index, d, cx: barX + segWidth, cy: barY + drawnHeight / 2 }
+            { series, seriesIndex, index, d }
           );
         });
       });
@@ -273,18 +274,21 @@ export class BarChart extends BaseChart {
     const seriesCount = this.seriesData.length;
     const barHeight = yScale.bandwidth / seriesCount;
 
+    const zeroX = xScale(0);
     this.seriesData.forEach((series, seriesIndex) => {
       series.data.forEach((d, index) => {
         const groupY = yScale.scale(String(d.x));
         const barY = groupY + seriesIndex * barHeight;
-        const barWidth = xScale(d.y);
+        const valueX = xScale(d.y);
+        const barX = Math.min(valueX, zeroX);
+        const barWidth = Math.abs(zeroX - valueX);
         const drawnHeight = barHeight * (1 - groupPadding);
 
         this.appendBar(
           group,
-          { x: 0, y: barY, width: barWidth, height: drawnHeight, rx: 4 },
+          { x: barX, y: barY, width: barWidth, height: drawnHeight, rx: 4 },
           series.color || colors.primary,
-          { series, seriesIndex, index, d, cx: barWidth, cy: barY + drawnHeight / 2 }
+          { series, seriesIndex, index, d }
         );
       });
     });

@@ -10,7 +10,7 @@
 
 import { CHART_TYPES } from './renderToString';
 
-/** One of the four accepted data shapes (kept permissive on purpose). */
+/** One of the four accepted runtime data shapes. */
 const dataSchema = {
   description:
     'Chart data. Accepts DataPoint[] ([{x,y}]), a plain number[] , column-oriented ' +
@@ -18,6 +18,7 @@ const dataSchema = {
   oneOf: [
     {
       type: 'array',
+      minItems: 1,
       items: {
         type: 'object',
         properties: {
@@ -29,23 +30,48 @@ const dataSchema = {
         additionalProperties: true,
       },
     },
-    { type: 'array', items: { type: 'number' } },
+    { type: 'array', minItems: 1, items: { type: 'number' } },
     {
       type: 'object',
       properties: {
-        x: { type: 'array', items: { type: ['string', 'number'] } },
+        x: { type: 'array', minItems: 1, items: { type: ['string', 'number'] } },
+        y: {
+          oneOf: [
+            { type: 'array', items: { type: 'number' } },
+            {
+              type: 'object',
+              minProperties: 1,
+              additionalProperties: { type: 'array', items: { type: 'number' } },
+            },
+          ],
+        },
       },
-      required: ['x'],
-      additionalProperties: true,
+      required: ['x', 'y'],
+      additionalProperties: false,
     },
     {
       type: 'object',
       properties: {
-        series: { type: 'array' },
-        data: { type: 'array' },
+        series: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              dataKey: { type: 'string' },
+              type: { type: 'string', enum: ['line', 'bar', 'area'] },
+              color: { type: 'string' },
+            },
+            required: ['name', 'dataKey'],
+            additionalProperties: false,
+          },
+        },
+        data: { type: 'array', minItems: 1, items: { type: 'object' } },
+        xKey: { type: 'string' },
       },
       required: ['series', 'data'],
-      additionalProperties: true,
+      additionalProperties: false,
     },
   ],
 } as const;

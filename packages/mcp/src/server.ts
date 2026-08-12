@@ -20,7 +20,7 @@ export function createServer(version = '0.0.0'): McpServer {
       title: 'Render a Chartlite chart',
       description:
         'Render a chart to an SVG string from a declarative spec ({ type, data, ...options }). ' +
-        'Zero-dependency, ~13KB, WCAG-accessible SVG output usable directly in HTML/Markdown. ' +
+        'Zero-dependency, ~15KB, WCAG-accessible SVG output usable directly in HTML/Markdown. ' +
         `Supported types: ${CHART_TYPES.join(', ')}. Call list_chart_types for the full schema.`,
       inputSchema: renderChartInput,
     },

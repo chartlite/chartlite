@@ -33,7 +33,10 @@ export function legendToggle(): ChartPlugin {
         const item = svg.querySelector(
           `.legend-item[data-series-index="${idx}"]`
         ) as SVGElement | null;
-        if (item) item.style.opacity = isHidden ? '0.4' : '1';
+        if (item) {
+          item.style.opacity = isHidden ? '0.4' : '1';
+          item.setAttribute('aria-pressed', String(isHidden));
+        }
       };
 
       // Re-apply persisted visibility after this (re-)render.
@@ -44,7 +47,11 @@ export function legendToggle(): ChartPlugin {
         if (idxAttr === null) return;
         const idx = Number(idxAttr);
         (item as SVGElement).style.cursor = 'pointer';
-        item.addEventListener('click', () => {
+        item.setAttribute('role', 'button');
+        item.setAttribute('tabindex', '0');
+        item.setAttribute('aria-pressed', String(hidden.has(idx)));
+        item.setAttribute('aria-label', `Toggle ${item.getAttribute('data-series') ?? ''} series`);
+        const toggle = (): void => {
           if (hidden.has(idx)) hidden.delete(idx);
           else hidden.add(idx);
           apply(idx);
@@ -53,6 +60,13 @@ export function legendToggle(): ChartPlugin {
             seriesIndex: idx,
             hidden: hidden.has(idx),
           });
+        };
+        item.addEventListener('click', toggle);
+        item.addEventListener('keydown', (event) => {
+          const keyboardEvent = event as KeyboardEvent;
+          if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
+          keyboardEvent.preventDefault();
+          toggle();
         });
       });
     },

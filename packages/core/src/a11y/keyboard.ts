@@ -53,27 +53,27 @@ export class KeyboardNavigator {
 
   private handleKeyDown(event: KeyboardEvent): void {
     // Prevent default scrolling for arrow keys
-    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter', ' '].includes(event.key)) {
       event.preventDefault();
     }
 
     switch (event.key) {
       case 'ArrowRight':
       case 'ArrowDown':
-        this.focusNextElement();
+        this.focusElement(this.focusedIndex + 1);
         break;
 
       case 'ArrowLeft':
       case 'ArrowUp':
-        this.focusPreviousElement();
+        this.focusElement(this.focusedIndex - 1);
         break;
 
       case 'Home':
-        this.focusFirstElement();
+        this.focusElement(0);
         break;
 
       case 'End':
-        this.focusLastElement();
+        this.focusElement(-1);
         break;
 
       case 'Enter':
@@ -90,67 +90,19 @@ export class KeyboardNavigator {
     }
   }
 
-  private focusNextElement(): void {
+  private focusElement(index: number): void {
     if (this.focusableElements.length === 0) {
       this.collectFocusableElements();
     }
+    const length = this.focusableElements.length;
+    if (!length) return;
 
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedIndex = (this.focusedIndex + 1) % this.focusableElements.length;
-    this.applyFocusToElement(this.focusedIndex);
-    this.announceToScreenReader();
-  }
-
-  private focusPreviousElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedIndex =
-      this.focusedIndex <= 0 ? this.focusableElements.length - 1 : this.focusedIndex - 1;
-    this.applyFocusToElement(this.focusedIndex);
-    this.announceToScreenReader();
-  }
-
-  private focusFirstElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedIndex = 0;
-    this.applyFocusToElement(this.focusedIndex);
-    this.announceToScreenReader();
-  }
-
-  private focusLastElement(): void {
-    if (this.focusableElements.length === 0) {
-      this.collectFocusableElements();
-    }
-
-    if (this.focusableElements.length === 0) return;
-
-    this.focusedIndex = this.focusableElements.length - 1;
-    this.applyFocusToElement(this.focusedIndex);
-    this.announceToScreenReader();
-  }
-
-  private applyFocusToElement(index: number): void {
-    // Remove previous focus
+    this.focusedIndex = index < 0 ? length - 1 : index % length;
     this.clearDataPointFocus();
-
-    const element = this.focusableElements[index];
-    if (!element) return;
-
-    // Add focus class
+    const element = this.focusableElements[this.focusedIndex];
     element.classList.add('data-point-focused');
-
-    // Store current focus state
     element.setAttribute('data-focused', 'true');
+    this.announceToScreenReader(element);
   }
 
   private clearDataPointFocus(): void {
@@ -161,12 +113,12 @@ export class KeyboardNavigator {
   }
 
   private activateCurrentElement(): void {
-    if (this.focusedIndex < 0 || this.focusedIndex >= this.focusableElements.length) {
-      return;
-    }
-
     const element = this.focusableElements[this.focusedIndex];
     if (!element) return;
+
+    // Mirror pointer activation so callbacks() and consumer click handlers work
+    // identically for keyboard users.
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     // Emit event for plugins to handle (e.g., tooltip plugin)
     this.emit('datapoint:activate', {
@@ -176,14 +128,7 @@ export class KeyboardNavigator {
     });
   }
 
-  private announceToScreenReader(): void {
-    if (this.focusedIndex < 0 || this.focusedIndex >= this.focusableElements.length) {
-      return;
-    }
-
-    const element = this.focusableElements[this.focusedIndex];
-    if (!element) return;
-
+  private announceToScreenReader(element: SVGElement): void {
     const ariaLabel = element.getAttribute('aria-label') || '';
 
     // Create or get live region

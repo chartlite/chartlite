@@ -11,8 +11,8 @@
 import { BaseChart } from './BaseChart';
 import type { RadialChartConfig } from '../types';
 import { setDataPointAttrs } from '../render/dataAttrs';
+import { createSVGElement } from '../render/constants';
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
 
@@ -20,7 +20,7 @@ export class RadialChart extends BaseChart {
   protected config: RadialChartConfig;
 
   constructor(container: HTMLElement | string, config: RadialChartConfig) {
-    super(container, config, config.data);
+    super(container, config, config.data, 'Radial');
 
     this.config = {
       max: 100,
@@ -81,38 +81,39 @@ export class RadialChart extends BaseChart {
       const color = palette[index % palette.length];
 
       // Track (full sweep, faint)
-      const track = document.createElementNS(SVG_NS, 'path');
+      const track = createSVGElement('path');
       track.setAttribute('d', this.ringArc(cx, cy, outerR, innerR, a0, a1));
       track.setAttribute('fill', trackColor);
       track.setAttribute('opacity', '0.25');
-      track.setAttribute('aria-hidden', 'true');
       mainGroup.appendChild(track);
 
       // Value arc
+      let dataMark: SVGPathElement = track;
       if (fraction > 0) {
         const valueEnd = a0 + fraction * sweep;
-        const arc = document.createElementNS(SVG_NS, 'path');
+        const arc = createSVGElement('path');
         arc.setAttribute('d', this.ringArc(cx, cy, outerR, innerR, a0, valueEnd));
         arc.setAttribute('fill', color);
-        arc.setAttribute('role', 'img');
-        const pct = Math.round(fraction * 100);
-        arc.setAttribute('aria-label', `${point.label ?? point.x}: ${point.y} (${pct}%)`);
-        arc.setAttribute('tabindex', '-1');
-        arc.classList.add('data-point');
-        setDataPointAttrs(arc, {
-          x: point.label ?? point.x,
-          y: point.y,
-          seriesIndex: 0,
-          index,
-        });
         mainGroup.appendChild(arc);
+        track.setAttribute('aria-hidden', 'true');
+        dataMark = arc;
       }
+
+      const dataAngle = fraction > 0 ? a0 + (fraction * sweep) / 2 : a0;
+      const dataRadius = (outerR + innerR) / 2;
+      const [dataX, dataY] = this.polar(cx, cy, dataRadius, dataAngle);
+      const pct = Math.round(fraction * 100);
+      dataMark.setAttribute('role', 'img');
+      dataMark.setAttribute('aria-label', `${point.label ?? point.x}: ${point.y} (${pct}%)`);
+      dataMark.setAttribute('tabindex', '-1');
+      dataMark.classList.add('data-point');
+      setDataPointAttrs(dataMark, point.label ?? point.x, point.y, this.seriesData[0]?.name, 0, index, dataX, dataY);
     });
 
     // Center value label (single ring only)
     if (this.config.showValue !== false && points.length === 1) {
       const value = points[0].y;
-      const text = document.createElementNS(SVG_NS, 'text');
+      const text = createSVGElement('text');
       text.setAttribute('x', String(cx));
       text.setAttribute('y', String(cy));
       text.setAttribute('text-anchor', 'middle');

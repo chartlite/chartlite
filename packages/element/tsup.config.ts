@@ -5,7 +5,7 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   splitting: false,
-  sourcemap: true,
+  sourcemap: false,
   clean: true,
   external: ['@chartlite/core'],
   minify: true,

@@ -1,5 +1,8 @@
 # Design: the critical path to 1.0
 
+> Historical design record. Chartlite 1.0 has shipped; package manifests and CI are the
+> source of current version, test, and bundle truth.
+
 **Status:** decisions locked — Decision 1 = **DOM shim in `/server`**, Decision 2 = **plugin
 factories in `/interactive`** (both confirmed 2026-07). Executing.
 **Companion to:** [V1_ROADMAP.md](V1_ROADMAP.md), which sets the *what/why/order*. This doc

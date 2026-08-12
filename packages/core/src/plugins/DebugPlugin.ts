@@ -18,48 +18,24 @@
 
 import type { ChartPlugin, PluginContext } from '../types';
 
+const DEBUG_EVENTS = [
+  'beforeRender',
+  'afterRender',
+  'beforeUpdate',
+  'afterUpdate',
+  'beforeDestroy',
+  'onResize',
+] as const;
+
 export class DebugPlugin implements ChartPlugin {
   name = 'debug';
-  private logPrefix: string;
+  [key: string]: any;
 
   constructor(logPrefix: string = '[ChartDebug]') {
-    this.logPrefix = logPrefix;
-  }
-
-  beforeRender(context: PluginContext): void {
-    console.log(`${this.logPrefix} beforeRender`, {
-      dataPoints: Array.isArray(context.data) ? context.data.length : context.data,
-      dimensions: context.dimensions,
-    });
-  }
-
-  afterRender(context: PluginContext): void {
-    console.log(`${this.logPrefix} afterRender`, {
-      svgElement: context.svg,
-      containerSize: {
-        width: context.container.clientWidth,
-        height: context.container.clientHeight,
-      },
-    });
-  }
-
-  beforeUpdate(context: PluginContext): void {
-    console.log(`${this.logPrefix} beforeUpdate`, {
-      newDataPoints: Array.isArray(context.data) ? context.data.length : context.data,
-    });
-  }
-
-  afterUpdate(): void {
-    console.log(`${this.logPrefix} afterUpdate`);
-  }
-
-  beforeDestroy(): void {
-    console.log(`${this.logPrefix} beforeDestroy`);
-  }
-
-  onResize(context: PluginContext): void {
-    console.log(`${this.logPrefix} onResize`, {
-      newDimensions: context.dimensions,
-    });
+    for (const event of DEBUG_EVENTS) {
+      this[event] = (context?: PluginContext): void => {
+        console.log(`${logPrefix} ${event}`, context);
+      };
+    }
   }
 }

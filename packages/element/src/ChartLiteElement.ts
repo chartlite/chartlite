@@ -49,6 +49,11 @@ const REGISTRY: Record<ChartType, ChartConstructor> = {
 /** Attributes that, when changed, trigger a re-render. */
 const OBSERVED = ['spec', 'type', 'data', 'theme', 'title', 'width', 'height', 'css-vars'];
 
+// Keep the module importable during SSR; registration remains browser-only.
+const HTMLElementBase = (
+  typeof HTMLElement === 'undefined' ? class {} : HTMLElement
+) as typeof HTMLElement;
+
 function parseJSON(value: string | null): unknown {
   if (value == null) return undefined;
   try {
@@ -58,7 +63,7 @@ function parseJSON(value: string | null): unknown {
   }
 }
 
-export class ChartLiteElement extends HTMLElement {
+export class ChartLiteElement extends HTMLElementBase {
   static get observedAttributes(): string[] {
     return OBSERVED;
   }

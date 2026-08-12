@@ -12,33 +12,30 @@ import type {
   SeriesDefinition,
 } from '../types';
 
+const isFiniteNumber = (value: any): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+const isXValue = (value: any): value is string | number =>
+  typeof value === 'string' || isFiniteNumber(value);
+
 /**
  * Check if data is in column-oriented format
  */
 function isColumnOrientedData(data: any): data is ColumnOrientedData {
-  // Basic structure check
-  if (!data || typeof data !== 'object') return false;
-  if (!('x' in data) || !('y' in data)) return false;
-  if (!Array.isArray(data.x) || data.x.length === 0) return false;
+  if (!data || typeof data !== 'object' || !Array.isArray(data.x) || !data.x.length) return false;
+  if (!data.x.every(isXValue)) return false;
 
   // Single series: y is number[]
   if (Array.isArray(data.y)) {
     // Validate arrays have same length
     if (data.x.length !== data.y.length) return false;
     // Validate all y values are numbers
-    return data.y.every((val: any) => typeof val === 'number' && !isNaN(val) && isFinite(val));
+    return data.y.every(isFiniteNumber);
   }
 
   // Multi-series: y is Record<string, number[]>
   if (data.y !== null && typeof data.y === 'object' && !Array.isArray(data.y)) {
-    const yValues = Object.values(data.y);
-    // All values must be arrays
-    if (!yValues.every((val) => Array.isArray(val))) return false;
-    // All arrays must have same length as x
-    if (!yValues.every((arr: any) => arr.length === data.x.length)) return false;
-    // All values must be valid numbers
-    return yValues.every((arr: any) =>
-      arr.every((val: any) => typeof val === 'number' && !isNaN(val) && isFinite(val))
+    return Object.values(data.y).every((values: any) =>
+      Array.isArray(values) && values.length === data.x.length && values.every(isFiniteNumber)
     );
   }
 
@@ -49,56 +46,57 @@ function isColumnOrientedData(data: any): data is ColumnOrientedData {
  * Check if data is in series-first format
  */
 function isSeriesFirstData(data: any): data is SeriesFirstData {
-  // Basic structure check
-  if (!data || typeof data !== 'object') return false;
-  if (!('series' in data) || !('data' in data)) return false;
-  if (!Array.isArray(data.series) || !Array.isArray(data.data)) return false;
+  if (!data || typeof data !== 'object' || !Array.isArray(data.series) || !Array.isArray(data.data)) return false;
 
   // Must have at least one series
   if (data.series.length === 0 || data.data.length === 0) {
     throw new Error('Chart data cannot be empty');
   }
 
-  // Validate series definitions
-  return data.series.every((s: any) =>
+  // Validate series definitions and every record. Series-first input commonly
+  // arrives from JSON, so the TypeScript shape alone is not a runtime guarantee.
+  const validSeries = data.series.every((s: any) =>
     s &&
     typeof s === 'object' &&
     typeof s.name === 'string' &&
-    typeof s.dataKey === 'string'
+    typeof s.dataKey === 'string' &&
+    (s.type === undefined || ['line', 'bar', 'area'].includes(s.type)) &&
+    (s.color === undefined || typeof s.color === 'string')
   );
+  if (!validSeries || (data.xKey !== undefined && typeof data.xKey !== 'string')) return false;
+
+  if (!data.data.every((record: any) => record && typeof record === 'object')) return false;
+  const firstRecord = data.data[0];
+  const dataKeys = data.series.map((s: any) => s.dataKey);
+  const xAxisKey = data.xKey || Object.keys(firstRecord).find((key) => !dataKeys.includes(key)) || Object.keys(firstRecord)[0];
+
+  return data.data.every((record: any) => {
+    const x = record[xAxisKey];
+    if (!isXValue(x)) return false;
+    return dataKeys.every((key: string) =>
+      record[key] === undefined ||
+      isFiniteNumber(record[key])
+    );
+  });
 }
 
 /**
  * Check if data is a simple array of numbers
  */
 function isNumberArray(data: any): data is number[] {
-  if (!Array.isArray(data)) return false;
-  if (data.length === 0) {
-    throw new Error('Chart data cannot be empty');
-  }
-
-  return data.every((val) => typeof val === 'number' && !isNaN(val) && isFinite(val));
+  return Array.isArray(data) && data.every(isFiniteNumber);
 }
 
 /**
  * Check if data is already in DataPoint[] format
  */
 function isDataPointArray(data: any): data is DataPoint[] {
-  if (!Array.isArray(data)) return false;
-  if (data.length === 0) {
-    throw new Error('Chart data cannot be empty');
-  }
-
-  // Validate all items are valid DataPoint objects
-  return data.every((item) =>
+  return Array.isArray(data) && data.every((item) =>
     item &&
     typeof item === 'object' &&
-    'x' in item &&
-    'y' in item &&
-    (typeof item.x === 'string' || typeof item.x === 'number') &&
-    typeof item.y === 'number' &&
-    !isNaN(item.y) &&
-    isFinite(item.y)
+    isXValue(item.x) &&
+    isFiniteNumber(item.y) &&
+    (item.label === undefined || typeof item.label === 'string')
   );
 }
 
@@ -169,6 +167,7 @@ function convertNumberArray(data: number[]): DataPoint[] {
  * Normalize any supported data format into DataPoint[]
  */
 export function normalizeData(data: FlexibleDataInput): DataPoint[] {
+  if (Array.isArray(data) && !data.length) throw new Error('Chart data cannot be empty');
   // Already in correct format
   if (isDataPointArray(data)) {
     return data;
@@ -190,10 +189,7 @@ export function normalizeData(data: FlexibleDataInput): DataPoint[] {
   }
 
   // Invalid data format
-  throw new Error(
-    'Invalid data format. Expected DataPoint[], number[], ColumnOrientedData, or SeriesFirstData. ' +
-    'See documentation for supported formats.'
-  );
+  throw new Error('Invalid data format');
 }
 
 /**
@@ -268,14 +264,17 @@ export function normalizeToSeriesData(
       type: s.type,
       data: records.map(record => ({
         x: record[xAxisKey],
-        y: record[s.dataKey],
+        y: record[s.dataKey] ?? 0,
       })),
     }));
   }
 
-  // Column-oriented format with multiple series
-  if (isColumnOrientedData(data) && typeof data.y === 'object' && !Array.isArray(data.y)) {
+  // Column-oriented formats
+  if (isColumnOrientedData(data)) {
     const { x, y } = data;
+    if (Array.isArray(y)) {
+      return [{ name: 'Series 1', data: convertColumnOrientedData(data) }];
+    }
     const seriesKeys = Object.keys(y);
 
     return seriesKeys.map((key, index) => {
@@ -306,15 +305,19 @@ export function normalizeToSeriesData(
  * Get all unique x-axis values from multi-series data
  */
 export function getAllXValues(seriesData: SeriesData[]): (string | number)[] {
-  const xValuesSet = new Set<string | number>();
+  // Every categorical chart ultimately renders x values as strings. Keying this
+  // map the same way prevents `1` and `'1'` from creating duplicate, overlapping
+  // bands while preserving the first source value for numeric scatter charts.
+  const xValues = new Map<string, string | number>();
 
   seriesData.forEach(series => {
     series.data.forEach(point => {
-      xValuesSet.add(point.x);
+      const key = String(point.x);
+      if (!xValues.has(key)) xValues.set(key, point.x);
     });
   });
 
-  return Array.from(xValuesSet);
+  return Array.from(xValues.values());
 }
 
 /**
@@ -334,6 +337,9 @@ export function getCombinedYRange(seriesData: SeriesData[]): { min: number; max:
   // Include 0 in the range
   min = Math.min(min, 0);
   max = Math.max(max, 0);
+
+  // All-zero data otherwise produces a zero-width scale and NaN coordinates.
+  if (min === max) max = min + 1;
 
   return { min, max };
 }

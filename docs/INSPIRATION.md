@@ -10,7 +10,7 @@
 
 - **Developer Experience First**: Beautiful defaults, flexible data formats, TypeScript-first
 - **Performance Conscious**: Efficient for 500-2,000 data points, <16ms render time
-- **Lightweight by Default**: ~20KB core, tree-shakeable optional features
+- **Lightweight by Default**: ~14.5KB gzipped core, tree-shakeable optional features
 - **Zero Dependencies**: Pure TypeScript/JavaScript only
 - **Accessible**: WCAG 2.1 AA compliant
 - **Not a Dashboard Library**: No complex interactivity, zoom/pan, or real-time monitoring for millions of points
@@ -34,7 +34,7 @@
 - Consistent design language across all chart types
 - Beautiful themes (inspired by their approach, not copied)
 
-**Bundle Impact**: Included in core (~20KB)
+**Bundle Impact**: Included in the core entry
 **Status**: Partially implemented (3 themes: default, midnight, minimal)
 
 #### 2. **Declarative API** ✅ CORE
@@ -59,7 +59,7 @@ new LineChart('#chart', {
 }).render();
 ```
 
-**Bundle Impact**: Included in core (~20KB)
+**Bundle Impact**: Included in the core entry
 **Status**: Implemented
 
 #### 3. **Multi-Series Support** 🎯 Phase 1 (CORE)
@@ -179,7 +179,7 @@ data: {
 }
 ```
 
-**Bundle Impact**: Included in core (~20KB)
+**Bundle Impact**: Included in the core entry
 **Status**: Implemented
 
 #### 2. **Responsive by Default** ✅ CORE
@@ -193,7 +193,7 @@ data: {
 - Fill container unless explicit width/height provided
 - Smooth resize transitions
 
-**Bundle Impact**: Included in core (~20KB)
+**Bundle Impact**: Included in the core entry
 **Status**: Implemented
 
 ---
@@ -340,7 +340,7 @@ import { Tooltip } from '@chartlite/core/tooltip'; // Only if needed
 
 **Key Points**:
 
-- **Core stays ~20KB**: Essential charts and features only
+- **Core stays below 15KB gzip**: Essential charts and features only
 - **Tree-shaking works**: Only pay for what you import
 - **No separate packages**: Everything in `@chartlite/core`, just import what you need
 - **Accessibility included**: Core feature, not optional
@@ -379,7 +379,7 @@ import { Tooltip } from '@chartlite/core/tooltip'; // Only if needed
 
 **Core Strengths**:
 
-1. **Tiny bundle**: ~20KB core vs 400KB for Recharts
+1. **Tiny bundle**: ~14.5KB gzipped core vs 400KB for Recharts
 2. **Zero dependencies**: No D3, no supply chain risk
 3. **Beautiful defaults**: Inspired by Tailwind, Material, Nord
 4. **Flexible data**: 4 input formats supported

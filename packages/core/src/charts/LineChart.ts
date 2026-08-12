@@ -12,12 +12,13 @@ import {
   getCombinedYRange,
 } from '../utils';
 import { setDataPointAttrs, setSeriesAttrs } from '../render/dataAttrs';
+import { createSVGElement } from '../render/constants';
 
 export class LineChart extends BaseChart {
   protected config: LineChartConfig;
 
   constructor(container: HTMLElement | string, config: LineChartConfig) {
-    super(container, config, config.data);
+    super(container, config, config.data, 'Line');
 
     this.config = {
       curve: 'linear',
@@ -70,7 +71,7 @@ export class LineChart extends BaseChart {
       const linePath = generateLinePath(points, this.config.curve);
 
       // Render line
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const path = createSVGElement('path');
       path.setAttribute('d', linePath);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', series.color || colors.primary);
@@ -84,7 +85,7 @@ export class LineChart extends BaseChart {
       if (this.config.showPoints) {
         points.forEach((point, index) => {
           const dataPoint = series.data[index];
-          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          const circle = createSVGElement('circle');
           circle.setAttribute('cx', String(point.x));
           circle.setAttribute('cy', String(point.y));
           circle.setAttribute('r', '4');
@@ -98,15 +99,7 @@ export class LineChart extends BaseChart {
           circle.setAttribute('aria-label', `${seriesLabel}Data point: ${dataPoint.x}, value ${dataPoint.y}`);
           circle.setAttribute('tabindex', '-1'); // Managed by keyboard navigation
           circle.classList.add('data-point');
-          setDataPointAttrs(circle, {
-            x: dataPoint.x,
-            y: dataPoint.y,
-            seriesName: series.name,
-            seriesIndex,
-            index,
-            cx: point.x,
-            cy: point.y,
-          });
+          setDataPointAttrs(circle, dataPoint.x, dataPoint.y, series.name, seriesIndex, index, point.x, point.y);
 
           mainGroup.appendChild(circle);
         });

@@ -13,18 +13,28 @@ export type ChartConstructor = new (
 ) => ChartInstance;
 
 /**
- * Build a stable dependency key from a config object. Functions (callbacks,
- * formatters) are dropped — they can't be compared by value — so the chart is
- * recreated when the *data or visual* config changes, which is what matters.
+ * Build a stable dependency key from a config object. Functions are compared by
+ * identity so callback, formatter, and plugin changes recreate the chart too.
  */
+const identities = new WeakMap<object, number>();
+let nextIdentity = 0;
+
+function identity(value: object): number {
+  let id = identities.get(value);
+  if (id === undefined) {
+    id = ++nextIdentity;
+    identities.set(value, id);
+  }
+  return id;
+}
+
 function configSignature(config: Record<string, unknown>): string {
   try {
     return JSON.stringify(config, (_key, value) =>
-      typeof value === 'function' ? undefined : value
+      typeof value === 'function' ? `__chartlite_fn_${identity(value)}` : value
     );
   } catch {
-    // Circular/non-serializable config: fall back to always-recreate.
-    return String(Math.random());
+    return `__chartlite_config_${identity(config)}`;
   }
 }
 

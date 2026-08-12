@@ -160,6 +160,14 @@ export class ShimElement {
     this.children.push(child);
     return child;
   }
+  insertBefore<T extends ShimElement>(child: T, reference: ShimElement | null): T {
+    if (reference === null) return this.appendChild(child);
+    const index = this.children.indexOf(reference);
+    if (index === -1) throw new Error('Reference node is not a child of this element');
+    child.parentNode = this;
+    this.children.splice(index, 0, child);
+    return child;
+  }
   removeChild<T extends ShimElement>(child: T): T {
     const i = this.children.indexOf(child);
     if (i !== -1) this.children.splice(i, 1);

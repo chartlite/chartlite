@@ -8,6 +8,14 @@
 
 import type { DataPoint, SeriesData } from '../types';
 
+const HTML_ENTITIES: Record<string, string> = {
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+};
+
+function escapeHTML(value: unknown): string {
+  return String(value).replace(/[&<>"']/g, (character) => HTML_ENTITIES[character]);
+}
+
 /** Fallback title used when the user doesn't supply one (e.g. "Line Chart"). */
 export function generateDefaultTitle(chartTypeName: string): string {
   return `${chartTypeName} Chart`;
@@ -65,9 +73,12 @@ export function generateDescription(params: {
     return `Empty ${chartType} chart with no data.`;
   }
 
-  const allYValues = seriesData.flatMap((s) => s.data.map((d) => d.y));
-  const min = Math.min(...allYValues);
-  const max = Math.max(...allYValues);
+  let min = Infinity;
+  let max = -Infinity;
+  seriesData.forEach((series) => series.data.forEach((point) => {
+    if (point.y < min) min = point.y;
+    if (point.y > max) max = point.y;
+  }));
 
   const firstPoint = data[0];
   const lastPoint = data[data.length - 1];
@@ -97,64 +108,28 @@ export function generateDataTableHTML(params: {
   seriesData: SeriesData[];
 }): string {
   const { title, data, seriesData } = params;
+  let headers: string;
+  let rows: string;
 
   if (seriesData.length === 1) {
-    // Single series table
-    const rows = data
-      .map((point) => `<tr><td>${point.x}</td><td>${point.y}</td></tr>`)
+    headers = '<th scope="col">Value</th>';
+    rows = data
+      .map((point) => `<tr><td>${escapeHTML(point.x)}</td><td>${escapeHTML(point.y)}</td></tr>`)
       .join('');
-
-    return `
-        <table class="sr-only" aria-label="Chart data table">
-          <caption>${title} - Data Table</caption>
-          <thead>
-            <tr>
-              <th scope="col">Category</th>
-              <th scope="col">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      `;
+  } else {
+    headers = seriesData.map((s) => `<th scope="col">${escapeHTML(s.name)}</th>`).join('');
+    const xValues = Array.from(new Set(seriesData.flatMap((s) => s.data.map((d) => String(d.x)))));
+    const valueMaps = seriesData.map((series) =>
+      new Map(series.data.map((point) => [String(point.x), point.y]))
+    );
+    rows = xValues.map((x) => {
+      const cells = valueMaps.map((values) => {
+        const value = values.get(x);
+        return `<td>${value === undefined ? '-' : escapeHTML(value)}</td>`;
+      }).join('');
+      return `<tr><th scope="row">${escapeHTML(x)}</th>${cells}</tr>`;
+    }).join('');
   }
 
-  // Multi-series table
-  const seriesHeaders = seriesData
-    .map((s) => `<th scope="col">${s.name}</th>`)
-    .join('');
-
-  // Get all unique x values
-  const allXValues = Array.from(
-    new Set(seriesData.flatMap((s) => s.data.map((d) => String(d.x))))
-  );
-
-  const rows = allXValues
-    .map((x) => {
-      const cells = seriesData
-        .map((series) => {
-          const point = series.data.find((d) => String(d.x) === x);
-          return `<td>${point ? point.y : '-'}</td>`;
-        })
-        .join('');
-
-      return `<tr><th scope="row">${x}</th>${cells}</tr>`;
-    })
-    .join('');
-
-  return `
-        <table class="sr-only" aria-label="Chart data table">
-          <caption>${title} - Data Table</caption>
-          <thead>
-            <tr>
-              <th scope="col">Category</th>
-              ${seriesHeaders}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      `;
+  return `<table class="sr-only" aria-label="Chart data table"><caption>${escapeHTML(title)} - Data Table</caption><thead><tr><th scope="col">Category</th>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
 }

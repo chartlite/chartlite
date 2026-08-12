@@ -15,11 +15,8 @@ import type {
 import {
   getDefaultDimensions,
   getThemeColors,
-  isMultiSeriesData,
   normalizeToSeriesData,
-  generateSeriesColors,
   autoDownsample,
-  ElementPool,
 } from '../utils';
 import {
   generateAriaLabel,
@@ -29,7 +26,7 @@ import {
 } from '../a11y/descriptions';
 import { injectAccessibilityStyles } from '../a11y/styles';
 import { KeyboardNavigator } from '../a11y/keyboard';
-import { CHART_DEFAULTS } from '../render/constants';
+import { CHART_DEFAULTS, createGroup, createSVGElement } from '../render/constants';
 import { renderTitle as drawTitle } from '../render/title';
 import { renderLegend as drawLegend } from '../render/legend';
 import {
@@ -49,14 +46,17 @@ export abstract class BaseChart implements Chart {
   protected config: BaseChartConfig;
   protected svg: SVGSVGElement | null = null;
   protected dimensions: Dimensions;
-  protected data: DataPoint[]; // Legacy: for single-series backward compatibility
-  protected seriesData: SeriesData[]; // New: normalized multi-series data
-  protected isMultiSeries: boolean;
+  protected data!: DataPoint[]; // Legacy: for single-series backward compatibility
+  protected seriesData!: SeriesData[]; // New: normalized multi-series data
+  protected isMultiSeries!: boolean;
   // Resolved (unwrapped) per-series colors, kept so the CSS-variable root tokens
   // can be emitted even when `seriesData[i].color` is a `var(--cl-series-i, …)` string.
   protected resolvedSeriesColors: string[] = [];
   private resizeObserver: ResizeObserver | null = null;
   private resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+  private layoutWidth: number;
+  private layoutHeight: number;
+  protected chartTypeName: string;
   protected eventListeners: Array<{
     element: Element;
     event: string;
@@ -67,20 +67,16 @@ export abstract class BaseChart implements Chart {
   protected plugins: ChartPlugin[] = [];
   private eventHandlers: Map<string, Set<(data?: any) => void>> = new Map();
 
-  // Performance optimizations
-  protected elementPool: ElementPool | null = null;
-
   // Chart bounds for overlay features (set by subclasses)
   protected chartBounds: ChartBounds | null = null;
-
-  // Keyboard navigation (Phase 3)
-  private keyboardNav: KeyboardNavigator | null = null;
 
   constructor(
     container: HTMLElement | string,
     config: BaseChartConfig,
-    dataInput: FlexibleDataInput
+    dataInput: FlexibleDataInput,
+    chartTypeName: string
   ) {
+    this.chartTypeName = chartTypeName;
     // Validate and set container
     if (typeof container === 'string') {
       const element = document.querySelector(container);
@@ -90,7 +86,7 @@ export abstract class BaseChart implements Chart {
       this.container = element as HTMLElement;
     } else {
       if (!container || !(container instanceof HTMLElement)) {
-        throw new Error('Container must be a valid HTMLElement or selector string');
+        throw new Error('Container must be a valid HTMLElement');
       }
       this.container = container;
     }
@@ -108,48 +104,15 @@ export abstract class BaseChart implements Chart {
       ...config,
     };
 
-    // Always initialize element pool for 42% faster updates
-    this.elementPool = new ElementPool(2000);
-
-    // Detect if multi-series data
-    this.isMultiSeries = isMultiSeriesData(dataInput);
-
-    // Normalize data to both formats for backward compatibility
-    // This will throw if data is invalid (via our strengthened type guards)
-    this.seriesData = normalizeToSeriesData(dataInput);
-    this.data = this.seriesData[0]?.data || [];
-
-    // Validate we have data
-    if (this.seriesData.length === 0 || this.data.length === 0) {
-      throw new Error('Chart data cannot be empty');
-    }
-
-    // Auto-assign colors to series (records resolved colors + var-wraps when cssVars)
-    this.assignSeriesColors();
-
-    // Automatic data sampling for performance (500+ points)
-    // Uses fast 'nth' algorithm for best performance
-    this.seriesData = this.seriesData.map(series => {
-      if (series.data.length > 500) {
-        return {
-          ...series,
-          data: autoDownsample(series.data, 500, 'nth'),
-        };
-      }
-      return series;
-    });
-    this.data = this.seriesData[0]?.data || [];
+    this.setData(dataInput);
 
     // Set up dimensions with space for title and legend
-    const baseWidth = this.config.width || this.container.clientWidth || CHART_DEFAULTS.DEFAULT_WIDTH;
-    const baseHeight = this.config.height || this.container.clientHeight || CHART_DEFAULTS.DEFAULT_HEIGHT;
+    const baseWidth = this.config.width ?? (this.container.clientWidth || CHART_DEFAULTS.DEFAULT_WIDTH);
+    const baseHeight = this.config.height ?? (this.container.clientHeight || CHART_DEFAULTS.DEFAULT_HEIGHT);
 
-    // Validate dimensions
-    if (baseWidth <= 0 || baseHeight <= 0) {
-      throw new Error(`Invalid dimensions: width=${baseWidth}, height=${baseHeight}. Must be positive numbers.`);
-    }
-
-    this.dimensions = this.calculateDimensions(baseWidth, baseHeight);
+    this.layoutWidth = baseWidth;
+    this.layoutHeight = baseHeight;
+    this.dimensions = this.calculateDimensions(this.layoutWidth, this.layoutHeight);
 
     // Initialize plugins
     this.plugins = this.config.plugins || [];
@@ -161,22 +124,25 @@ export abstract class BaseChart implements Chart {
   private validateConfig(config: BaseChartConfig): void {
     // Validate dimensions if provided
     if (config.width !== undefined && (config.width <= 0 || !isFinite(config.width))) {
-      throw new Error(`Invalid width: ${config.width}. Must be a positive number.`);
+      throw new Error(`Invalid width: ${config.width}`);
     }
     if (config.height !== undefined && (config.height <= 0 || !isFinite(config.height))) {
-      throw new Error(`Invalid height: ${config.height}. Must be a positive number.`);
+      throw new Error(`Invalid height: ${config.height}`);
     }
 
     // Validate theme
-    const validThemes = ['default', 'midnight', 'minimal', 'tailwind', 'nord', 'high-contrast'];
-    if (config.theme && !validThemes.includes(config.theme)) {
-      throw new Error(`Invalid theme: ${config.theme}. Must be one of: ${validThemes.join(', ')}`);
+    if (
+      config.theme &&
+      config.theme !== 'default' &&
+      getThemeColors(config.theme) === getThemeColors('default')
+    ) {
+      throw new Error(`Invalid theme: ${config.theme}`);
     }
 
     // Validate colors array if provided
     if (config.colors) {
       if (!Array.isArray(config.colors)) {
-        throw new Error('Colors must be an array of color strings');
+        throw new Error('Colors must be an array');
       }
       if (config.colors.length === 0) {
         throw new Error('Colors array cannot be empty');
@@ -184,38 +150,36 @@ export abstract class BaseChart implements Chart {
       // Basic color format validation (hex, rgb, named colors)
       config.colors.forEach((color, index) => {
         if (typeof color !== 'string') {
-          throw new Error(`Invalid color at index ${index}: ${color}. Must be a valid CSS color string.`);
+          throw new Error(`Invalid color at index ${index}: ${color}`);
         }
 
-        // Allow hex, rgb/rgba, hsl/hsla formats, or CSS named colors
-        const isHex = /^#[0-9a-fA-F]{3,8}$/.test(color);
-        const isRgb = /^rgba?\(/.test(color);
-        const isHsl = /^hsla?\(/.test(color);
-        const isNamedColor = /^[a-z]{3,20}$/i.test(color); // Only letters, 3-20 chars
-
-        if (!isHex && !isRgb && !isHsl && !isNamedColor) {
-          throw new Error(`Invalid color at index ${index}: ${color}. Must be a valid CSS color string.`);
+        // Allow hex, rgb/rgba, hsl/hsla formats, or CSS named colors.
+        if (!/^(?:#[\da-f]{3,8}$|rgba?\(|hsla?\(|[a-z]{3,20}$)/i.test(color)) {
+          throw new Error(`Invalid color at index ${index}: ${color}`);
         }
       });
     }
 
     // Validate boolean flags
     if (config.animate !== undefined && typeof config.animate !== 'boolean') {
-      throw new Error('animate must be a boolean');
+      throw new Error('animate must be boolean');
     }
     if (config.responsive !== undefined && typeof config.responsive !== 'boolean') {
-      throw new Error('responsive must be a boolean');
+      throw new Error('responsive must be boolean');
     }
     // Validate legend config if provided
     if (config.legend) {
       if (config.legend.show !== undefined && typeof config.legend.show !== 'boolean') {
-        throw new Error('legend.show must be a boolean');
+        throw new Error('legend.show must be boolean');
       }
       if (config.legend.position && !['top', 'bottom'].includes(config.legend.position)) {
-        throw new Error(`Invalid legend.position: ${config.legend.position}. Must be 'top' or 'bottom'.`);
+        throw new Error(`Invalid legend.position: ${config.legend.position}`);
       }
       if (config.legend.align && !['left', 'center', 'right'].includes(config.legend.align)) {
-        throw new Error(`Invalid legend.align: ${config.legend.align}. Must be 'left', 'center', or 'right'.`);
+        throw new Error(`Invalid legend.align: ${config.legend.align}`);
+      }
+      if (config.legend.layout && !['horizontal', 'vertical'].includes(config.legend.layout)) {
+        throw new Error(`Invalid legend.layout: ${config.legend.layout}`);
       }
     }
   }
@@ -239,7 +203,10 @@ export abstract class BaseChart implements Chart {
     // Legend adds space based on position
     const showLegend = this.config.legend?.show ?? false;
     if (showLegend && this.seriesData.length > 1) {
-      const legendHeight = CHART_DEFAULTS.LEGEND_FONT_SIZE + CHART_DEFAULTS.LEGEND_PADDING;
+      const legendHeight = this.config.legend?.layout === 'vertical'
+        ? this.seriesData.length * CHART_DEFAULTS.LEGEND_ICON_SIZE +
+          (this.seriesData.length - 1) * 8 + CHART_DEFAULTS.LEGEND_PADDING
+        : CHART_DEFAULTS.LEGEND_FONT_SIZE + CHART_DEFAULTS.LEGEND_PADDING;
 
       const position = this.config.legend?.position || 'top';
       if (position === 'top') {
@@ -281,7 +248,7 @@ export abstract class BaseChart implements Chart {
         tagName: K,
         attributes?: Record<string, string | number>
       ): SVGElementTagNameMap[K] => {
-        const element = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+        const element = createSVGElement(tagName);
         if (attributes) {
           Object.entries(attributes).forEach(([key, value]) => {
             element.setAttribute(key, String(value));
@@ -348,6 +315,22 @@ export abstract class BaseChart implements Chart {
     return this.config.cssVars === true;
   }
 
+  /** Normalize, validate, color, and cap input data for rendering. */
+  private setData(dataInput: FlexibleDataInput): void {
+    this.seriesData = normalizeToSeriesData(dataInput);
+    if (!this.seriesData.length || !this.seriesData[0]?.data.length) {
+      throw new Error('Chart data cannot be empty');
+    }
+    this.isMultiSeries = this.seriesData.length > 1;
+    this.assignSeriesColors();
+    const pointLimit = Math.max(3, Math.floor(500 / this.seriesData.length));
+    this.seriesData = this.seriesData.map(series => series.data.length > pointLimit
+      ? { ...series, data: autoDownsample(series.data, pointLimit, 'nth') }
+      : series
+    );
+    this.data = this.seriesData[0].data;
+  }
+
   /**
    * Resolve each series' color (explicit per-series > `colors` config > theme
    * palette), record the resolved values in `resolvedSeriesColors`, and store the
@@ -355,14 +338,11 @@ export abstract class BaseChart implements Chart {
    * `cssVars` is enabled so it can be overridden with plain CSS.
    */
   private assignSeriesColors(): void {
-    const autoColors = generateSeriesColors(
-      this.seriesData.length,
-      this.config.colors,
-      this.config.theme || 'default'
-    );
+    const theme = getThemeColors(this.config.theme || 'default');
+    const palette = this.config.colors?.length ? this.config.colors : theme.seriesColors;
 
     this.resolvedSeriesColors = this.seriesData.map(
-      (series, index) => series.color || autoColors[index]
+      (series, index) => series.color || palette[index % palette.length]
     );
 
     this.seriesData = this.seriesData.map((series, index) => ({
@@ -399,7 +379,13 @@ export abstract class BaseChart implements Chart {
    * Create the SVG element with accessibility attributes
    */
   protected createSVG(): SVGSVGElement {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const svg = createSVGElement('svg');
+    this.prepareSVG(svg);
+    return svg;
+  }
+
+  /** Refresh root attributes and accessibility content on every render/update. */
+  private prepareSVG(svg: SVGSVGElement): void {
     svg.setAttribute('width', String(this.dimensions.width));
     svg.setAttribute('height', String(this.dimensions.height));
     svg.setAttribute('viewBox', `0 0 ${this.dimensions.width} ${this.dimensions.height}`);
@@ -434,11 +420,11 @@ export abstract class BaseChart implements Chart {
     svg.setAttribute('tabindex', '0');
 
     // Title and description for screen readers
-    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    const title = createSVGElement('title');
     title.textContent = this.config.title || generateDefaultTitle(this.chartTypeName);
     svg.appendChild(title);
 
-    const desc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
+    const desc = createSVGElement('desc');
     desc.textContent = generateDescription({
       chartTypeName: this.chartTypeName,
       data: this.data,
@@ -454,24 +440,13 @@ export abstract class BaseChart implements Chart {
 
     // Inject accessibility styles if not already present
     injectAccessibilityStyles();
-
-    return svg;
-  }
-
-  /**
-   * The chart's type name derived from the concrete subclass, e.g. "Line".
-   * NOTE: relies on `constructor.name`, which is mangled under minification;
-   * a follow-up will have subclasses declare this explicitly.
-   */
-  protected get chartTypeName(): string {
-    return this.constructor.name.replace('Chart', '');
   }
 
   /**
    * Add data table fallback for screen readers
    */
   private addDataTableFallback(svg: SVGSVGElement): void {
-    const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+    const foreignObject = createSVGElement('foreignObject');
     foreignObject.setAttribute('width', '0');
     foreignObject.setAttribute('height', '0');
     foreignObject.setAttribute('overflow', 'hidden');
@@ -491,7 +466,7 @@ export abstract class BaseChart implements Chart {
    * destroy() tears them down with everything else.
    */
   private setupKeyboardNavigation(svg: SVGSVGElement): void {
-    this.keyboardNav = new KeyboardNavigator({
+    new KeyboardNavigator({
       svg,
       emit: (eventName, data) => this.emit(eventName, data),
       addListener: (element, event, handler) =>
@@ -503,38 +478,25 @@ export abstract class BaseChart implements Chart {
    * Create a group element with transform
    */
   protected createGroup(x: number = 0, y: number = 0): SVGGElement {
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    if (x !== 0 || y !== 0) {
-      g.setAttribute('transform', `translate(${x}, ${y})`);
-    }
-    return g;
+    return createGroup(x, y);
   }
 
-  /**
-   * Render the chart
-   */
   public render(): void {
-    this.renderSync();
-  }
-
-  /**
-   * Synchronous rendering (traditional approach)
-   */
-  private renderSync(): void {
     // Call beforeRender plugin hook
     this.callPluginHook('beforeRender');
 
-    // Clear existing content and event listeners (with element pool optimization)
+    // Clear existing content and event listeners while preserving the SVG root.
     this.eventListeners.forEach(({ element, event, handler }) => {
       element.removeEventListener(event, handler);
     });
     this.eventListeners = [];
 
     if (this.svg) {
-      // Clear SVG children but reuse the SVG element (element pooling)
+      // Reuse the SVG root, but rebuild its content and accessibility metadata.
       while (this.svg.firstChild) {
         this.svg.removeChild(this.svg.firstChild);
       }
+      this.prepareSVG(this.svg);
     } else {
       // First render: create SVG
       this.svg = this.createSVG();
@@ -579,7 +541,7 @@ export abstract class BaseChart implements Chart {
     }
 
     // Set up resize observer if responsive
-    if (this.config.responsive && typeof ResizeObserver !== 'undefined') {
+    if (this.config.responsive && !this.resizeObserver && typeof ResizeObserver !== 'undefined') {
       this.setupResizeObserver();
     }
 
@@ -591,40 +553,42 @@ export abstract class BaseChart implements Chart {
    * Set up resize observer for responsive charts with throttling
    */
   private setupResizeObserver(): void {
-    // Clean up existing observer
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-    }
-
     this.resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
+      const { width, height } = entries[0].contentRect;
 
-        // Only resize if dimensions have actually changed and are valid
-        if (width > 0 && height > 0) {
-          const newWidth = this.config.width || width;
-          const newHeight = this.config.height || height;
+      // Only resize if dimensions have actually changed and are valid
+      if (width > 0 && height > 0) {
+        const newWidth = this.config.width ?? width;
+        // An auto-height container often reports the SVG's own expanded height
+        // (title/legend included). Treat that as stable output, not new input,
+        // or every observer delivery grows the chart again.
+        const newHeight = this.config.height ??
+          (height === this.dimensions.height ? this.layoutHeight : height);
 
-          // Update dimensions if changed - but throttle to avoid excessive re-renders
-          if (newWidth !== this.dimensions.width || newHeight !== this.dimensions.height) {
-            // Clear any pending resize
-            if (this.resizeTimeout) {
-              clearTimeout(this.resizeTimeout);
-            }
+        // Update dimensions if changed - but throttle to avoid excessive re-renders
+        if (newWidth !== this.layoutWidth || newHeight !== this.layoutHeight) {
+          // Clear any pending resize
+          if (this.resizeTimeout) {
+            clearTimeout(this.resizeTimeout);
+          }
 
-            // Debounce the resize operation
-            this.resizeTimeout = setTimeout(() => {
-              this.dimensions = this.calculateDimensions(newWidth, newHeight);
-              // Re-render without animation to avoid janky resizing
-              const originalAnimate = this.config.animate;
-              this.config.animate = false;
+          // Debounce the resize operation
+          this.resizeTimeout = setTimeout(() => {
+            this.layoutWidth = newWidth;
+            this.layoutHeight = newHeight;
+            this.dimensions = this.calculateDimensions(this.layoutWidth, this.layoutHeight);
+            // Re-render without animation to avoid janky resizing
+            const originalAnimate = this.config.animate;
+            this.config.animate = false;
+            try {
               this.render();
-              this.config.animate = originalAnimate;
               // Call onResize plugin hook
               this.callPluginHook('onResize');
+            } finally {
+              this.config.animate = originalAnimate;
               this.resizeTimeout = null;
-            }, CHART_DEFAULTS.RESIZE_DEBOUNCE_MS);
-          }
+            }
+          }, CHART_DEFAULTS.RESIZE_DEBOUNCE_MS);
         }
       }
     });
@@ -654,20 +618,10 @@ export abstract class BaseChart implements Chart {
   protected applyAnimation(): void {
     if (!this.svg) return;
 
-    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    const style = createSVGElement('style');
     // Gate the entrance animation behind `prefers-reduced-motion: no-preference`
     // so users who ask their OS to reduce motion never see it (WCAG 2.3.3).
-    style.textContent = `
-      @keyframes chartFadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      @media (prefers-reduced-motion: no-preference) {
-        .chart-animated {
-          animation: chartFadeIn 0.6s ease-out;
-        }
-      }
-    `;
+    style.textContent = '@keyframes clFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@media (prefers-reduced-motion: no-preference){.chart-animated{animation:clFade .6s ease-out}}';
     this.svg.appendChild(style);
 
     // Add animation class to main chart group
@@ -684,27 +638,11 @@ export abstract class BaseChart implements Chart {
     // Call beforeUpdate plugin hook
     this.callPluginHook('beforeUpdate');
 
-    // Re-normalize data
     const dataInput = data as FlexibleDataInput;
+    this.setData(dataInput);
 
-    this.isMultiSeries = isMultiSeriesData(dataInput);
-    this.seriesData = normalizeToSeriesData(dataInput);
-    this.data = this.seriesData[0]?.data || [];
-
-    // Re-assign colors (records resolved colors + var-wraps when cssVars)
-    this.assignSeriesColors();
-
-    // Automatic data sampling for performance (500+ points)
-    this.seriesData = this.seriesData.map(series => {
-      if (series.data.length > 500) {
-        return {
-          ...series,
-          data: autoDownsample(series.data, 500, 'nth'),
-        };
-      }
-      return series;
-    });
-    this.data = this.seriesData[0]?.data || [];
+    // Series count can change the amount of space reserved for the legend.
+    this.dimensions = this.calculateDimensions(this.layoutWidth, this.layoutHeight);
 
     this.render();
 
@@ -749,12 +687,6 @@ export abstract class BaseChart implements Chart {
       this.resizeObserver = null;
     }
 
-    // Clean up element pool
-    if (this.elementPool) {
-      this.elementPool.clear();
-      this.elementPool = null;
-    }
-
     // Remove SVG
     if (this.svg && this.svg.parentNode) {
       this.svg.parentNode.removeChild(this.svg);
@@ -764,10 +696,6 @@ export abstract class BaseChart implements Chart {
     // Clear event handlers
     this.eventHandlers.clear();
 
-    // Release the keyboard navigator (its listeners were removed above)
-    if (this.keyboardNav) {
-      this.keyboardNav = null;
-    }
   }
 
   /**
@@ -776,7 +704,7 @@ export abstract class BaseChart implements Chart {
    */
   public toSVG(): string {
     if (!this.svg) {
-      throw new Error('Chart must be rendered before calling toSVG(). Call render() first.');
+      throw new Error('Chart must be rendered before calling toSVG()');
     }
     return this.svg.outerHTML;
   }

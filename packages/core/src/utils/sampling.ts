@@ -35,11 +35,9 @@ export function downsampleLTTB(data: DataPoint[], threshold: number): DataPoint[
     throw new Error('Threshold must be >= 3');
   }
 
-  // Convert x values to numbers for calculation
-  const dataWithNumericX = data.map((point, index) => ({
-    ...point,
-    xNum: typeof point.x === 'number' ? point.x : index,
-  }));
+  // Read numeric x values lazily to avoid cloning the entire input dataset.
+  const xAt = (index: number): number =>
+    typeof data[index].x === 'number' ? data[index].x as number : index;
 
   const sampled: DataPoint[] = [];
   const dataLength = data.length;
@@ -66,8 +64,8 @@ export function downsampleLTTB(data: DataPoint[], threshold: number): DataPoint[
     const avgRangeLength = avgRangeEnd - avgRangeStart;
 
     for (let j = avgRangeStart; j < avgRangeEnd; j++) {
-      avgX += dataWithNumericX[j].xNum;
-      avgY += dataWithNumericX[j].y;
+      avgX += xAt(j);
+      avgY += data[j].y;
     }
 
     avgX /= avgRangeLength;
@@ -81,8 +79,8 @@ export function downsampleLTTB(data: DataPoint[], threshold: number): DataPoint[
     );
 
     // Point a (the point selected in the previous bucket)
-    const pointAX = dataWithNumericX[a].xNum;
-    const pointAY = dataWithNumericX[a].y;
+    const pointAX = xAt(a);
+    const pointAY = data[a].y;
 
     // Find the point in this bucket with the largest triangle area
     let maxArea = -1;
@@ -91,8 +89,8 @@ export function downsampleLTTB(data: DataPoint[], threshold: number): DataPoint[
     for (let j = rangeOffs; j < rangeTo; j++) {
       // Calculate triangle area over three buckets
       const area = Math.abs(
-        (pointAX - avgX) * (dataWithNumericX[j].y - pointAY) -
-        (pointAX - dataWithNumericX[j].xNum) * (avgY - pointAY)
+        (pointAX - avgX) * (data[j].y - pointAY) -
+        (pointAX - xAt(j)) * (avgY - pointAY)
       ) * 0.5;
 
       if (area > maxArea) {

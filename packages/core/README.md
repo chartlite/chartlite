@@ -6,11 +6,11 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@chartlite/core)](https://bundlephobia.com/package/@chartlite/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Chartlite is a high-performance charting library designed for developers who want fast page loads, minimal configuration, and beautiful defaults—all in a ~20KB bundle with zero dependencies.
+Chartlite is a high-performance charting library designed for developers who want fast page loads, minimal configuration, and beautiful defaults—all in a ~14.5KB gzipped core with zero dependencies.
 
 ## Why Chartlite?
 
-- 🚀 **Fast page loads** - ~20KB bundle size (10-15x smaller than alternatives)
+- 🚀 **Fast page loads** - ~14.5KB gzipped core (10-15x smaller than alternatives)
 - ⚡ **Quick setup** - Beautiful charts with minimal configuration
 - 💪 **Modern DX** - TypeScript-first, flexible data formats, zero dependencies
 - 🎨 **Beautiful defaults** - Inspired by Tailwind, Material Design, and modern design systems
@@ -370,4 +370,4 @@ MIT © [Riel St. Amand](https://github.com/chartlite)
 - [GitHub Repository](https://github.com/chartlite/chartlite)
 - [Issue Tracker](https://github.com/chartlite/chartlite/issues)
 - [Changelog](https://github.com/chartlite/chartlite/blob/main/docs/CHANGELOG.md)
-- [Roadmap](https://github.com/chartlite/chartlite/blob/main/docs/ROADMAP.md)
+- [Road to 1.0](https://github.com/chartlite/chartlite/blob/main/docs/V1_ROADMAP.md)

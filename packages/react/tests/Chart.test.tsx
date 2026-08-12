@@ -50,6 +50,16 @@ describe('@chartlite/react', () => {
     expect(svg?.querySelector('title')?.textContent).toContain('Sales');
   });
 
+  it('recreates when a formatter callback changes', () => {
+    const { container, rerender } = render(
+      <LineChart data={data} valueFormatter={(value) => `old-${value}`} />
+    );
+    expect(container.textContent).toContain('old-0');
+    rerender(<LineChart data={data} valueFormatter={(value) => `new-${value}`} />);
+    expect(container.textContent).toContain('new-0');
+    expect(container.textContent).not.toContain('old-0');
+  });
+
   it('renders combo and sparkline via named components', () => {
     const combo = {
       series: [

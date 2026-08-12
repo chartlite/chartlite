@@ -13,7 +13,7 @@ export default function Install() {
             Beautiful charts, shipping today.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-mist-500">
-            Zero dependencies. ~13KB gzipped. MIT licensed. Pick your framework and
+            Zero dependencies. ~15KB gzipped. MIT licensed. Pick your framework and
             go.
           </p>
 

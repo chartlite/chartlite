@@ -5,9 +5,9 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   splitting: false,
-  sourcemap: true,
+  sourcemap: false,
   clean: true,
   external: ['vue', '@chartlite/core'],
-  minify: true,
+  minify: false,
   treeshake: true,
 });

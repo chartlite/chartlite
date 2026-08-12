@@ -119,7 +119,7 @@ export default function Hero() {
           </h1>
 
           <p className="hero-sub mt-6 max-w-lg text-lg text-mist-500">
-            A zero-dependency SVG charting library. ~13KB gzipped, fast by default,
+            A zero-dependency SVG charting library. ~15KB gzipped, fast by default,
             WCAG&nbsp;AA, server-renderable — with React, Vue, Svelte, and a
             <span className="text-mist-300"> &lt;chart-lite&gt;</span> web component.
           </p>

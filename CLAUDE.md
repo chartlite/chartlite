@@ -5,7 +5,7 @@
 ## Project Vision
 
 Chartlite is a high-performance charting library designed for developers who want:
-- 🚀 **Fast page loads** - ~20KB bundle size (10-15x smaller than alternatives)
+- 🚀 **Fast page loads** - ~14.5KB gzipped core (10-15x smaller than alternatives)
 - ⚡ **Quick setup** - Beautiful charts with minimal configuration
 - 💪 **Modern DX** - TypeScript-first, flexible data formats, zero dependencies
 - ♿ **Accessible** - WCAG 2.1 AA compliant out of the box
@@ -31,7 +31,7 @@ Chartlite is a high-performance charting library designed for developers who wan
 
 We trade feature breadth for:
 - **Performance**: 5-10x faster rendering than Recharts/Chart.js
-- **Bundle size**: 10-15x smaller (20KB vs 200-500KB)
+- **Bundle size**: 10-15x smaller (~14.5KB gzipped vs 200-500KB)
 - **DX**: Flexible data formats, great TypeScript support
 - **Zero dependencies**: No D3, no Canvas wrappers, pure TypeScript
 
@@ -39,7 +39,7 @@ We trade feature breadth for:
 
 ## Technical Specifications
 
-- **Bundle Size**: ~20KB minified (core), ~25KB with all optional features
+- **Bundle Size**: ~51KB minified / ~14.5KB gzipped for the core entry; optional features use separate subpaths
 - **Performance Target**: 500-2,000 data points, <16ms render time (60fps)
 - **Tech Stack**: TypeScript, SVG rendering, zero runtime dependencies
 - **Framework Support**: React, Vue, Svelte, Angular wrappers
@@ -79,7 +79,7 @@ chartlite/
 │   ├── index.html                      # Main examples showcase
 │   └── flexible-data.html              # Data format examples
 ├── docs/
-│   ├── ROADMAP.md                      # Feature roadmap
+│   ├── V1_ROADMAP.md                   # Historical road to 1.0
 │   └── INSPIRATION.md                  # Design inspiration & decisions
 ├── package.json           # Root package.json
 ├── pnpm-workspace.yaml
@@ -120,7 +120,7 @@ chartlite/
 - Multi-series support with auto-color assignment and configurable legend
 - Reference lines, annotations, and region highlighting
 - Accessibility: ARIA roles/descriptions, keyboard navigation, screen-reader data-table fallback
-- Performance: automatic LTTB downsampling + element pooling for fast updates
+- Performance: a chart-wide 500-point sampling budget + SVG root reuse for fast updates
 - Opt-in, tree-shakeable interactivity (`@chartlite/core/interactive`): tooltip, crosshair, legend toggle, click/hover callbacks
 - Server-side / zero-JS rendering: `renderToString(spec)` (`@chartlite/core/server`), no DOM/jsdom needed
 - Agent-native: `@chartlite/mcp` MCP server, published chart-spec JSON Schema, and `llms.txt`
@@ -131,7 +131,7 @@ chartlite/
 - TypeScript-first
 - Official wrappers for **React, Vue, Svelte**, plus a `<chart-lite>` web component
 
-**Bundle Size (measured):** **~13KB gzipped** (zero dependencies)
+**Bundle Size (measured):** **~14.5KB gzipped** (zero dependencies)
 
 **Test Coverage:**
 - 452 core tests across 25 files, plus per-wrapper test suites
@@ -216,7 +216,7 @@ Tree-shakeable modules:
 - Complete Svelte wrapper
 - Complete Angular wrapper
 
-See [ROADMAP.md](docs/ROADMAP.md) for detailed feature breakdown.
+See [V1_ROADMAP.md](docs/V1_ROADMAP.md) for the historical road to 1.0.
 
 ---
 
@@ -378,7 +378,7 @@ const sampledData = largeDataset.filter((_, i) => i % 10 === 0);
    - Great error messages
 
 3. **Performance Conscious**
-   - Bundle size budget: 20KB core
+   - Bundle size budget: 15,360 bytes gzipped for the core entry
    - Render time: <16ms (60fps)
    - Tree-shakeable optional features
 
@@ -425,7 +425,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 
 | Feature | Chartlite | Recharts | Chart.js | ECharts |
 |---------|-----------|----------|----------|---------|
-| Bundle Size | ~20KB | ~400KB | ~200KB | ~1000KB |
+| Bundle Size | ~14.5KB gzip | ~400KB | ~200KB | ~1000KB |
 | Dependencies | 0 | D3 (many) | 0 | ZRender |
 | TypeScript | Native | Good | Good | Good |
 | Chart Types | 3-4 | 10+ | 8+ | 50+ |

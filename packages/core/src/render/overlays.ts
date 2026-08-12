@@ -7,9 +7,7 @@
 
 import type { BaseChartConfig, Dimensions } from '../types';
 import { getThemeColors, createLinearScale, createBandScale } from '../utils';
-import { createGroup } from './constants';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
+import { createGroup, createSVGElement } from './constants';
 
 /** Data-space extent of the plotted area, plus optional categorical x values. */
 export interface ChartBounds {
@@ -18,6 +16,14 @@ export interface ChartBounds {
   yMin: number;
   yMax: number;
   xValues?: string[];
+}
+
+function createXMapper(bounds: ChartBounds, width: number) {
+  const band = bounds.xValues ? createBandScale(bounds.xValues, [0, width], 0) : undefined;
+  const linear = band ? undefined : createLinearScale([bounds.xMin, bounds.xMax], [0, width]);
+  return (value: string | number, bandOffset = 0.5) => band
+    ? band.scale(String(value)) + band.bandwidth * bandOffset
+    : linear!(Number(value));
 }
 
 export function renderReferenceLines(
@@ -33,6 +39,8 @@ export function renderReferenceLines(
   const { margin } = dimensions;
   const chartWidth = dimensions.width - margin.left - margin.right;
   const chartHeight = dimensions.height - margin.top - margin.bottom;
+  const xScale = createXMapper(bounds, chartWidth);
+  const yScale = createLinearScale([bounds.yMin, bounds.yMax], [chartHeight, 0]);
 
   // Create a group for reference lines
   const refLinesGroup = createGroup(margin.left, margin.top);
@@ -56,7 +64,6 @@ export function renderReferenceLines(
 
     if (axis === 'y') {
       // Horizontal reference line
-      const yScale = createLinearScale([bounds.yMin, bounds.yMax], [chartHeight, 0]);
       const y = yScale(value as number);
 
       x1 = 0;
@@ -80,16 +87,7 @@ export function renderReferenceLines(
       }
     } else {
       // Vertical reference line
-      let x: number;
-      if (bounds.xValues) {
-        // Categorical x-axis
-        const xScale = createBandScale(bounds.xValues, [0, chartWidth], 0);
-        x = xScale.scale(String(value)) + xScale.bandwidth / 2;
-      } else {
-        // Numeric x-axis
-        const xScale = createLinearScale([bounds.xMin, bounds.xMax], [0, chartWidth]);
-        x = xScale(value as number);
-      }
+      const x = xScale(value);
 
       x1 = x;
       y1 = 0;
@@ -113,7 +111,7 @@ export function renderReferenceLines(
     }
 
     // Draw the line
-    const line = document.createElementNS(SVG_NS, 'line');
+    const line = createSVGElement('line');
     line.setAttribute('x1', String(x1));
     line.setAttribute('y1', String(y1));
     line.setAttribute('x2', String(x2));
@@ -132,7 +130,7 @@ export function renderReferenceLines(
 
     // Add label if provided
     if (label) {
-      const labelText = document.createElementNS(SVG_NS, 'text');
+      const labelText = createSVGElement('text');
       labelText.setAttribute('x', String(labelX));
       labelText.setAttribute('y', String(labelY));
       labelText.setAttribute('text-anchor', textAnchor);
@@ -160,6 +158,8 @@ export function renderAnnotations(
   const { margin } = dimensions;
   const chartWidth = dimensions.width - margin.left - margin.right;
   const chartHeight = dimensions.height - margin.top - margin.bottom;
+  const xScale = createXMapper(bounds, chartWidth);
+  const yScale = createLinearScale([bounds.yMin, bounds.yMax], [chartHeight, 0]);
 
   // Create a group for annotations
   const annotationsGroup = createGroup(margin.left, margin.top);
@@ -180,16 +180,7 @@ export function renderAnnotations(
     } = annotation;
 
     // Calculate point position
-    let pointX: number;
-    if (bounds.xValues) {
-      const xScale = createBandScale(bounds.xValues, [0, chartWidth], 0);
-      pointX = xScale.scale(String(xValue)) + xScale.bandwidth / 2;
-    } else {
-      const xScale = createLinearScale([bounds.xMin, bounds.xMax], [0, chartWidth]);
-      pointX = xScale(xValue as number);
-    }
-
-    const yScale = createLinearScale([bounds.yMin, bounds.yMax], [chartHeight, 0]);
+    const pointX = xScale(xValue);
     const pointY = yScale(yValue);
 
     // Calculate text position based on anchor
@@ -249,7 +240,7 @@ export function renderAnnotations(
 
     // Draw arrow if enabled
     if (showArrow) {
-      const arrowLine = document.createElementNS(SVG_NS, 'line');
+      const arrowLine = createSVGElement('line');
       arrowLine.setAttribute('x1', String(pointX));
       arrowLine.setAttribute('y1', String(pointY));
       arrowLine.setAttribute('x2', String(textX));
@@ -272,7 +263,7 @@ export function renderAnnotations(
         }`,
       ].join(' ');
 
-      const arrowHead = document.createElementNS(SVG_NS, 'polygon');
+      const arrowHead = createSVGElement('polygon');
       arrowHead.setAttribute('points', arrowPoints);
       arrowHead.setAttribute('fill', arrowColor);
       arrowHead.setAttribute('opacity', '0.6');
@@ -280,7 +271,7 @@ export function renderAnnotations(
     }
 
     // Draw text
-    const textElement = document.createElementNS(SVG_NS, 'text');
+    const textElement = createSVGElement('text');
     textElement.setAttribute('x', String(textX));
     textElement.setAttribute('y', String(textY));
     textElement.setAttribute('text-anchor', textAnchor);
@@ -308,6 +299,8 @@ export function renderRegions(
   const { margin } = dimensions;
   const chartWidth = dimensions.width - margin.left - margin.right;
   const chartHeight = dimensions.height - margin.top - margin.bottom;
+  const xScale = createXMapper(bounds, chartWidth);
+  const yScale = createLinearScale([bounds.yMin, bounds.yMax], [chartHeight, 0]);
 
   // Create a group for regions (render first so they appear behind data)
   const regionsGroup = createGroup(margin.left, margin.top);
@@ -339,17 +332,8 @@ export function renderRegions(
 
     if (axis === 'x') {
       // Vertical region
-      let startX: number, endX: number;
-
-      if (bounds.xValues) {
-        const xScale = createBandScale(bounds.xValues, [0, chartWidth], 0);
-        startX = xScale.scale(String(start));
-        endX = xScale.scale(String(end)) + xScale.bandwidth;
-      } else {
-        const xScale = createLinearScale([bounds.xMin, bounds.xMax], [0, chartWidth]);
-        startX = xScale(start as number);
-        endX = xScale(end as number);
-      }
+      const startX = xScale(start, 0);
+      const endX = xScale(end, 1);
 
       rectX = startX;
       rectY = 0;
@@ -367,7 +351,6 @@ export function renderRegions(
       labelY = 15;
     } else {
       // Horizontal region
-      const yScale = createLinearScale([bounds.yMin, bounds.yMax], [chartHeight, 0]);
       const startY = yScale(start as number);
       const endY = yScale(end as number);
 
@@ -389,7 +372,7 @@ export function renderRegions(
     }
 
     // Draw rectangle
-    const rect = document.createElementNS(SVG_NS, 'rect');
+    const rect = createSVGElement('rect');
     rect.setAttribute('x', String(rectX));
     rect.setAttribute('y', String(rectY));
     rect.setAttribute('width', String(rectWidth));
@@ -400,7 +383,7 @@ export function renderRegions(
 
     // Add label if provided
     if (label) {
-      const labelText = document.createElementNS(SVG_NS, 'text');
+      const labelText = createSVGElement('text');
       labelText.setAttribute('x', String(labelX));
       labelText.setAttribute('y', String(labelY));
       labelText.setAttribute('text-anchor', textAnchor);

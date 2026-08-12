@@ -121,6 +121,20 @@ describe('interactive plugins', () => {
       const pt = container.querySelector('.data-point') as SVGElement;
       expect(pt.style.cursor).toBe('');
     });
+
+    it('fires point callbacks from keyboard activation', () => {
+      const clicks: ChartPointEvent[] = [];
+      new LineChart(container, {
+        data: single,
+        plugins: [callbacks({ onPointClick: (event) => clicks.push(event) })],
+      }).render();
+      const svg = container.querySelector('svg')!;
+      fire(svg, 'focus');
+      svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(clicks).toHaveLength(1);
+      expect(clicks[0].x).toBe('Jan');
+    });
   });
 
   describe('legendToggle()', () => {
@@ -153,6 +167,19 @@ describe('interactive plugins', () => {
       mainSeries0.forEach((el) => {
         expect((el as SVGElement).style.display).toBe('');
       });
+    });
+
+    it('exposes button semantics and toggles with the keyboard', () => {
+      new BarChart(container, {
+        data: multi,
+        legend: { show: true },
+        plugins: [legendToggle()],
+      }).render();
+      const item = container.querySelector('.legend-item')!;
+      expect(item.getAttribute('role')).toBe('button');
+      expect(item.getAttribute('tabindex')).toBe('0');
+      item.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      expect(item.getAttribute('aria-pressed')).toBe('true');
     });
   });
 

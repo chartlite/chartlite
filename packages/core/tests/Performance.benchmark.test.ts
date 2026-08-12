@@ -6,7 +6,7 @@ import type { DataPoint } from '../src/types';
 /**
  * Performance Benchmark Suite
  * Verifies that charts render and update efficiently with built-in optimizations
- * (Element pooling, data sampling, and other optimizations are always enabled)
+ * (SVG root reuse, data sampling, and other optimizations are always enabled)
  */
 
 // Helper to generate test data
@@ -87,8 +87,8 @@ describe('Performance Benchmarks', () => {
     });
   });
 
-  describe('Update Performance (Element Pooling)', () => {
-    it('should update efficiently with element pooling', async () => {
+  describe('Update Performance (SVG Root Reuse)', () => {
+    it('should update efficiently while reusing the SVG root', async () => {
       const data = generateData(100);
       const chart = new LineChart(container, { data });
       chart.render();
@@ -104,9 +104,9 @@ describe('Performance Benchmarks', () => {
 
       console.log(`\n=== Update Performance (100 points, 10 updates) ===`);
       console.log(`Average: ${avgTime.toFixed(2)}ms`);
-      console.log(`Note: Element pooling is always enabled`);
+      console.log(`Note: the SVG root is reused across updates`);
 
-      // Chart survives repeated updates (element pooling reuses DOM elements)
+      // Chart survives repeated updates while retaining the SVG root.
       expect(svg).toBeTruthy();
       chart.destroy();
     });

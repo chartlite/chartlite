@@ -28,16 +28,17 @@
   ],
   "scripts": {
     "build": "tsup",
+    "size": "node scripts/check-bundle-size.mjs",
     "gen:schema": "tsx scripts/gen-schema.ts",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "bench": "vitest bench --run",
-    "perf": "tsx scripts/benchmark.ts",
+    "bench": "tsx scripts/benchmark-with-sampling.ts",
+    "perf": "tsx scripts/benchmark-with-sampling.ts",
     "perf:sampling": "tsx scripts/benchmark-with-sampling.ts",
     "audit:colors": "tsx scripts/audit-colors.ts",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "keywords": [
     "charts",
@@ -59,11 +60,12 @@
   },
   "homepage": "https://github.com/chartlite/chartlite#readme",
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.4",
+    "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^25.0.1",
+    "terser": "^5.43.1",
     "tsup": "^8.0.0",
     "tsx": "^4.20.6",
     "typescript": "^5.5.0",
-    "vitest": "^4.0.4"
+    "vitest": "^4.1.10"
   }
 }

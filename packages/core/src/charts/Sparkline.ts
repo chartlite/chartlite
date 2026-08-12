@@ -9,15 +9,15 @@
 import { BaseChart } from './BaseChart';
 import type { SparklineConfig, Dimensions } from '../types';
 import { createLinearScale, generateLinePath } from '../utils';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
+import { setDataPointAttrs } from '../render/dataAttrs';
+import { createSVGElement } from '../render/constants';
 
 export class Sparkline extends BaseChart {
   protected config: SparklineConfig;
 
   constructor(container: HTMLElement | string, config: SparklineConfig) {
     // Sparklines default to a small, fixed size and no responsive observer.
-    super(container, { width: 120, height: 32, responsive: false, ...config }, config.data);
+    super(container, { width: 120, height: 32, responsive: false, ...config }, config.data, 'Sparkline');
 
     this.config = {
       type: 'line',
@@ -79,7 +79,7 @@ export class Sparkline extends BaseChart {
     if (this.config.type === 'area' && n > 1) {
       const linePath = generateLinePath(points, this.config.curve);
       const areaPath = `${linePath} L ${points[n - 1].x},${h} L ${points[0].x},${h} Z`;
-      const area = document.createElementNS(SVG_NS, 'path');
+      const area = createSVGElement('path');
       area.setAttribute('d', areaPath);
       area.setAttribute('fill', color);
       area.setAttribute('opacity', String(this.config.fillOpacity));
@@ -88,7 +88,7 @@ export class Sparkline extends BaseChart {
 
     // The line itself
     if (n > 1) {
-      const path = document.createElementNS(SVG_NS, 'path');
+      const path = createSVGElement('path');
       path.setAttribute('d', generateLinePath(points, this.config.curve));
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', color);
@@ -102,13 +102,30 @@ export class Sparkline extends BaseChart {
     // Dot on the most recent point
     if (this.config.showEndDot) {
       const last = points[n - 1];
-      const dot = document.createElementNS(SVG_NS, 'circle');
+      const dot = createSVGElement('circle');
       dot.setAttribute('cx', String(last.x));
       dot.setAttribute('cy', String(last.y));
       dot.setAttribute('r', String(Math.max(1.5, (this.config.strokeWidth ?? 1.5) + 0.5)));
       dot.setAttribute('fill', color);
+      dot.setAttribute('aria-hidden', 'true');
       dot.classList.add('sparkline-end-dot');
       mainGroup.appendChild(dot);
     }
+
+    // Point-level hit targets keep tiny sparklines keyboard- and plugin-accessible.
+    data.forEach((point, index) => {
+      const position = points[index];
+      const hitTarget = createSVGElement('circle');
+      hitTarget.setAttribute('cx', String(position.x));
+      hitTarget.setAttribute('cy', String(position.y));
+      hitTarget.setAttribute('r', '6');
+      hitTarget.setAttribute('fill', 'transparent');
+      hitTarget.setAttribute('role', 'img');
+      hitTarget.setAttribute('tabindex', '-1');
+      hitTarget.setAttribute('aria-label', `${point.x}: ${point.y}`);
+      hitTarget.classList.add('data-point');
+      setDataPointAttrs(hitTarget, point.x, point.y, this.seriesData[0]?.name, 0, index, position.x, position.y);
+      mainGroup.appendChild(hitTarget);
+    });
   }
 }

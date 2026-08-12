@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LineChart } from '../src/charts/LineChart';
 import type { DataPoint } from '../src/types';
 
-describe('Element Pool Behavior', () => {
+describe('SVG Root Reuse', () => {
   let container: HTMLDivElement;
   let data: DataPoint[];
 
@@ -22,7 +22,7 @@ describe('Element Pool Behavior', () => {
     document.body.removeChild(container);
   });
 
-  it('should REUSE same SVG on update (pooling always enabled)', () => {
+  it('should reuse the same SVG root on update', () => {
     const chart = new LineChart(container, { data });
     chart.render();
     const originalSvg = container.querySelector('svg');

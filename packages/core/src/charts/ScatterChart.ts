@@ -10,13 +10,14 @@ import {
   getAllXValues,
   getCombinedYRange,
 } from '../utils';
-import { setDataPointAttrs, type DataPointAttrs } from '../render/dataAttrs';
+import { setDataPointAttrs } from '../render/dataAttrs';
+import { createSVGElement } from '../render/constants';
 
 export class ScatterChart extends BaseChart {
   protected config: ScatterChartConfig;
 
   constructor(container: HTMLElement | string, config: ScatterChartConfig) {
-    super(container, config, config.data);
+    super(container, config, config.data, 'Scatter');
 
     this.config = {
       pointSize: 6,
@@ -46,9 +47,17 @@ export class ScatterChart extends BaseChart {
     const { min: yMin, max: yMax } = getCombinedYRange(this.seriesData);
 
     // Convert x values to numbers for scatter plot (we need numeric scales)
-    const numericXValues = allXValues.map(v => typeof v === 'number' ? v : parseFloat(String(v)));
-    const xMin = Math.min(...numericXValues);
-    const xMax = Math.max(...numericXValues);
+    const numericXValues = allXValues.map(Number);
+    if (numericXValues.some((value) => !Number.isFinite(value))) {
+      throw new Error('Scatter chart x values must be finite numbers');
+    }
+    let xMin = Math.min(...numericXValues);
+    let xMax = Math.max(...numericXValues);
+    if (xMin === xMax) {
+      const padding = Math.abs(xMin) * 0.01 || 1;
+      xMin -= padding;
+      xMax += padding;
+    }
 
     // Set chart bounds for Phase 2 features (reference lines, annotations, regions)
     this.chartBounds = {
@@ -69,21 +78,16 @@ export class ScatterChart extends BaseChart {
     this.seriesData.forEach((series, seriesIndex) => {
       // Render points for this series
       series.data.forEach((d, index) => {
-        const x = xScale(typeof d.x === 'number' ? d.x : parseFloat(String(d.x)));
+        const x = xScale(Number(d.x));
         const y = yScale(d.y);
 
         // Render point with ARIA label
         const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
         const ariaLabel = `${seriesLabel}Point: x=${d.x}, y=${d.y}${d.label ? `, ${d.label}` : ''}`;
-        this.renderPoint(mainGroup, x, y, series.color || colors.primary, colors, ariaLabel, {
-          x: d.x,
-          y: d.y,
-          seriesName: series.name,
-          seriesIndex,
-          index,
-          cx: x,
-          cy: y,
-        });
+        this.renderPoint(
+          mainGroup, x, y, series.color || colors.primary, colors.background, ariaLabel,
+          d.x, d.y, series.name, seriesIndex, index
+        );
 
         // Render label if enabled and label exists
         if (this.config.showLabels && d.label) {
@@ -101,55 +105,38 @@ export class ScatterChart extends BaseChart {
     x: number,
     y: number,
     color: string,
-    colors: ReturnType<typeof getThemeColors>,
+    background: string,
     ariaLabel: string,
-    attrs: DataPointAttrs
+    dataX: string | number,
+    dataY: number,
+    seriesName: string,
+    seriesIndex: number,
+    index: number
   ): void {
     const size = this.config.pointSize || 6;
     const shape = this.config.pointShape || 'circle';
+    let element: SVGElement;
 
     switch (shape) {
       case 'circle':
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        const circle = createSVGElement('circle');
         circle.setAttribute('cx', String(x));
         circle.setAttribute('cy', String(y));
         circle.setAttribute('r', String(size));
-        circle.setAttribute('fill', color);
-        circle.setAttribute('stroke', colors.background);
-        circle.setAttribute('stroke-width', '2');
-        circle.classList.add('data-point');
-
-        // ARIA attributes for accessibility
-        circle.setAttribute('role', 'img');
-        circle.setAttribute('aria-label', ariaLabel);
-        circle.setAttribute('tabindex', '-1');
-        setDataPointAttrs(circle, attrs);
-
-        group.appendChild(circle);
+        element = circle;
         break;
 
       case 'square':
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        const rect = createSVGElement('rect');
         rect.setAttribute('x', String(x - size));
         rect.setAttribute('y', String(y - size));
         rect.setAttribute('width', String(size * 2));
         rect.setAttribute('height', String(size * 2));
-        rect.setAttribute('fill', color);
-        rect.setAttribute('stroke', colors.background);
-        rect.setAttribute('stroke-width', '2');
-        rect.classList.add('data-point');
-
-        // ARIA attributes for accessibility
-        rect.setAttribute('role', 'img');
-        rect.setAttribute('aria-label', ariaLabel);
-        rect.setAttribute('tabindex', '-1');
-        setDataPointAttrs(rect, attrs);
-
-        group.appendChild(rect);
+        element = rect;
         break;
 
       case 'triangle':
-        const triangle = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        const triangle = createSVGElement('polygon');
         const height = size * 1.732; // Equilateral triangle height
         const points = [
           `${x},${y - height}`,
@@ -157,20 +144,19 @@ export class ScatterChart extends BaseChart {
           `${x + size},${y + size}`
         ].join(' ');
         triangle.setAttribute('points', points);
-        triangle.setAttribute('fill', color);
-        triangle.setAttribute('stroke', colors.background);
-        triangle.setAttribute('stroke-width', '2');
-        triangle.classList.add('data-point');
-
-        // ARIA attributes for accessibility
-        triangle.setAttribute('role', 'img');
-        triangle.setAttribute('aria-label', ariaLabel);
-        triangle.setAttribute('tabindex', '-1');
-        setDataPointAttrs(triangle, attrs);
-
-        group.appendChild(triangle);
+        element = triangle;
         break;
     }
+
+    element.setAttribute('fill', color);
+    element.setAttribute('stroke', background);
+    element.setAttribute('stroke-width', '2');
+    element.classList.add('data-point');
+    element.setAttribute('role', 'img');
+    element.setAttribute('aria-label', ariaLabel);
+    element.setAttribute('tabindex', '-1');
+    setDataPointAttrs(element, dataX, dataY, seriesName, seriesIndex, index, x, y);
+    group.appendChild(element);
   }
 
   /**
@@ -225,7 +211,7 @@ export class ScatterChart extends BaseChart {
         break;
     }
 
-    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    const label = createSVGElement('text');
     label.setAttribute('x', String(labelX));
     label.setAttribute('y', String(labelY));
     label.setAttribute('text-anchor', textAnchor);

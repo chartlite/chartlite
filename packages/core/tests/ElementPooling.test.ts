@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LineChart } from '../src/charts/LineChart';
 import type { DataPoint } from '../src/types';
 
-describe('Element Pooling', () => {
+describe('Repeated Updates', () => {
   let container: HTMLDivElement;
   let data: DataPoint[];
 
@@ -36,7 +36,7 @@ describe('Element Pooling', () => {
     expect(circles.length).toBe(data.length);
   });
 
-  it('should handle updates (pooling always enabled)', () => {
+  it('should handle repeated updates', () => {
     const chart = new LineChart(container, {
       data,
       title: 'Original'

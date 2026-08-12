@@ -1,7 +1,7 @@
 # Chartlite → v1.0 Roadmap
 
-**Status:** In progress
-**Current published version:** `0.7.0` (core + react, published to npm via OIDC trusted publishing)
+**Status:** Complete — retained as the historical plan
+**Current published version:** `1.0.0` for the core and framework packages
 **Author:** planning pass, 2026-07
 
 ### Progress so far
@@ -24,13 +24,11 @@
   `renderToString(spec)`, the declarative `ChartSpec` type, and a published `schema.json`
   (see design decision 1 in [DESIGN_TO_1.0.md](DESIGN_TO_1.0.md)). Unblocks the agent milestone.
 
-Test suite: **417 passing**. Design for the critical path (SSR shim + interactivity delivery)
-is locked in [DESIGN_TO_1.0.md](DESIGN_TO_1.0.md). Remaining: agent tooling (0.9.0), breadth &
-theming polish, second wrapper, API freeze (0.10.0).
+The 1.0 scope shipped. Current test and bundle numbers are verified in CI rather than
+frozen in this historical document.
 
-This document is the single source of truth for the path from today's `0.2.1` to a
-credible, stable `1.0.0`. It supersedes the roadmap sections in `README.md` and
-`CLAUDE.md`, both of which currently describe an earlier state of the project.
+This document records the path that led to `1.0.0`. See package manifests and CI for
+current release and verification truth.
 
 ---
 
@@ -134,7 +132,7 @@ numbering — we just insert 0.3.0 (foundation) ahead of it.
      warns at 20 KB against the *minified* file and silently fires every run. Switch to
      gzipped size with a realistic budget that **fails** (not warns) on regression.
 3. **Reconcile docs with reality.** Rewrite the README roadmap (multi-series, annotations,
-   reference lines, regions, accessibility, scatter, plugins, element-pooling are
+   reference lines, regions, accessibility, scatter, plugins, SVG-root reuse are
    **shipped**), update `CLAUDE.md` (says v0.0.1 / 3 types), and stop advertising themes
    that don't exist yet.
 4. **Fix the dangling `PieChartConfig`** — implement in 0.5.0 or stop exporting it now.

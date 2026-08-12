@@ -52,8 +52,9 @@ describe('RadialChart', () => {
       ],
       max: 100,
     }).render();
-    // only the non-zero point yields a data-point arc
-    expect(container.querySelectorAll('path.data-point')).toHaveLength(1);
+    // The zero point uses its track as a focusable hit target for a11y/plugin parity.
+    expect(container.querySelectorAll('path.data-point')).toHaveLength(2);
+    expect(container.querySelector('[data-y="0"]')).toBeTruthy();
   });
 
   it('clamps values above max to a full arc', () => {

@@ -15,9 +15,13 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   splitting: false,
-  sourcemap: true,
+  sourcemap: false,
   clean: true,
-  minify: true,
+  minify: 'terser',
+  terserOptions: {
+    compress: { passes: 3 },
+    module: true,
+  },
   treeshake: true,
   define: {
     __CHARTLITE_VERSION__: JSON.stringify(pkg.version),

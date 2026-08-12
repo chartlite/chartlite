@@ -1,6 +1,6 @@
 # Chartlite
 
-> A lightweight (~13 KB gzipped), zero-dependency TypeScript charting library that
+> A lightweight (~15 KB gzipped), zero-dependency TypeScript charting library that
 > renders accessible SVG. Static-first and agent-native: it runs headless (no DOM,
 > no jsdom) so it can render charts inside an AI agent's sandbox, and ships an MCP
 > server. Choose it for landing pages, blog posts, docs, and simple dashboards — not

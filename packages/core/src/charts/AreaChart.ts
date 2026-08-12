@@ -10,7 +10,8 @@ import {
   generateLinePath,
   getAllXValues,
 } from '../utils';
-import { setSeriesAttrs } from '../render/dataAttrs';
+import { setDataPointAttrs, setSeriesAttrs } from '../render/dataAttrs';
+import { createSVGElement } from '../render/constants';
 
 /**
  * Module-level sequence so every chart instance gets gradient ids that are
@@ -24,7 +25,7 @@ export class AreaChart extends BaseChart {
   private readonly instanceId = ++areaInstanceSeq;
 
   constructor(container: HTMLElement | string, config: AreaChartConfig) {
-    super(container, config, config.data);
+    super(container, config, config.data, 'Area');
 
     this.config = {
       curve: 'linear',
@@ -53,9 +54,16 @@ export class AreaChart extends BaseChart {
     // For stacked areas, we need to calculate cumulative values
     const stackedData = this.calculateStackedData(xValues);
 
-    // Find the max cumulative value for y-axis
-    const yMax = Math.max(...stackedData.map(s => Math.max(...s.cumulativeData.map(d => d.y1))));
-    const yMin = 0; // Stacked areas always start at 0
+    // Diverging stacks keep positive and negative values on opposite sides of zero.
+    let yMin = 0;
+    let yMax = 0;
+    for (const series of stackedData) {
+      for (const point of series.cumulativeData) {
+        yMin = Math.min(yMin, point.y0, point.y1);
+        yMax = Math.max(yMax, point.y0, point.y1);
+      }
+    }
+    if (yMin === yMax) yMax = yMin + 1;
 
     // Set chart bounds for Phase 2 features
     this.chartBounds = {
@@ -77,7 +85,7 @@ export class AreaChart extends BaseChart {
     const useGradient = this.config.gradient !== false;
     let defs: SVGDefsElement | null = null;
     if (useGradient) {
-      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs = createSVGElement('defs');
       this.svg.appendChild(defs);
     }
 
@@ -98,7 +106,7 @@ export class AreaChart extends BaseChart {
       // Create area path (fill)
       const seriesColor = seriesStack.color || colors.primary;
       const areaPath = this.generateStackedAreaPath(topPoints, bottomPoints);
-      const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const area = createSVGElement('path');
       area.setAttribute('d', areaPath);
       if (useGradient && defs) {
         // Vertical fade from the series color (at fillOpacity) down to transparent —
@@ -125,7 +133,7 @@ export class AreaChart extends BaseChart {
 
       // Create line path (stroke) for top edge
       const linePath = generateLinePath(topPoints, this.config.curve);
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const line = createSVGElement('path');
       line.setAttribute('d', linePath);
       line.setAttribute('fill', 'none');
       line.setAttribute('stroke', seriesStack.color || colors.primary);
@@ -140,6 +148,28 @@ export class AreaChart extends BaseChart {
       setSeriesAttrs(line, seriesIndex, seriesStack.name);
 
       mainGroup.appendChild(line);
+
+      // Transparent hit targets provide point-level keyboard and interaction parity
+      // without changing the visual appearance of the area.
+      seriesStack.cumulativeData.forEach((point) => {
+        if (point.index === undefined) return;
+        const cx = xScale.scale(String(point.x)) + xScale.bandwidth / 2;
+        const cy = yScale(point.y1);
+        const hitTarget = createSVGElement('circle');
+        hitTarget.setAttribute('cx', String(cx));
+        hitTarget.setAttribute('cy', String(cy));
+        hitTarget.setAttribute('r', '8');
+        hitTarget.setAttribute('fill', 'transparent');
+        hitTarget.setAttribute('role', 'img');
+        hitTarget.setAttribute('tabindex', '-1');
+        hitTarget.setAttribute(
+          'aria-label',
+          `${seriesStack.name}, ${point.x}: ${point.value}`
+        );
+        hitTarget.classList.add('data-point');
+        setDataPointAttrs(hitTarget, point.x, point.value, seriesStack.name, seriesIndex, point.index, cx, cy);
+        mainGroup.appendChild(hitTarget);
+      });
     });
   }
 
@@ -149,27 +179,29 @@ export class AreaChart extends BaseChart {
   private calculateStackedData(xValues: string[]): Array<{
     name: string;
     color?: string;
-    cumulativeData: Array<{ x: string | number; y0: number; y1: number }>;
+    cumulativeData: Array<{
+      x: string | number;
+      y0: number;
+      y1: number;
+      value: number;
+      index?: number;
+    }>;
   }> {
-    // Create a map of x -> cumulative values
-    const cumulativeMap = new Map<string, number>();
-    xValues.forEach(x => cumulativeMap.set(x, 0));
+    const positive = new Map(xValues.map((x) => [x, 0]));
+    const negative = new Map(xValues.map((x) => [x, 0]));
 
     return this.seriesData.map((series) => {
+      const points = new Map(
+        series.data.map((point, index) => [String(point.x), { point, index }])
+      );
       const cumulativeData = xValues.map((xVal) => {
-        // Find the data point for this x value
-        const dataPoint = series.data.find(d => String(d.x) === xVal);
-        const value = dataPoint?.y || 0;
-
-        // Get the current cumulative value (y0 = bottom of this area)
-        const y0 = cumulativeMap.get(xVal) || 0;
-        // Calculate y1 (top of this area)
+        const source = points.get(xVal);
+        const value = source?.point.y ?? 0;
+        const cumulative = value >= 0 ? positive : negative;
+        const y0 = cumulative.get(xVal) ?? 0;
         const y1 = y0 + value;
-
-        // Update cumulative value for next series
-        cumulativeMap.set(xVal, y1);
-
-        return { x: xVal, y0, y1 };
+        cumulative.set(xVal, y1);
+        return { x: xVal, y0, y1, value, index: source?.index };
       });
 
       return {
@@ -205,10 +237,7 @@ export class AreaChart extends BaseChart {
    */
   private createFillGradient(id: string, color: string): SVGLinearGradientElement {
     const topOpacity = this.config.fillOpacity ?? 0.3;
-    const gradient = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'linearGradient'
-    );
+    const gradient = createSVGElement('linearGradient');
     gradient.setAttribute('id', id);
     // Gradient runs top→bottom in the element's own coordinate box.
     gradient.setAttribute('x1', '0');
@@ -216,13 +245,13 @@ export class AreaChart extends BaseChart {
     gradient.setAttribute('x2', '0');
     gradient.setAttribute('y2', '1');
 
-    const stopTop = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    const stopTop = createSVGElement('stop');
     stopTop.setAttribute('offset', '0%');
     stopTop.setAttribute('stop-color', color);
     stopTop.setAttribute('stop-opacity', String(topOpacity));
     gradient.appendChild(stopTop);
 
-    const stopBottom = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    const stopBottom = createSVGElement('stop');
     stopBottom.setAttribute('offset', '100%');
     stopBottom.setAttribute('stop-color', color);
     stopBottom.setAttribute('stop-opacity', '0');

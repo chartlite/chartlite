@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Thin Svelte wrapper over [`@chartlite/core`](https://www.npmjs.com/package/@chartlite/core) — a ~13KB-gzip, zero-dependency SVG charting library. Shipped as a Svelte **action**, so it needs no Svelte compiler and works across Svelte 3, 4, and 5.
+Thin Svelte wrapper over [`@chartlite/core`](https://www.npmjs.com/package/@chartlite/core) — a ~15KB-gzip, zero-dependency SVG charting library. Shipped as a Svelte **action** and supports Svelte 4 and 5.
 
 ## Installation
 

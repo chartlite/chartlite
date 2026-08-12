@@ -2,7 +2,7 @@
  * Performance Benchmark Script
  *
  * Tests chart rendering with built-in automatic optimizations.
- * All optimizations (element pooling, auto-sampling, etc.) are always enabled.
+ * Automatic sampling is enabled for large inputs and the SVG root is reused on updates.
  */
 
 import { JSDOM } from 'jsdom';
@@ -75,8 +75,8 @@ console.log('\n==============================================');
 console.log('📊 Chartlite Performance Benchmark');
 console.log('==============================================\n');
 console.log('All optimizations enabled automatically:');
-console.log('  • Element pooling (always on)');
-console.log('  • Auto-sampling (500+ points)');
+console.log('  • SVG root reuse on updates');
+console.log('  • Auto-sampling (500-point chart budget)');
 console.log('  • Animations disabled by default\n');
 console.log(`Target: <${TARGET_MS}ms\n`);
 
@@ -125,7 +125,7 @@ testCases.forEach(({ points, series, name, autoSampled }) => {
 
   const passed = time < TARGET_MS;
   const status = passed ? '✅ Pass' : '⚠️  Slow';
-  const notes = autoSampled ? 'Auto-sampled to 500pts' : '';
+  const notes = autoSampled ? '500-point chart budget' : '';
 
   results.push({ name, time, passed, autoSampled });
 
@@ -142,7 +142,7 @@ testCases.forEach(({ points, series, name, autoSampled }) => {
 console.log('─'.repeat(80) + '\n');
 
 // Update performance test
-console.log('Update Performance (Element Pooling):');
+console.log('Update Performance (SVG Root Reuse):');
 console.log('─'.repeat(80));
 
 const updateTests = [
@@ -191,8 +191,8 @@ const avgTime = results.reduce((sum, r) => sum + r.time, 0) / results.length;
 console.log('Summary:');
 console.log(`  Tests passing <${TARGET_MS}ms: ${passing}/${results.length}`);
 console.log(`  Average render time: ${avgTime.toFixed(2)}ms`);
-console.log(`  Element pooling: Always enabled`);
-console.log(`  Auto-sampling: Kicks in at 500+ points`);
+console.log(`  SVG root reuse: Enabled`);
+console.log(`  Auto-sampling: 500-point chart budget`);
 console.log();
 
 console.log('==============================================');

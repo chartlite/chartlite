@@ -41,7 +41,7 @@ const REGISTRY: Record<ChartType, ChartConstructor> = {
  * <Chart type="combo" :data="spec.data" theme="tailwind" />
  * ```
  */
-export const Chart = defineChartComponent('Chart', (attrs) => {
+export const Chart = /* @__PURE__ */ defineChartComponent('Chart', (attrs) => {
   const type = attrs.type as ChartType | undefined;
   return type ? REGISTRY[type] : undefined;
 });

@@ -52,6 +52,18 @@ describe('@chartlite/vue', () => {
     wrapper.unmount();
   });
 
+  it('recreates when the generic constructor or a formatter callback changes', async () => {
+    const wrapper = mount(Chart, {
+      attrs: { type: 'line', data, valueFormatter: (value: number) => `old-${value}` },
+    });
+    expect(wrapper.text()).toContain('old-0');
+    await wrapper.setProps({ valueFormatter: (value: number) => `new-${value}` });
+    expect(wrapper.text()).toContain('new-0');
+    await wrapper.setProps({ type: 'bar' });
+    expect(wrapper.find('rect.bar').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it('renders combo bar + line shapes via the named component', () => {
     const combo = {
       series: [

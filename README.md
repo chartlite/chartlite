@@ -3,7 +3,7 @@
 **Beautiful charts for modern web apps. Lightweight, fast, and developer-friendly.**
 
 [![npm](https://img.shields.io/npm/v/@chartlite/core?label=%40chartlite%2Fcore)](https://www.npmjs.com/package/@chartlite/core)
-[![Bundle Size](https://img.shields.io/badge/bundle-~13KB_gzipped-success)](https://bundlephobia.com/package/@chartlite/core)
+[![Bundle Size](https://img.shields.io/badge/bundle-~15KB_gzipped-success)](https://bundlephobia.com/package/@chartlite/core)
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -30,7 +30,7 @@ For a simple landing page or blog post, this is overkill.
 
 Chartlite gives you **professional charts at 10-15x smaller bundle size**:
 
-- ✅ **~13KB gzipped** - Lightning-fast page loads
+- ✅ **~15KB gzipped** - Enforced by CI
 - ✅ **Zero dependencies** - No D3, no bloat
 - ✅ **TypeScript-first** - Full type safety
 - ✅ **Multiple data formats** - Maximum flexibility
@@ -140,8 +140,8 @@ data: {
 
 - **Target**: 500-2,000 data points
 - **Render time**: <16ms (60fps)
-- **Bundle size**: ~13KB gzipped (~48KB minified), zero dependencies
-- **Built in**: automatic downsampling (LTTB) and element pooling for fast updates
+- **Bundle size**: ~15KB gzipped (~56KB minified), zero dependencies
+- **Built in**: automatic downsampling and SVG-root reuse for fast updates
 
 ---
 
@@ -157,7 +157,7 @@ data: {
 - **Server-side / zero-JS rendering** (`renderToString`) + a declarative chart spec
 - **Agent-native tooling:** `@chartlite/mcp` server, published JSON Schema, and `llms.txt`
 - **CSS-variable theming** (`cssVars`) & pluggable **formatters** (currency/percent/abbreviate)
-- **Performance:** automatic LTTB downsampling + element pooling for fast updates
+- **Performance:** automatic downsampling + SVG-root reuse for fast updates
 - 4 flexible data formats · 6 built-in themes · responsive sizing · SVG export · TypeScript-first
 - Official wrappers for **React, Vue, Svelte** + a **`<chart-lite>`** web component
 
@@ -228,7 +228,7 @@ More examples at [examples/](examples/) · live at **[chartlite.dev](https://cha
 
 | Feature | Chartlite | Recharts | Chart.js | ECharts |
 |---------|-----------|----------|----------|---------|
-| Bundle Size | **~13KB gz** | ~400KB | ~200KB | ~1000KB |
+| Bundle Size | **~15KB gz** | ~400KB | ~200KB | ~1000KB |
 | Dependencies | **0** | D3 (many) | 0 | ZRender |
 | TypeScript | **Native** | Good | Good | Good |
 | Chart Types | 8 | 10+ | 8+ | 50+ |
@@ -276,7 +276,7 @@ We deliberately trade **feature breadth** for:
 
 1. **Beautiful by Default** - Professional themes, no config needed
 2. **Developer Experience First** - TypeScript, flexible data formats
-3. **Performance Conscious** - 20KB budget, <16ms renders
+3. **Performance Conscious** - 15KB Gzip budget with automatic point sampling
 4. **Accessibility Non-Negotiable** - WCAG 2.1 AA compliant
 5. **Progressive Enhancement** - Optional features are truly optional
 

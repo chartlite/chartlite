@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Thin Vue 3 wrapper over [`@chartlite/core`](https://www.npmjs.com/package/@chartlite/core) — a ~13KB-gzip, zero-dependency SVG charting library. Same charts, same API, idiomatic Vue.
+Thin Vue 3 wrapper over [`@chartlite/core`](https://www.npmjs.com/package/@chartlite/core) — a ~15KB-gzip, zero-dependency SVG charting library. Same charts, same API, idiomatic Vue.
 
 ## Installation
 

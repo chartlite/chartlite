@@ -30,28 +30,41 @@ import type { ChartConstructor } from './useChart';
 
 type Props<C> = C & ChartFrameOwnProps;
 
-/** Build a named component bound to a single core chart class. */
-function makeChart<C>(ctor: unknown, displayName: string) {
-  function Component({ className, style, onError, ...config }: Props<C>): ReactElement {
-    return (
-      <ChartFrame
-        ctor={ctor as ChartConstructor}
-        config={config as Record<string, unknown>}
-        className={className}
-        style={style}
-        onError={onError}
-      />
-    );
-  }
-  Component.displayName = displayName;
-  return Component;
+/** Render a named component without module-load factory calls, preserving tree-shaking. */
+function renderNamed<C>(ctor: ChartConstructor, props: Props<C>): ReactElement {
+  const { className, style, onError, ...config } = props;
+  return (
+    <ChartFrame
+      ctor={ctor}
+      config={config as Record<string, unknown>}
+      className={className}
+      style={style}
+      onError={onError}
+    />
+  );
 }
 
-export const LineChart = makeChart<LineChartConfig>(CoreLine, 'LineChart');
-export const BarChart = makeChart<BarChartConfig>(CoreBar, 'BarChart');
-export const AreaChart = makeChart<AreaChartConfig>(CoreArea, 'AreaChart');
-export const ScatterChart = makeChart<ScatterChartConfig>(CoreScatter, 'ScatterChart');
-export const PieChart = makeChart<PieChartConfig>(CorePie, 'PieChart');
-export const RadialChart = makeChart<RadialChartConfig>(CoreRadial, 'RadialChart');
-export const ComboChart = makeChart<ComboChartConfig>(CoreCombo, 'ComboChart');
-export const Sparkline = makeChart<SparklineConfig>(CoreSparkline, 'Sparkline');
+export function LineChart(props: Props<LineChartConfig>): ReactElement {
+  return renderNamed(CoreLine as unknown as ChartConstructor, props);
+}
+export function BarChart(props: Props<BarChartConfig>): ReactElement {
+  return renderNamed(CoreBar as unknown as ChartConstructor, props);
+}
+export function AreaChart(props: Props<AreaChartConfig>): ReactElement {
+  return renderNamed(CoreArea as unknown as ChartConstructor, props);
+}
+export function ScatterChart(props: Props<ScatterChartConfig>): ReactElement {
+  return renderNamed(CoreScatter as unknown as ChartConstructor, props);
+}
+export function PieChart(props: Props<PieChartConfig>): ReactElement {
+  return renderNamed(CorePie as unknown as ChartConstructor, props);
+}
+export function RadialChart(props: Props<RadialChartConfig>): ReactElement {
+  return renderNamed(CoreRadial as unknown as ChartConstructor, props);
+}
+export function ComboChart(props: Props<ComboChartConfig>): ReactElement {
+  return renderNamed(CoreCombo as unknown as ChartConstructor, props);
+}
+export function Sparkline(props: Props<SparklineConfig>): ReactElement {
+  return renderNamed(CoreSparkline as unknown as ChartConstructor, props);
+}

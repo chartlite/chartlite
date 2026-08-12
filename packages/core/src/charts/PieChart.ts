@@ -9,15 +9,15 @@
 import { BaseChart } from './BaseChart';
 import type { PieChartConfig } from '../types';
 import { setDataPointAttrs } from '../render/dataAttrs';
+import { createSVGElement } from '../render/constants';
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const FULL_CIRCLE = Math.PI * 2;
 
 export class PieChart extends BaseChart {
   protected config: PieChartConfig;
 
   constructor(container: HTMLElement | string, config: PieChartConfig) {
-    super(container, config, config.data);
+    super(container, config, config.data, 'Pie');
 
     this.config = {
       innerRadius: 0,
@@ -64,8 +64,12 @@ export class PieChart extends BaseChart {
       const angleEnd = angleStart + fraction * FULL_CIRCLE;
       const sliceColor = palette[index % palette.length];
       const percent = (fraction * 100).toFixed(1);
+      const midAngle = (angleStart + angleEnd) / 2;
+      const dataRadius = innerRadius > 0 ? (radius + innerRadius) / 2 : radius * 0.65;
+      const dataX = cx + dataRadius * Math.sin(midAngle);
+      const dataY = cy - dataRadius * Math.cos(midAngle);
 
-      const path = document.createElementNS(SVG_NS, 'path');
+      const path = createSVGElement('path');
       path.setAttribute(
         'd',
         this.buildSlicePath(cx, cy, radius, innerRadius, angleStart, angleEnd, fraction)
@@ -79,22 +83,15 @@ export class PieChart extends BaseChart {
       path.setAttribute('aria-label', `${slice.label ?? slice.x}: ${slice.y} (${percent}%)`);
       path.setAttribute('tabindex', '-1');
       path.classList.add('data-point');
-      setDataPointAttrs(path, {
-        x: slice.label ?? slice.x,
-        y: slice.y,
-        seriesIndex: 0,
-        index,
-      });
+      setDataPointAttrs(path, slice.label ?? slice.x, slice.y, this.seriesData[0]?.name, 0, index, dataX, dataY);
       mainGroup.appendChild(path);
 
       // Optional percentage label at the slice mid-angle
       if (this.config.showLabels) {
-        const midAngle = (angleStart + angleEnd) / 2;
-        const labelRadius = innerRadius > 0 ? (radius + innerRadius) / 2 : radius * 0.65;
-        const lx = cx + labelRadius * Math.sin(midAngle);
-        const ly = cy - labelRadius * Math.cos(midAngle);
+        const lx = dataX;
+        const ly = dataY;
 
-        const text = document.createElementNS(SVG_NS, 'text');
+        const text = createSVGElement('text');
         text.setAttribute('x', String(lx));
         text.setAttribute('y', String(ly));
         text.setAttribute('text-anchor', 'middle');

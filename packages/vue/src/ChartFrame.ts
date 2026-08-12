@@ -10,6 +10,7 @@ import { useChart, type ChartConstructor } from './useChart';
  * `resolveCtor` receives the current attrs so the generic `<Chart>` can pick a
  * constructor from its `type` attr; named components ignore the argument.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export function defineChartComponent(
   name: string,
   resolveCtor: (attrs: Record<string, unknown>) => ChartConstructor | undefined
@@ -36,7 +37,7 @@ export function defineChartComponent(
       const { container, error } = useChart(
         () => resolveCtor(attrs as Record<string, unknown>),
         getConfig,
-        props.onError
+        () => props.onError
       );
 
       return () => {

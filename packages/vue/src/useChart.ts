@@ -13,14 +13,27 @@ export type ChartConstructor = new (
 ) => ChartInstance;
 
 /**
- * Stable dependency key for a config object. Functions (callbacks, formatters)
- * are dropped, so the chart recreates when data/visual config changes.
+ * Stable dependency key for a config object, including callback/formatter identity.
  */
+const identities = new WeakMap<object, number>();
+let nextIdentity = 0;
+
+function identity(value: object): number {
+  let id = identities.get(value);
+  if (id === undefined) {
+    id = ++nextIdentity;
+    identities.set(value, id);
+  }
+  return id;
+}
+
 export function configSignature(config: Record<string, unknown>): string {
   try {
-    return JSON.stringify(config, (_k, v) => (typeof v === 'function' ? undefined : v));
+    return JSON.stringify(config, (_key, value) =>
+      typeof value === 'function' ? `__chartlite_fn_${identity(value)}` : value
+    );
   } catch {
-    return String(Math.random());
+    return `__chartlite_config_${identity(config)}`;
   }
 }
 
@@ -33,7 +46,7 @@ export function configSignature(config: Record<string, unknown>): string {
 export function useChart(
   getCtor: () => ChartConstructor | undefined,
   getConfig: () => Record<string, unknown>,
-  onError?: (error: Error) => void
+  getOnError?: () => ((error: Error) => void) | undefined
 ): { container: Ref<HTMLElement | null>; error: Ref<Error | null> } {
   const container = ref<HTMLElement | null>(null);
   const error = ref<Error | null>(null);
@@ -51,6 +64,7 @@ export function useChart(
     } catch (err) {
       const normalized = err instanceof Error ? err : new Error(String(err));
       error.value = normalized;
+      const onError = getOnError?.();
       if (onError) onError(normalized);
       else console.error('Chartlite render error:', normalized);
     }
@@ -58,10 +72,7 @@ export function useChart(
 
   onMounted(build);
   // Recreate when the constructor identity or the config signature changes.
-  watch(
-    () => `${getCtor()?.name ?? 'none'}|${configSignature(getConfig())}`,
-    build
-  );
+  watch([getCtor, () => configSignature(getConfig())], build);
   onBeforeUnmount(() => {
     chart?.destroy();
     chart = null;

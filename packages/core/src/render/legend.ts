@@ -1,13 +1,10 @@
 /**
- * Legend rendering for multi-series charts. Laid out horizontally in the expanded
- * margin area (above or below the data area), measured with getBBox where available.
+ * Legend rendering for multi-series charts, measured with getBBox where available.
  */
 
 import type { BaseChartConfig, Dimensions, SeriesData } from '../types';
 import { getThemeColors, getDefaultDimensions } from '../utils';
-import { CHART_DEFAULTS, createGroup } from './constants';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
+import { CHART_DEFAULTS, createGroup, createSVGElement } from './constants';
 
 export function renderLegend(
   svg: SVGSVGElement,
@@ -17,6 +14,7 @@ export function renderLegend(
 ): void {
   const colors = getThemeColors(config.theme || 'default');
   const position = config.legend?.position || 'top';
+  const layout = config.legend?.layout || 'horizontal';
 
   // Create legend group
   const legendGroup = createGroup();
@@ -27,13 +25,14 @@ export function renderLegend(
   const iconSize = CHART_DEFAULTS.LEGEND_ICON_SIZE;
   const iconMargin = CHART_DEFAULTS.LEGEND_ICON_MARGIN;
 
-  // Render horizontal legend (only layout supported)
-  let currentX = 0;
+  const rowGap = 8;
   const itemWidths: number[] = [];
+  const itemGroups: SVGGElement[] = [];
+  const labels: SVGTextElement[] = [];
 
-  // First pass: render items and measure their actual widths
+  // First pass: create items. Append once so browsers can measure all labels.
   seriesData.forEach((series, seriesIndex) => {
-    const itemGroup = createGroup(currentX, 0);
+    const itemGroup = createGroup();
     // Tag each item so the tree-shakeable legendToggle() plugin can bind clicks
     // and match the item to its series. Purely additive; no effect when unused.
     itemGroup.classList.add('legend-item');
@@ -41,7 +40,7 @@ export function renderLegend(
     itemGroup.setAttribute('data-series', series.name);
 
     // Color indicator (square)
-    const rect = document.createElementNS(SVG_NS, 'rect');
+    const rect = createSVGElement('rect');
     rect.setAttribute('width', String(iconSize));
     rect.setAttribute('height', String(iconSize));
     rect.setAttribute('fill', series.color || colors.primary);
@@ -49,7 +48,7 @@ export function renderLegend(
     itemGroup.appendChild(rect);
 
     // Label
-    const label = document.createElementNS(SVG_NS, 'text');
+    const label = createSVGElement('text');
     label.setAttribute('x', String(iconSize + iconMargin));
     label.setAttribute('y', String(iconSize / 2));
     label.setAttribute('dominant-baseline', 'middle');
@@ -59,10 +58,12 @@ export function renderLegend(
     itemGroup.appendChild(label);
 
     legendGroup.appendChild(itemGroup);
+    itemGroups.push(itemGroup);
+    labels.push(label);
+  });
 
-    // Measure actual text width using getBBox()
-    // Temporarily append to SVG to measure
-    svg.appendChild(legendGroup);
+  svg.appendChild(legendGroup);
+  labels.forEach((label, index) => {
     let textWidth: number;
     try {
       const bbox = label.getBBox();
@@ -70,18 +71,24 @@ export function renderLegend(
     } catch (e) {
       // getBBox not available (e.g., in test environment or SSR)
       // Fallback to estimation: ~7px per character
-      textWidth = series.name.length * 7;
+      textWidth = seriesData[index].name.length * 7;
     }
     const itemWidth = iconSize + iconMargin + textWidth;
     itemWidths.push(itemWidth);
-    svg.removeChild(legendGroup);
-
-    currentX += itemWidth + itemSpacing;
   });
+  svg.removeChild(legendGroup);
 
-  // Calculate total width
-  const totalWidth =
-    itemWidths.reduce((sum, w) => sum + w, 0) + itemSpacing * (seriesData.length - 1);
+  const totalWidth = layout === 'vertical'
+    ? Math.max(...itemWidths)
+    : itemWidths.reduce((sum, width) => sum + width, 0) +
+      itemSpacing * (seriesData.length - 1);
+  let offset = 0;
+  itemGroups.forEach((item, index) => {
+    const x = layout === 'horizontal' ? offset : 0;
+    const y = layout === 'vertical' ? index * (iconSize + rowGap) : 0;
+    item.setAttribute('transform', `translate(${x}, ${y})`);
+    if (layout === 'horizontal') offset += itemWidths[index] + itemSpacing;
+  });
 
   // Calculate horizontal position based on alignment
   const align = config.legend?.align || 'left';
