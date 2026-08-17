@@ -26,6 +26,7 @@ export interface KeyboardActivationEvent {
 
 export class KeyboardNavigator {
   private focusedIndex = -1;
+  private focusedElement: SVGElement | null = null;
   private focusableElements: SVGElement[] = [];
   private liveRegion: HTMLElement | null = null;
   private readonly svg: SVGSVGElement;
@@ -110,14 +111,15 @@ export class KeyboardNavigator {
     const element = this.focusableElements[this.focusedIndex];
     element.classList.add('data-point-focused');
     element.setAttribute('data-focused', 'true');
+    this.focusedElement = element;
     this.announceToScreenReader(element);
   }
 
   private clearDataPointFocus(): void {
-    this.focusableElements.forEach((el) => {
-      el.classList.remove('data-point-focused');
-      el.removeAttribute('data-focused');
-    });
+    if (!this.focusedElement) return;
+    this.focusedElement.classList.remove('data-point-focused');
+    this.focusedElement.removeAttribute('data-focused');
+    this.focusedElement = null;
   }
 
   private activateCurrentElement(): void {

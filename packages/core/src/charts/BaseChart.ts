@@ -26,7 +26,12 @@ import {
 } from '../a11y/descriptions';
 import { injectAccessibilityStyles } from '../a11y/styles';
 import { KeyboardNavigator } from '../a11y/keyboard';
-import { CHART_DEFAULTS, createGroup, createSVGElement } from '../render/constants';
+import {
+  CHART_DEFAULTS,
+  CHART_POINT_BUDGET,
+  createGroup,
+  createSVGElement,
+} from '../render/constants';
 import { renderTitle as drawTitle } from '../render/title';
 import { renderLegend as drawLegend } from '../render/legend';
 import {
@@ -48,6 +53,53 @@ const isSelector = (value: HTMLElement | string): value is string =>
 const isStringValue = (value: any): value is string => typeof value === 'string';
 const isBooleanValue = (value: any): value is boolean => typeof value === 'boolean';
 
+function updateTable(
+  foreignObject: SVGForeignObjectElement,
+  title: string,
+  data: DataPoint[],
+  seriesData: SeriesData[]
+): boolean {
+  if (seriesData.length !== 1 || foreignObject.childNodes.length !== 1) return false;
+
+  const table = foreignObject.querySelector<HTMLTableElement>('table.sr-only');
+  if (
+    !table ||
+    table !== foreignObject.firstElementChild ||
+    table.getAttribute('aria-label') !== 'Chart data table' ||
+    table.children.length !== 3 ||
+    table.tBodies.length !== 1 ||
+    table.tHead?.rows.length !== 1
+  ) return false;
+
+  const header = table.tHead.rows[0];
+  const body = table.tBodies[0];
+  if (
+    !table.caption ||
+    header.innerHTML !== '<th scope="col">Category</th><th scope="col">Value</th>' ||
+    body.rows.length !== data.length
+  ) return false;
+
+  table.caption.textContent = `${title} - Data Table`;
+  for (let index = 0; index < body.rows.length; index += 1) {
+    const cells = body.rows[index].cells;
+    if (
+      cells.length !== 2 ||
+      cells[0].tagName !== 'TD' ||
+      cells[1].tagName !== 'TD' ||
+      cells[0].childNodes.length !== 1 ||
+      cells[1].childNodes.length !== 1
+    ) return false;
+
+    const xNode = cells[0].firstChild;
+    const yNode = cells[1].firstChild;
+    if (xNode?.nodeName !== '#text' || yNode?.nodeName !== '#text') return false;
+    const point = data[index];
+    xNode.nodeValue = String(point.x);
+    yNode.nodeValue = String(point.y);
+  }
+  return true;
+}
+
 export abstract class BaseChart implements Chart {
   protected container: HTMLElement;
   protected config: BaseChartConfig;
@@ -59,6 +111,7 @@ export abstract class BaseChart implements Chart {
   // Resolved (unwrapped) per-series colors, kept so the CSS-variable root tokens
   // can be emitted even when `seriesData[i].color` is a `var(--cl-series-i, …)` string.
   protected resolvedSeriesColors: string[] = [];
+  private tableFallback: SVGForeignObjectElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private resizeTimeout: ReturnType<typeof setTimeout> | null = null;
   private layoutWidth: number;
@@ -330,7 +383,10 @@ export abstract class BaseChart implements Chart {
     }
     this.isMultiSeries = this.seriesData.length > 1;
     this.assignSeriesColors();
-    const pointLimit = Math.max(3, Math.floor(500 / this.seriesData.length));
+    const pointLimit = Math.max(
+      3,
+      Math.floor(CHART_POINT_BUDGET / this.seriesData.length)
+    );
     this.seriesData = this.seriesData.map(series => series.data.length > pointLimit
       ? { ...series, data: autoDownsample(series.data, pointLimit, 'nth') }
       : series
@@ -453,17 +509,25 @@ export abstract class BaseChart implements Chart {
    * Add data table fallback for screen readers
    */
   private addDataTableFallback(svg: SVGSVGElement): void {
+    const title = this.config.title || generateDefaultTitle(this.chartTypeName);
+    const retainedFallback = this.tableFallback;
+    if (retainedFallback && updateTable(retainedFallback, title, this.data, this.seriesData)) {
+      svg.appendChild(retainedFallback);
+      return;
+    }
+
     const foreignObject = createSVGElement('foreignObject');
     foreignObject.setAttribute('width', '0');
     foreignObject.setAttribute('height', '0');
     foreignObject.setAttribute('overflow', 'hidden');
 
     foreignObject.innerHTML = generateDataTableHTML({
-      title: this.config.title || generateDefaultTitle(this.chartTypeName),
+      title,
       data: this.data,
       seriesData: this.seriesData,
     });
 
+    this.tableFallback = foreignObject;
     svg.appendChild(foreignObject);
   }
 
@@ -500,9 +564,11 @@ export abstract class BaseChart implements Chart {
 
     if (this.svg) {
       // Reuse the SVG root, but rebuild its content and accessibility metadata.
-      while (this.svg.firstChild) {
-        this.svg.removeChild(this.svg.firstChild);
+      const retainedFallback = this.tableFallback;
+      if (retainedFallback?.parentNode) {
+        retainedFallback.parentNode.removeChild(retainedFallback);
       }
+      this.svg.replaceChildren();
       this.prepareSVG(this.svg);
     } else {
       // First render: create SVG
@@ -698,6 +764,7 @@ export abstract class BaseChart implements Chart {
       this.svg.parentNode.removeChild(this.svg);
     }
     this.svg = null;
+    this.tableFallback = null;
 
     // Clear event handlers
     this.eventHandlers.clear();

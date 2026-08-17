@@ -15,8 +15,10 @@ export default defineConfig({
     ".windsurf/**",
     "tools/oxlint/anti-slop/**",
   ],
+  // The root lint script compiles the vendored TypeScript plugin first because
+  // the Node 20 CI runtime cannot import `.ts` modules directly.
   jsPlugins: [
-    { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
+    { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/dist/index.js" },
   ],
   rules: {
     "anti-slop/no-chained-type-assertions": "error",

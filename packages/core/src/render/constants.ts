@@ -29,6 +29,9 @@ export const CHART_DEFAULTS = {
   DEFAULT_HEIGHT: 400,
 } as const;
 
+/** Maximum rendered points shared across all series in a chart. */
+export const CHART_POINT_BUDGET = 500;
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** Create a typed SVG element without repeating the namespace at every call site. */
