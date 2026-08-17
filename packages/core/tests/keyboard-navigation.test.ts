@@ -6,8 +6,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LineChart } from '../src/charts/LineChart';
 import { BarChart } from '../src/charts/BarChart';
-import { AreaChart } from '../src/charts/AreaChart';
 import { ScatterChart } from '../src/charts/ScatterChart';
+import { requireElement } from './test-helpers';
 
 describe('Keyboard Navigation', () => {
   let container: HTMLDivElement;
@@ -42,17 +42,6 @@ describe('Keyboard Navigation', () => {
       expect(svg?.getAttribute('tabindex')).toBe('0');
     });
 
-    it('should maintain focus on SVG when tabbed to', () => {
-      const chart = new LineChart(container, {
-        data: [{ x: 'A', y: 10 }],
-      });
-      chart.render();
-
-      const svg = container.querySelector('svg') as SVGElement;
-      svg.focus();
-
-      expect(document.activeElement).toBe(svg);
-    });
   });
 
   describe('Arrow Key Navigation', () => {
@@ -67,7 +56,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       // Press ArrowRight
@@ -89,7 +78,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       // Go to first element
@@ -113,7 +102,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       const dataPoints = Array.from(container.querySelectorAll('.data-point'));
@@ -141,7 +130,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       const dataPoints = Array.from(container.querySelectorAll('.data-point'));
@@ -161,7 +150,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
@@ -180,7 +169,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       // Go forward first
@@ -206,7 +195,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       const dataPoints = Array.from(container.querySelectorAll('.data-point'));
@@ -232,7 +221,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       const dataPoints = Array.from(container.querySelectorAll('.data-point'));
@@ -255,7 +244,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       // Navigate to a point
@@ -281,7 +270,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -302,7 +291,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       const dataPoints = Array.from(container.querySelectorAll('.data-point'));
@@ -329,7 +318,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       // Navigate to trigger announcement
@@ -352,7 +341,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       // Navigate to first point
@@ -373,7 +362,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       // Navigate to first
@@ -403,7 +392,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -423,7 +412,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -444,7 +433,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -463,7 +452,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -491,7 +480,7 @@ describe('Keyboard Navigation', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg') as SVGElement;
+      const svg = requireElement<SVGElement>(container, 'svg');
       svg.focus();
 
       const dataPoints = container.querySelectorAll('.data-point');

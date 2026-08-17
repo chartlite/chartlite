@@ -1,4 +1,38 @@
 import { onMounted, onBeforeUnmount, ref, watch, type Ref } from 'vue';
+import type {
+  AreaChartConfig,
+  BarChartConfig,
+  ComboChartConfig,
+  LineChartConfig,
+  PieChartConfig,
+  RadialChartConfig,
+  ScatterChartConfig,
+  SparklineConfig,
+} from '@chartlite/core';
+
+export type ChartType =
+  | 'line'
+  | 'bar'
+  | 'area'
+  | 'scatter'
+  | 'pie'
+  | 'radial'
+  | 'combo'
+  | 'sparkline';
+
+/** Configuration accepted by each Vue chart wrapper. */
+export interface ChartConfigByType {
+  line: LineChartConfig;
+  bar: BarChartConfig;
+  area: AreaChartConfig;
+  scatter: ScatterChartConfig;
+  pie: PieChartConfig;
+  radial: RadialChartConfig;
+  combo: ComboChartConfig;
+  sparkline: SparklineConfig;
+}
+
+export type ChartConfig = ChartConfigByType[ChartType];
 
 /** The subset of the core chart instance the wrapper relies on. */
 interface ChartInstance {
@@ -7,18 +41,18 @@ interface ChartInstance {
 }
 
 /** Any core chart constructor: `new Ctor(container, config)`. */
-export type ChartConstructor = new (
+export type ChartConstructor<C extends ChartConfig> = new (
   container: HTMLElement,
-  config: Record<string, unknown>
+  config: C
 ) => ChartInstance;
 
 /**
  * Stable dependency key for a config object, including callback/formatter identity.
  */
-const identities = new WeakMap<object, number>();
+const identities = new WeakMap<WeakKey, number>();
 let nextIdentity = 0;
 
-function identity(value: object): number {
+function identity(value: WeakKey): number {
   let id = identities.get(value);
   if (id === undefined) {
     id = ++nextIdentity;
@@ -27,10 +61,10 @@ function identity(value: object): number {
   return id;
 }
 
-export function configSignature(config: Record<string, unknown>): string {
+export function configSignature(config: ChartConfig): string {
   try {
     return JSON.stringify(config, (_key, value) =>
-      typeof value === 'function' ? `__chartlite_fn_${identity(value)}` : value
+      value instanceof Function ? `__chartlite_fn_${identity(value)}` : value
     );
   } catch {
     return `__chartlite_config_${identity(config)}`;
@@ -43,11 +77,16 @@ export function configSignature(config: Record<string, unknown>): string {
  * serializable config changes, and destroys it on unmount. Returns the container
  * ref to bind and a reactive `error`.
  */
-export function useChart(
-  getCtor: () => ChartConstructor | undefined,
-  getConfig: () => Record<string, unknown>,
+export interface UseChartResult {
+  container: Ref<HTMLElement | null>;
+  error: Ref<Error | null>;
+}
+
+export function useChart<C extends ChartConfig>(
+  getCtor: () => ChartConstructor<C> | undefined,
+  getConfig: () => C,
   getOnError?: () => ((error: Error) => void) | undefined
-): { container: Ref<HTMLElement | null>; error: Ref<Error | null> } {
+): UseChartResult {
   const container = ref<HTMLElement | null>(null);
   const error = ref<Error | null>(null);
   let chart: ChartInstance | null = null;

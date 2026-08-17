@@ -36,8 +36,12 @@ export function downsampleLTTB(data: DataPoint[], threshold: number): DataPoint[
   }
 
   // Read numeric x values lazily to avoid cloning the entire input dataset.
-  const xAt = (index: number): number =>
-    typeof data[index].x === 'number' ? data[index].x as number : index;
+  const isNumericX = (value: string | number): value is number =>
+    typeof value === 'number';
+  const xAt = (index: number): number => {
+    const value = data[index].x;
+    return isNumericX(value) ? value : index;
+  };
 
   const sampled: DataPoint[] = [];
   const dataLength = data.length;

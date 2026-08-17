@@ -23,7 +23,15 @@ export {
 // Version advertised to MCP clients. Injected at build time from package.json
 // (see tsup.config.ts); falls back for ts-node/test.
 declare const __MCP_VERSION__: string;
-const VERSION = typeof __MCP_VERSION__ !== 'undefined' ? __MCP_VERSION__ : '0.0.0-dev';
+function readVersion(): string {
+  try {
+    return __MCP_VERSION__;
+  } catch {
+    return '0.0.0-dev';
+  }
+}
+
+const VERSION = readVersion();
 
 async function main(): Promise<void> {
   const server = createServer(VERSION);
@@ -33,7 +41,6 @@ async function main(): Promise<void> {
 
 // Auto-start only when executed as a binary, not when imported for its exports.
 const invokedAsBin =
-  typeof process !== 'undefined' &&
   process.argv[1] !== undefined &&
   process.argv[1] === fileURLToPath(import.meta.url);
 

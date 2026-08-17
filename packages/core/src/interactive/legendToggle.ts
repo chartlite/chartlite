@@ -23,16 +23,16 @@ export function legendToggle(): ChartPlugin {
     afterRender(ctx: PluginContext): void {
       if (!ctx.svg) return;
       const svg = ctx.svg;
-      const main = svg.querySelector('g.chart-main');
+      const main = svg.querySelector<SVGGElement>('g.chart-main');
 
       const apply = (idx: number): void => {
         const isHidden = hidden.has(idx);
-        main?.querySelectorAll(`[data-series-index="${idx}"]`).forEach((el) => {
-          (el as SVGElement).style.display = isHidden ? 'none' : '';
+        main?.querySelectorAll<SVGElement>(`[data-series-index="${idx}"]`).forEach((el) => {
+          el.style.display = isHidden ? 'none' : '';
         });
-        const item = svg.querySelector(
+        const item = svg.querySelector<SVGElement>(
           `.legend-item[data-series-index="${idx}"]`
-        ) as SVGElement | null;
+        );
         if (item) {
           item.style.opacity = isHidden ? '0.4' : '1';
           item.setAttribute('aria-pressed', String(isHidden));
@@ -42,11 +42,11 @@ export function legendToggle(): ChartPlugin {
       // Re-apply persisted visibility after this (re-)render.
       hidden.forEach((idx) => apply(idx));
 
-      svg.querySelectorAll('.legend-item').forEach((item) => {
+      svg.querySelectorAll<SVGElement>('.legend-item').forEach((item) => {
         const idxAttr = item.getAttribute('data-series-index');
         if (idxAttr === null) return;
         const idx = Number(idxAttr);
-        (item as SVGElement).style.cursor = 'pointer';
+        item.style.cursor = 'pointer';
         item.setAttribute('role', 'button');
         item.setAttribute('tabindex', '0');
         item.setAttribute('aria-pressed', String(hidden.has(idx)));
@@ -63,7 +63,8 @@ export function legendToggle(): ChartPlugin {
         };
         item.addEventListener('click', toggle);
         item.addEventListener('keydown', (event) => {
-          const keyboardEvent = event as KeyboardEvent;
+          if (!(event instanceof KeyboardEvent)) return;
+          const keyboardEvent = event;
           if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
           keyboardEvent.preventDefault();
           toggle();

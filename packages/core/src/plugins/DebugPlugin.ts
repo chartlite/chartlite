@@ -18,24 +18,39 @@
 
 import type { ChartPlugin, PluginContext } from '../types';
 
-const DEBUG_EVENTS = [
-  'beforeRender',
-  'afterRender',
-  'beforeUpdate',
-  'afterUpdate',
-  'beforeDestroy',
-  'onResize',
-] as const;
-
 export class DebugPlugin implements ChartPlugin {
   name = 'debug';
-  [key: string]: any;
+  private readonly logPrefix: string;
 
   constructor(logPrefix: string = '[ChartDebug]') {
-    for (const event of DEBUG_EVENTS) {
-      this[event] = (context?: PluginContext): void => {
-        console.log(`${logPrefix} ${event}`, context);
-      };
-    }
+    this.logPrefix = logPrefix;
+  }
+
+  private log(event: keyof ChartPlugin, context: PluginContext): void {
+    console.log(`${this.logPrefix} ${event}`, context);
+  }
+
+  beforeRender(context: PluginContext): void {
+    this.log('beforeRender', context);
+  }
+
+  afterRender(context: PluginContext): void {
+    this.log('afterRender', context);
+  }
+
+  beforeUpdate(context: PluginContext): void {
+    this.log('beforeUpdate', context);
+  }
+
+  afterUpdate(context: PluginContext): void {
+    this.log('afterUpdate', context);
+  }
+
+  beforeDestroy(context: PluginContext): void {
+    this.log('beforeDestroy', context);
+  }
+
+  onResize(context: PluginContext): void {
+    this.log('onResize', context);
   }
 }

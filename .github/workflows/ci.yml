@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [20.19.x]
 
     steps:
       - name: Checkout code
@@ -32,8 +32,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      - name: Anti-slop
+        run: pnpm lint:anti-slop
+
+      - name: Workspace lint and typecheck
+        run: pnpm lint:workspace
 
       - name: Build
         run: pnpm build
@@ -62,7 +65,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 20.x
+          node-version: 20.19.x
           cache: "pnpm"
 
       - name: Install dependencies

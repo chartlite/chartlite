@@ -4,8 +4,8 @@ import {
   renderChartResult,
   listChartTypesResult,
   CHART_TYPE_TUPLE,
+  renderChartInput,
 } from '../src/tools';
-import { createServer } from '../src/server';
 
 describe('render_chart tool', () => {
   it('renders a valid spec to SVG text (headless, via the SSR shim)', () => {
@@ -49,11 +49,33 @@ describe('schema drift guard', () => {
   it('the tool enum tuple matches the core render registry', () => {
     expect([...CHART_TYPE_TUPLE]).toEqual(CHART_TYPES);
   });
-});
 
-describe('server wiring', () => {
-  it('constructs without throwing and registers tools', () => {
-    // Should not throw; exercises the SDK integration surface.
-    expect(() => createServer('9.9.9')).not.toThrow();
+  it('validates flexible data without discarding chart-specific options', () => {
+    const result = renderChartInput.spec.safeParse({
+      type: 'scatter',
+      data: {
+        x: [1, 2],
+        y: { actual: [3, 4], forecast: [5, 6] },
+      },
+      pointShape: 'square',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.pointShape).toBe('square');
+    }
+  });
+
+  it('rejects malformed data and unknown themes at the tool boundary', () => {
+    expect(renderChartInput.spec.safeParse({
+      type: 'line',
+      data: [{ x: 'Jan', y: 'ten' }],
+    }).success).toBe(false);
+
+    expect(renderChartInput.spec.safeParse({
+      type: 'line',
+      data: [1, 2, 3],
+      theme: 'corporate-neon',
+    }).success).toBe(false);
   });
 });

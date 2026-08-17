@@ -26,11 +26,13 @@ describe('SVG Root Reuse', () => {
     const chart = new LineChart(container, { data });
     chart.render();
     const originalSvg = container.querySelector('svg');
+    expect(container.querySelectorAll('circle')).toHaveLength(3);
 
     chart.update([{ x: 'A', y: 10 }]);
     const updatedSvg = container.querySelector('svg');
 
     expect(updatedSvg).toBeTruthy();
     expect(updatedSvg).toBe(originalSvg); // SAME SVG element (reused!)
+    expect(container.querySelectorAll('circle')).toHaveLength(1);
   });
 });

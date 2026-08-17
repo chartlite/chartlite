@@ -91,16 +91,6 @@ describe('ComboChart', () => {
     expect(container.querySelectorAll('rect.bar')).toHaveLength(0);
   });
 
-  it('shares one y-axis across bar and line series (combined range)', () => {
-    // Line values (growth) are far below revenue; both must be visible on one scale.
-    new ComboChart(container, { data: comboData }).render();
-    const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
-    // Bars and line points all present → both series plotted on the shared axis.
-    expect(container.querySelectorAll('rect.bar').length).toBeGreaterThan(0);
-    expect(container.querySelectorAll('circle.data-point').length).toBeGreaterThan(0);
-  });
-
   it('tags shapes with the data-* contract for interactivity/SSR', () => {
     new ComboChart(container, { data: comboData }).render();
     const bar = container.querySelector('rect.bar');
@@ -110,11 +100,4 @@ describe('ComboChart', () => {
     expect(point?.getAttribute('data-series-index')).toBe('1');
   });
 
-  it('supports export to SVG string', () => {
-    const chart = new ComboChart(container, { data: comboData });
-    chart.render();
-    const svg = chart.toSVG();
-    expect(svg).toContain('<svg');
-    expect(svg).toContain('</svg>');
-  });
 });

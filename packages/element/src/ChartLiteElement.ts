@@ -18,6 +18,18 @@ import {
   ComboChart,
   Sparkline,
 } from '@chartlite/core';
+import type {
+  AreaChartConfig,
+  BarChartConfig,
+  BaseChartConfig,
+  ComboChartConfig,
+  FlexibleDataInput,
+  LineChartConfig,
+  PieChartConfig,
+  RadialChartConfig,
+  ScatterChartConfig,
+  SparklineConfig,
+} from '@chartlite/core';
 
 export type ChartType =
   | 'line'
@@ -33,28 +45,96 @@ interface ChartInstance {
   render(): void;
   destroy(): void;
 }
-type ChartConstructor = new (el: HTMLElement, config: Record<string, unknown>) => ChartInstance;
 
-const REGISTRY: Record<ChartType, ChartConstructor> = {
-  line: LineChart as unknown as ChartConstructor,
-  bar: BarChart as unknown as ChartConstructor,
-  area: AreaChart as unknown as ChartConstructor,
-  scatter: ScatterChart as unknown as ChartConstructor,
-  pie: PieChart as unknown as ChartConstructor,
-  radial: RadialChart as unknown as ChartConstructor,
-  combo: ComboChart as unknown as ChartConstructor,
-  sparkline: Sparkline as unknown as ChartConstructor,
-};
+/** The supported chart options accepted by a `<chart-lite>` spec. */
+export interface ChartSpec extends BaseChartConfig {
+  type?: string;
+  data?: FlexibleDataInput;
+  curve?: LineChartConfig['curve'];
+  showPoints?: LineChartConfig['showPoints'];
+  orientation?: BarChartConfig['orientation'];
+  stacked?: BarChartConfig['stacked'];
+  fillOpacity?: AreaChartConfig['fillOpacity'];
+  gradient?: AreaChartConfig['gradient'];
+  innerRadius?: PieChartConfig['innerRadius'];
+  showLabels?: PieChartConfig['showLabels'];
+  max?: RadialChartConfig['max'];
+  startAngle?: RadialChartConfig['startAngle'];
+  endAngle?: RadialChartConfig['endAngle'];
+  thickness?: RadialChartConfig['thickness'];
+  showValue?: RadialChartConfig['showValue'];
+  trackColor?: RadialChartConfig['trackColor'];
+  defaultType?: ComboChartConfig['defaultType'];
+  pointSize?: ScatterChartConfig['pointSize'];
+  labelOffset?: ScatterChartConfig['labelOffset'];
+  labelPosition?: ScatterChartConfig['labelPosition'];
+  pointShape?: ScatterChartConfig['pointShape'];
+  showEndDot?: SparklineConfig['showEndDot'];
+  strokeWidth?: SparklineConfig['strokeWidth'];
+}
+
+type ChartConfig = Omit<ChartSpec, 'type'>;
+
+const THEMES = ['default', 'midnight', 'minimal', 'tailwind', 'nord', 'high-contrast'] as const;
+
+function parseTheme(value: string | null): BaseChartConfig['theme'] {
+  if (value === null) return undefined;
+  return THEMES.find((theme) => theme === value);
+}
+
+function requiredData(config: ChartConfig): FlexibleDataInput {
+  if (config.data === undefined) throw new Error('Chart data is required');
+  return config.data;
+}
+
+function createChart(
+  container: HTMLElement,
+  type: string | undefined,
+  config: ChartConfig,
+): ChartInstance {
+  switch (type) {
+    case 'line':
+      return new LineChart(container, { ...config, data: requiredData(config) });
+    case 'bar':
+      return new BarChart(container, { ...config, data: requiredData(config) });
+    case 'area':
+      return new AreaChart(container, { ...config, data: requiredData(config) });
+    case 'scatter':
+      return new ScatterChart(container, { ...config, data: requiredData(config) });
+    case 'pie':
+      return new PieChart(container, { ...config, data: requiredData(config) });
+    case 'radial':
+      return new RadialChart(container, { ...config, data: requiredData(config) });
+    case 'combo':
+      return new ComboChart(container, { ...config, data: requiredData(config) });
+    case 'sparkline':
+      return new Sparkline(container, { ...config, data: requiredData(config) });
+    default:
+      throw new Error(`Unknown chart type: ${String(type)}`);
+  }
+}
 
 /** Attributes that, when changed, trigger a re-render. */
 const OBSERVED = ['spec', 'type', 'data', 'theme', 'title', 'width', 'height', 'css-vars'];
 
 // Keep the module importable during SSR; registration remains browser-only.
-const HTMLElementBase = (
-  typeof HTMLElement === 'undefined' ? class {} : HTMLElement
-) as typeof HTMLElement;
+// SAFETY: globalThis.HTMLElement is the browser DOM base; SSR uses the inert fallback.
+const HTMLElementBase = (globalThis.HTMLElement ?? class {}) as typeof HTMLElement;
 
-function parseJSON(value: string | null): unknown {
+function parseSpecJSON(value: string | null): ChartSpec | undefined {
+  if (value == null) return undefined;
+  try {
+    const parsed = JSON.parse(value);
+    if (Object.prototype.toString.call(parsed) !== '[object Object]') return undefined;
+    // SAFETY: the object tag check establishes that JSON parsing produced a spec object;
+    // chart-specific fields are validated by the core chart constructor.
+    return parsed as ChartSpec;
+  } catch {
+    return undefined;
+  }
+}
+
+function parseDataJSON(value: string | null): FlexibleDataInput | undefined {
   if (value == null) return undefined;
   try {
     return JSON.parse(value);
@@ -68,16 +148,16 @@ export class ChartLiteElement extends HTMLElementBase {
     return OBSERVED;
   }
 
-  private _spec: Record<string, unknown> | null = null;
+  private _spec: ChartSpec | null = null;
   private instance: ChartInstance | null = null;
   private scheduled = false;
 
   /** Set the full chart spec as a JS property (preferred for dynamic data). */
-  set spec(value: Record<string, unknown> | null) {
+  set spec(value: ChartSpec | null) {
     this._spec = value;
     this.schedule();
   }
-  get spec(): Record<string, unknown> | null {
+  get spec(): ChartSpec | null {
     return this._spec;
   }
 
@@ -105,25 +185,23 @@ export class ChartLiteElement extends HTMLElementBase {
   }
 
   /** Merge the property spec (wins) with any attribute-derived spec. */
-  private resolveSpec(): Record<string, unknown> {
+  private resolveSpec(): ChartSpec {
     if (this._spec) return this._spec;
 
-    const attrSpec = parseJSON(this.getAttribute('spec'));
-    if (attrSpec && typeof attrSpec === 'object') {
-      return attrSpec as Record<string, unknown>;
-    }
+    const attrSpec = parseSpecJSON(this.getAttribute('spec'));
+    if (attrSpec !== undefined) return attrSpec;
 
-    const spec: Record<string, unknown> = {};
+    const spec: ChartSpec = {};
     const type = this.getAttribute('type');
     if (type) spec.type = type;
 
-    const data = parseJSON(this.getAttribute('data'));
+    const data = parseDataJSON(this.getAttribute('data'));
     if (data !== undefined) spec.data = data;
 
-    for (const key of ['theme', 'title'] as const) {
-      const value = this.getAttribute(key);
-      if (value != null) spec[key] = value;
-    }
+    const theme = parseTheme(this.getAttribute('theme'));
+    if (theme !== undefined) spec.theme = theme;
+    const title = this.getAttribute('title');
+    if (title !== null) spec.title = title;
     for (const key of ['width', 'height'] as const) {
       const value = this.getAttribute(key);
       if (value != null && value !== '') spec[key] = Number(value);
@@ -154,9 +232,7 @@ export class ChartLiteElement extends HTMLElementBase {
       this.instance?.destroy();
       this.instance = null;
       this.textContent = '';
-      const Ctor = REGISTRY[type as ChartType];
-      if (!Ctor) throw new Error(`Unknown chart type: ${String(type)}`);
-      const chart = new Ctor(this, config);
+      const chart = createChart(this, type, config);
       chart.render();
       this.instance = chart;
       this.dispatchEvent(new CustomEvent('chartlite:render', { detail: { type } }));
@@ -173,8 +249,9 @@ export class ChartLiteElement extends HTMLElementBase {
  * times and a no-op where `customElements` is unavailable (e.g. SSR/Node).
  */
 export function defineChartElement(tagName = 'chart-lite'): void {
-  if (typeof customElements === 'undefined') return;
-  if (!customElements.get(tagName)) {
-    customElements.define(tagName, ChartLiteElement);
+  const registry = globalThis.customElements;
+  if (registry === undefined) return;
+  if (!registry.get(tagName)) {
+    registry.define(tagName, ChartLiteElement);
   }
 }

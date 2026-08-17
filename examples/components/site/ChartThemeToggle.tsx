@@ -10,8 +10,9 @@ import { useState } from 'react';
  * that as its initial state. Persisted to localStorage.
  */
 function initialLight(): boolean {
-  if (typeof document === 'undefined') return false;
-  return document.documentElement.dataset.chartTheme === 'light';
+  const documentRef = globalThis.document;
+  if (documentRef === undefined) return false;
+  return documentRef.documentElement.dataset.chartTheme === 'light';
 }
 
 export default function ChartThemeToggle() {

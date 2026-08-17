@@ -8,12 +8,19 @@
 
 import type { DataPoint, SeriesData } from '../types';
 
-const HTML_ENTITIES: Record<string, string> = {
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-};
+const HTML_ENTITIES = new Map<string, string>([
+  ['&', '&amp;'],
+  ['<', '&lt;'],
+  ['>', '&gt;'],
+  ['"', '&quot;'],
+  ["'", '&#39;'],
+]);
 
-function escapeHTML(value: unknown): string {
-  return String(value).replace(/[&<>"']/g, (character) => HTML_ENTITIES[character]);
+function escapeHTML(value: string | number): string {
+  return String(value).replace(
+    /[&<>"']/g,
+    (character) => HTML_ENTITIES.get(character) ?? character
+  );
 }
 
 /** Fallback title used when the user doesn't supply one (e.g. "Line Chart"). */

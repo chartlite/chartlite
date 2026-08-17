@@ -4,7 +4,7 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { CHART_TYPES, type ChartSpec } from '@chartlite/core/server';
+import { CHART_TYPES } from '@chartlite/core/server';
 import {
   renderChartInput,
   renderChartResult,
@@ -24,7 +24,21 @@ export function createServer(version = '0.0.0'): McpServer {
         `Supported types: ${CHART_TYPES.join(', ')}. Call list_chart_types for the full schema.`,
       inputSchema: renderChartInput,
     },
-    async ({ spec }) => renderChartResult(spec as ChartSpec)
+    async ({ spec }) => {
+      // Preserve the validated literal discriminator so TypeScript and the core
+      // renderer agree on the chart-specific branch. Core decodes the flexible
+      // data contract and validates chart options while rendering.
+      switch (spec.type) {
+        case 'line': return renderChartResult({ ...spec, type: 'line' });
+        case 'bar': return renderChartResult({ ...spec, type: 'bar' });
+        case 'area': return renderChartResult({ ...spec, type: 'area' });
+        case 'scatter': return renderChartResult({ ...spec, type: 'scatter' });
+        case 'pie': return renderChartResult({ ...spec, type: 'pie' });
+        case 'radial': return renderChartResult({ ...spec, type: 'radial' });
+        case 'combo': return renderChartResult({ ...spec, type: 'combo' });
+        case 'sparkline': return renderChartResult({ ...spec, type: 'sparkline' });
+      }
+    }
   );
 
   server.registerTool(

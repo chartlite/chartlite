@@ -5,6 +5,8 @@
 ```bash
 pnpm install
 pnpm build
+pnpm lint
+pnpm test
 pnpm dev
 ```
 
@@ -20,5 +22,7 @@ pnpm dev
 
 - Focus on performance
 - Keep bundle size small
-- Write tests for new features
+- Keep the anti-slop and workspace lint gates green
+- Write tests that protect distinct behavior or failure modes; avoid coverage-padding
+  and duplicate smoke assertions
 - Update documentation

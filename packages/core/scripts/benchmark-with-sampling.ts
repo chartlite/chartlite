@@ -7,20 +7,21 @@
 
 import { JSDOM } from 'jsdom';
 import { LineChart } from '../src/charts/LineChart';
-import { BarChart } from '../src/charts/BarChart';
 
 // Set up JSDOM environment
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-global.document = dom.window.document as any;
-global.window = dom.window as any;
-global.HTMLElement = dom.window.HTMLElement as any;
-global.SVGElement = dom.window.SVGElement as any;
-global.Element = dom.window.Element as any;
-global.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as any;
+Object.assign(globalThis, {
+  document: dom.window.document,
+  window: dom.window,
+  HTMLElement: dom.window.HTMLElement,
+  SVGElement: dom.window.SVGElement,
+  Element: dom.window.Element,
+  ResizeObserver: class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+});
 
 // Helper to generate data
 function generateData(count: number) {
@@ -31,9 +32,9 @@ function generateData(count: number) {
 }
 
 function generateMultiSeriesData(count: number, seriesCount: number = 3) {
-  const data: any[] = [];
+  const data: BenchmarkRecord[] = [];
   for (let i = 0; i < count; i++) {
-    const point: any = { x: `Point ${i}` };
+    const point: BenchmarkRecord = { x: `Point ${i}` };
     for (let s = 0; s < seriesCount; s++) {
       point[`series${s}`] = Math.random() * 100;
     }
@@ -46,6 +47,10 @@ function generateMultiSeriesData(count: number, seriesCount: number = 3) {
   }));
 
   return { series, data };
+}
+
+interface BenchmarkRecord {
+  [key: string]: string | number;
 }
 
 // Benchmark function

@@ -10,12 +10,31 @@ import type {
   SeriesFirstData,
   SeriesData,
   SeriesDefinition,
+  SeriesFirstRecord,
 } from '../types';
 
 const isFiniteNumber = (value: any): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 const isXValue = (value: any): value is string | number =>
   typeof value === 'string' || isFiniteNumber(value);
+
+const isSeriesDefinition = (value: any): value is SeriesDefinition =>
+  Boolean(value) &&
+  typeof value === 'object' &&
+  typeof value.name === 'string' &&
+  typeof value.dataKey === 'string' &&
+  (value.type === undefined || ['line', 'bar', 'area'].includes(value.type)) &&
+  (value.color === undefined || typeof value.color === 'string');
+
+const isSeriesRecord = (value: any): value is SeriesFirstRecord =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const isDataPoint = (value: any): value is DataPoint =>
+  Boolean(value) &&
+  typeof value === 'object' &&
+  isXValue(value.x) &&
+  isFiniteNumber(value.y) &&
+  (value.label === undefined || typeof value.label === 'string');
 
 /**
  * Check if data is in column-oriented format
@@ -55,22 +74,15 @@ function isSeriesFirstData(data: any): data is SeriesFirstData {
 
   // Validate series definitions and every record. Series-first input commonly
   // arrives from JSON, so the TypeScript shape alone is not a runtime guarantee.
-  const validSeries = data.series.every((s: any) =>
-    s &&
-    typeof s === 'object' &&
-    typeof s.name === 'string' &&
-    typeof s.dataKey === 'string' &&
-    (s.type === undefined || ['line', 'bar', 'area'].includes(s.type)) &&
-    (s.color === undefined || typeof s.color === 'string')
-  );
+  const validSeries = data.series.every(isSeriesDefinition);
   if (!validSeries || (data.xKey !== undefined && typeof data.xKey !== 'string')) return false;
 
-  if (!data.data.every((record: any) => record && typeof record === 'object')) return false;
+  if (!data.data.every(isSeriesRecord)) return false;
   const firstRecord = data.data[0];
-  const dataKeys = data.series.map((s: any) => s.dataKey);
+  const dataKeys = data.series.map((series: SeriesDefinition) => series.dataKey);
   const xAxisKey = data.xKey || Object.keys(firstRecord).find((key) => !dataKeys.includes(key)) || Object.keys(firstRecord)[0];
 
-  return data.data.every((record: any) => {
+  return data.data.every((record: SeriesFirstRecord) => {
     const x = record[xAxisKey];
     if (!isXValue(x)) return false;
     return dataKeys.every((key: string) =>
@@ -91,13 +103,20 @@ function isNumberArray(data: any): data is number[] {
  * Check if data is already in DataPoint[] format
  */
 function isDataPointArray(data: any): data is DataPoint[] {
-  return Array.isArray(data) && data.every((item) =>
-    item &&
-    typeof item === 'object' &&
-    isXValue(item.x) &&
-    isFiniteNumber(item.y) &&
-    (item.label === undefined || typeof item.label === 'string')
-  );
+  return Array.isArray(data) && data.every(isDataPoint);
+}
+
+function readSeriesX(record: SeriesFirstRecord, key: string): string | number {
+  const value = record[key];
+  if (!isXValue(value)) throw new Error(`Invalid x value for series key "${key}"`);
+  return value;
+}
+
+function readSeriesY(record: SeriesFirstRecord, key: string): number {
+  const value = record[key];
+  if (value === undefined) return 0;
+  if (!isFiniteNumber(value)) throw new Error(`Invalid y value for series key "${key}"`);
+  return value;
 }
 
 /**
@@ -148,8 +167,8 @@ function convertSeriesFirstData(data: SeriesFirstData): DataPoint[] {
   const firstSeries = series[0];
 
   return records.map(record => ({
-    x: record[xAxisKey],
-    y: record[firstSeries.dataKey],
+    x: readSeriesX(record, xAxisKey),
+    y: readSeriesY(record, firstSeries.dataKey),
   }));
 }
 
@@ -215,7 +234,7 @@ export function isMultiSeriesData(data: FlexibleDataInput): boolean {
   }
 
   if (isColumnOrientedData(data)) {
-    return typeof data.y === 'object' && !Array.isArray(data.y);
+    return !Array.isArray(data.y);
   }
 
   return false;
@@ -230,7 +249,7 @@ export function extractSeriesDefinitions(data: FlexibleDataInput): SeriesDefinit
     return data.series;
   }
 
-  if (isColumnOrientedData(data) && typeof data.y === 'object' && !Array.isArray(data.y)) {
+  if (isColumnOrientedData(data) && !Array.isArray(data.y)) {
     // Convert column-oriented multi-series to SeriesDefinition[]
     return Object.keys(data.y).map((key) => ({
       name: key,
@@ -263,8 +282,8 @@ export function normalizeToSeriesData(
       color: s.color,
       type: s.type,
       data: records.map(record => ({
-        x: record[xAxisKey],
-        y: record[s.dataKey] ?? 0,
+        x: readSeriesX(record, xAxisKey),
+        y: readSeriesY(record, s.dataKey),
       })),
     }));
   }
@@ -323,7 +342,12 @@ export function getAllXValues(seriesData: SeriesData[]): (string | number)[] {
 /**
  * Get combined y-axis range from multi-series data
  */
-export function getCombinedYRange(seriesData: SeriesData[]): { min: number; max: number } {
+export interface NumericRange {
+  min: number;
+  max: number;
+}
+
+export function getCombinedYRange(seriesData: SeriesData[]): NumericRange {
   let min = Infinity;
   let max = -Infinity;
 

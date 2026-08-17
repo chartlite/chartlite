@@ -9,29 +9,26 @@ import {
   Sparkline as CoreSparkline,
 } from '@chartlite/core';
 import { defineChartComponent } from './ChartFrame';
-import type { ChartConstructor } from './useChart';
+import type {
+  ChartConfigByType,
+  ChartConfig,
+  ChartConstructor,
+  ChartType,
+} from './useChart';
+
+export type { ChartType } from './useChart';
 
 /** Every chart type the generic `<Chart>` can render. */
-export type ChartType =
-  | 'line'
-  | 'bar'
-  | 'area'
-  | 'scatter'
-  | 'pie'
-  | 'radial'
-  | 'combo'
-  | 'sparkline';
-
-const REGISTRY: Record<ChartType, ChartConstructor> = {
-  line: CoreLine as unknown as ChartConstructor,
-  bar: CoreBar as unknown as ChartConstructor,
-  area: CoreArea as unknown as ChartConstructor,
-  scatter: CoreScatter as unknown as ChartConstructor,
-  pie: CorePie as unknown as ChartConstructor,
-  radial: CoreRadial as unknown as ChartConstructor,
-  combo: CoreCombo as unknown as ChartConstructor,
-  sparkline: CoreSparkline as unknown as ChartConstructor,
-};
+const REGISTRY = {
+  line: CoreLine,
+  bar: CoreBar,
+  area: CoreArea,
+  scatter: CoreScatter,
+  pie: CorePie,
+  radial: CoreRadial,
+  combo: CoreCombo,
+  sparkline: CoreSparkline,
+} satisfies { [K in ChartType]: ChartConstructor<ChartConfigByType[K]> };
 
 /**
  * Generic, spec-driven chart. Bind a `type` plus any Chartlite config as
@@ -42,6 +39,9 @@ const REGISTRY: Record<ChartType, ChartConstructor> = {
  * ```
  */
 export const Chart = /* @__PURE__ */ defineChartComponent('Chart', (attrs) => {
-  const type = attrs.type as ChartType | undefined;
-  return type ? REGISTRY[type] : undefined;
+  const type = attrs.type;
+  if (!type) return undefined;
+  // SAFETY: the discriminator selects the matching constructor; Vue fall-through
+  // attrs cannot express this per-key generic relationship in the component type.
+  return REGISTRY[type] as ChartConstructor<ChartConfig>;
 });

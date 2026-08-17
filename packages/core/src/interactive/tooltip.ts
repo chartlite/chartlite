@@ -56,7 +56,7 @@ export function tooltip(options: TooltipOptions = {}): ChartPlugin {
       fontSize: `${options.fontSize ?? 12}px`,
       fontFamily: 'system-ui, -apple-system, sans-serif',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-    } as Partial<CSSStyleDeclaration>);
+    } satisfies Partial<CSSStyleDeclaration>);
     if (options.className) el.className = options.className;
     document.body.appendChild(el);
     return el;
@@ -73,13 +73,15 @@ export function tooltip(options: TooltipOptions = {}): ChartPlugin {
     afterRender(ctx: PluginContext): void {
       if (!ctx.svg) return;
       const tip = ensure();
-      ctx.svg.querySelectorAll('.data-point').forEach((pt) => {
+      ctx.svg.querySelectorAll<SVGElement>('.data-point').forEach((pt) => {
         pt.addEventListener('mouseenter', (e) => {
           tip.textContent = format(readPointEvent(pt, e));
           tip.style.display = 'block';
-          move(e as MouseEvent);
+          if (e instanceof MouseEvent) move(e);
         });
-        pt.addEventListener('mousemove', (e) => move(e as MouseEvent));
+        pt.addEventListener('mousemove', (e) => {
+          if (e instanceof MouseEvent) move(e);
+        });
         pt.addEventListener('mouseleave', () => {
           tip.style.display = 'none';
         });

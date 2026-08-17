@@ -1,5 +1,16 @@
-import { defineComponent, h, type PropType } from 'vue';
-import { useChart, type ChartConstructor } from './useChart';
+import { defineComponent, h, type PropType, type StyleValue } from 'vue';
+import {
+  useChart,
+  type ChartConfig,
+  type ChartConstructor,
+  type ChartType,
+} from './useChart';
+
+type ChartAttrs<C extends ChartConfig> = C & {
+  type?: ChartType;
+  class?: string;
+  style?: StyleValue;
+};
 
 /**
  * Internal factory: builds a Vue component bound to a core chart class. All
@@ -11,31 +22,35 @@ import { useChart, type ChartConstructor } from './useChart';
  * constructor from its `type` attr; named components ignore the argument.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export function defineChartComponent(
+export function defineChartComponent<C extends ChartConfig>(
   name: string,
-  resolveCtor: (attrs: Record<string, unknown>) => ChartConstructor | undefined
+  resolveCtor: (attrs: ChartAttrs<C>) => ChartConstructor<C> | undefined
 ) {
   return defineComponent({
     name,
     inheritAttrs: false,
     props: {
       onError: {
+        // SAFETY: Vue's runtime validator is the Function constructor; PropType
+        // supplies the callback signature that the wrapper invokes.
         type: Function as PropType<(error: Error) => void>,
         default: undefined,
       },
     },
     setup(props, { attrs }) {
-      const getConfig = (): Record<string, unknown> => {
-        // Everything except container-level attrs becomes chart config.
-        const { class: _class, style: _style, type: _type, ...config } = attrs as Record<
-          string,
-          unknown
-        >;
+      // SAFETY: Vue fall-through attrs are the public chart config at this boundary;
+      // core constructors validate the required data and option values before render.
+      const chartAttrs = attrs as ChartAttrs<C>;
+      const getConfig = (): C => {
+        const config = { ...chartAttrs };
+        delete config.class;
+        delete config.style;
+        delete config.type;
         return config;
       };
 
       const { container, error } = useChart(
-        () => resolveCtor(attrs as Record<string, unknown>),
+        () => resolveCtor(chartAttrs),
         getConfig,
         () => props.onError
       );
@@ -45,20 +60,22 @@ export function defineChartComponent(
           return h(
             'div',
             {
-              class: attrs.class,
-              style: {
-                ...(attrs.style as object),
-                padding: '20px',
-                color: '#dc2626',
-                border: '1px solid #fecaca',
-                borderRadius: '4px',
-                backgroundColor: '#fee2e2',
-              },
+              class: chartAttrs.class,
+              style: [
+                chartAttrs.style,
+                {
+                  padding: '20px',
+                  color: '#dc2626',
+                  border: '1px solid #fecaca',
+                  borderRadius: '4px',
+                  backgroundColor: '#fee2e2',
+                },
+              ],
             },
             [h('strong', 'Chart Error: '), error.value.message]
           );
         }
-        return h('div', { ref: container, class: attrs.class, style: attrs.style });
+        return h('div', { ref: container, class: chartAttrs.class, style: chartAttrs.style });
       };
     },
   });

@@ -10,33 +10,32 @@ import {
   Sparkline as CoreSparkline,
 } from '@chartlite/core';
 import { ChartFrame, type ChartFrameOwnProps } from './ChartFrame';
-import type { ChartConstructor } from './useChart';
+import type {
+  ChartConfigByType,
+  ChartConstructor,
+  ChartType,
+} from './useChart';
 
-/** Every chart type the generic `<Chart>` can render. */
-export type ChartType =
-  | 'line'
-  | 'bar'
-  | 'area'
-  | 'scatter'
-  | 'pie'
-  | 'radial'
-  | 'combo'
-  | 'sparkline';
+export type { ChartType } from './useChart';
 
 /**
  * Maps a `type` string to its core chart class. Referenced statically, so using
  * `<Chart>` bundles all chart types — reach for the named components
  * (`<LineChart>`, …) instead if you want per-type tree-shaking.
  */
-const REGISTRY: Record<ChartType, ChartConstructor> = {
-  line: CoreLine as unknown as ChartConstructor,
-  bar: CoreBar as unknown as ChartConstructor,
-  area: CoreArea as unknown as ChartConstructor,
-  scatter: CoreScatter as unknown as ChartConstructor,
-  pie: CorePie as unknown as ChartConstructor,
-  radial: CoreRadial as unknown as ChartConstructor,
-  combo: CoreCombo as unknown as ChartConstructor,
-  sparkline: CoreSparkline as unknown as ChartConstructor,
+type ChartRegistry = {
+  [K in ChartType]: ChartConstructor<ChartConfigByType[K]>;
+};
+
+const REGISTRY: ChartRegistry = {
+  line: CoreLine,
+  bar: CoreBar,
+  area: CoreArea,
+  scatter: CoreScatter,
+  pie: CorePie,
+  radial: CoreRadial,
+  combo: CoreCombo,
+  sparkline: CoreSparkline,
 };
 
 /**
@@ -48,17 +47,19 @@ const REGISTRY: Record<ChartType, ChartConstructor> = {
  * <Chart type="combo" data={{ series: […], data: […] }} theme="tailwind" />
  * ```
  */
-export function Chart({
+export function Chart<K extends ChartType>({
   type,
   className,
   style,
   onError,
   ...config
-}: { type: ChartType } & ChartFrameOwnProps & Record<string, unknown>): ReactElement {
+}: { type: K } & ChartFrameOwnProps & ChartConfigByType[K]): ReactElement {
+  // SAFETY: `config` is the chart-specific props after removing only React wrapper props.
+  const chartConfig = config as ChartConfigByType[K];
   return (
-    <ChartFrame
+    <ChartFrame<ChartConfigByType[K]>
       ctor={REGISTRY[type]}
-      config={config}
+      config={chartConfig}
       className={className}
       style={style}
       onError={onError}

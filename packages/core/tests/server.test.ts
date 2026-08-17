@@ -14,9 +14,16 @@ const lineData = [
   { x: 'Mar', y: 15 },
 ];
 
+type HeadlessGlobals = Omit<typeof globalThis, 'document' | 'HTMLElement'> & {
+  document?: Document;
+  HTMLElement?: typeof HTMLElement;
+};
+
 /** Run a function with the real DOM removed, so the SSR shim must be used. */
 function headless<T>(fn: () => T): T {
-  const g = globalThis as Record<string, unknown>;
+  // SAFETY: the test only replaces these two host globals and restores the exact
+  // saved values in the finally block below.
+  const g = globalThis as HeadlessGlobals;
   const savedDoc = g.document;
   const savedHtml = g.HTMLElement;
   // Force `typeof document === 'undefined'` so installDOM() installs the shim.
@@ -137,7 +144,7 @@ describe('SSR shim (no real DOM)', () => {
 
   it('restores the global document afterwards', () => {
     headless(() => renderToString({ type: 'line', data: lineData }));
-    expect(typeof document).toBe('object');
+    expect(document).toBeInstanceOf(Document);
   });
 });
 

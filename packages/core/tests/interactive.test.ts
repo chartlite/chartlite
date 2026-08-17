@@ -9,6 +9,7 @@ import {
   interactive,
 } from '../src/interactive';
 import type { ChartPointEvent, LegendToggleEvent } from '../src/types';
+import { requireElement } from './test-helpers';
 
 const single = [
   { x: 'Jan', y: 10 },
@@ -52,7 +53,7 @@ describe('interactive plugins', () => {
       const pt = container.querySelector('.data-point')!;
 
       fire(pt, 'mouseenter');
-      const tip = document.querySelector('body > div:last-child') as HTMLDivElement;
+      const tip = requireElement<HTMLDivElement>(document, 'body > div:last-child');
       expect(tip.style.display).toBe('block');
       expect(tip.textContent).toContain('Jan');
       expect(tip.textContent).toContain('10');
@@ -68,7 +69,7 @@ describe('interactive plugins', () => {
       }).render();
       const pt = container.querySelector('.data-point')!;
       fire(pt, 'mouseenter');
-      const tip = document.querySelector('body > div:last-child') as HTMLDivElement;
+      const tip = requireElement<HTMLDivElement>(document, 'body > div:last-child');
       expect(tip.textContent).toBe('V=10');
     });
 
@@ -118,7 +119,7 @@ describe('interactive plugins', () => {
     it('does nothing when no handlers are provided', () => {
       // Should not throw and should not attach a pointer cursor.
       new LineChart(container, { data: single, plugins: [callbacks()] }).render();
-      const pt = container.querySelector('.data-point') as SVGElement;
+      const pt = requireElement<SVGElement>(container, '.data-point');
       expect(pt.style.cursor).toBe('');
     });
 
@@ -148,7 +149,7 @@ describe('interactive plugins', () => {
       }).render();
 
       const item = container.querySelector('.legend-item[data-series-index="0"]')!;
-      const mainSeries0 = container.querySelectorAll(
+      const mainSeries0 = container.querySelectorAll<SVGElement>(
         'g.chart-main [data-series-index="0"]'
       );
       expect(mainSeries0.length).toBeGreaterThan(0);
@@ -158,14 +159,14 @@ describe('interactive plugins', () => {
       expect(toggles[0].hidden).toBe(true);
       expect(toggles[0].seriesIndex).toBe(0);
       mainSeries0.forEach((el) => {
-        expect((el as SVGElement).style.display).toBe('none');
+        expect(el.style.display).toBe('none');
       });
 
       // toggling back shows it again
       fire(item, 'click');
       expect(toggles[1].hidden).toBe(false);
       mainSeries0.forEach((el) => {
-        expect((el as SVGElement).style.display).toBe('');
+        expect(el.style.display).toBe('');
       });
     });
 
@@ -186,7 +187,7 @@ describe('interactive plugins', () => {
   describe('crosshair()', () => {
     it('adds a hidden crosshair group that appears on hover', () => {
       new LineChart(container, { data: single, plugins: [crosshair()] }).render();
-      const group = container.querySelector('.chart-crosshair') as SVGGElement;
+      const group = requireElement<SVGGElement>(container, '.chart-crosshair');
       expect(group).toBeTruthy();
       expect(group.style.display).toBe('none');
 

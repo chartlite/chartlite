@@ -13,9 +13,15 @@ export interface KeyboardNavigatorOptions {
   /** The focusable chart SVG. */
   svg: SVGSVGElement;
   /** Emit a plugin event (e.g. `datapoint:activate`). */
-  emit: (eventName: string, data?: unknown) => void;
+  emit: (eventName: string, data?: KeyboardActivationEvent) => void;
   /** Register an event listener through the chart's tracked-cleanup mechanism. */
-  addListener: (element: EventTarget, event: string, handler: EventListener) => void;
+  addListener: (element: Element, event: string, handler: EventListener) => void;
+}
+
+export interface KeyboardActivationEvent {
+  element: SVGElement;
+  index: number;
+  ariaLabel: string | null;
 }
 
 export class KeyboardNavigator {
@@ -23,13 +29,15 @@ export class KeyboardNavigator {
   private focusableElements: SVGElement[] = [];
   private liveRegion: HTMLElement | null = null;
   private readonly svg: SVGSVGElement;
-  private readonly emit: (eventName: string, data?: unknown) => void;
+  private readonly emit: (eventName: string, data?: KeyboardActivationEvent) => void;
 
   constructor(options: KeyboardNavigatorOptions) {
     this.svg = options.svg;
     this.emit = options.emit;
 
-    options.addListener(this.svg, 'keydown', (e) => this.handleKeyDown(e as KeyboardEvent));
+    options.addListener(this.svg, 'keydown', (event) => {
+      if (event instanceof KeyboardEvent) this.handleKeyDown(event);
+    });
     options.addListener(this.svg, 'focus', () => this.handleFocus());
     options.addListener(this.svg, 'blur', () => this.handleBlur());
   }
@@ -47,8 +55,8 @@ export class KeyboardNavigator {
 
   private collectFocusableElements(): void {
     // Find all data points with the data-point class
-    const elements = this.svg.querySelectorAll('.data-point');
-    this.focusableElements = Array.from(elements) as SVGElement[];
+    const elements = this.svg.querySelectorAll<SVGElement>('.data-point');
+    this.focusableElements = Array.from(elements);
   }
 
   private handleKeyDown(event: KeyboardEvent): void {

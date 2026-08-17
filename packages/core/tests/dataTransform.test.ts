@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeData, extractColorsFromSeriesData } from '../src/utils/dataTransform';
+import {
+  normalizeData,
+  normalizeToSeriesData,
+  extractColorsFromSeriesData,
+} from '../src/utils/dataTransform';
 import type { DataPoint, ColumnOrientedData, SeriesFirstData } from '../src/types';
 
 describe('Data Transformation', () => {
@@ -120,6 +124,44 @@ describe('Data Transformation', () => {
         expect(result).toEqual([
           { x: 'Jan', y: 100 },
           { x: 'Feb', y: 150 },
+        ]);
+      });
+
+      it('should normalize missing series values to zero in both paths', () => {
+        const data: SeriesFirstData = {
+          series: [
+            { name: 'Revenue', dataKey: 'revenue' },
+            { name: 'Profit', dataKey: 'profit' },
+          ],
+          data: [
+            { month: 'Jan', revenue: 100, profit: 50 },
+            { month: 'Feb', profit: 75 },
+          ],
+        };
+
+        expect(normalizeData(data)).toEqual([
+          { x: 'Jan', y: 100 },
+          { x: 'Feb', y: 0 },
+        ]);
+        expect(normalizeToSeriesData(data)).toEqual([
+          {
+            name: 'Revenue',
+            color: undefined,
+            type: undefined,
+            data: [
+              { x: 'Jan', y: 100 },
+              { x: 'Feb', y: 0 },
+            ],
+          },
+          {
+            name: 'Profit',
+            color: undefined,
+            type: undefined,
+            data: [
+              { x: 'Jan', y: 50 },
+              { x: 'Feb', y: 75 },
+            ],
+          },
         ]);
       });
 

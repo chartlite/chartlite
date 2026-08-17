@@ -91,7 +91,8 @@ describe('@chartlite/vue', () => {
 
   it('destroys the chart on unmount', () => {
     const wrapper = mount(PieChart, { attrs: { data } });
-    const el = wrapper.element as HTMLElement;
+    const el = wrapper.element;
+    expect(el).toBeInstanceOf(HTMLElement);
     expect(el.querySelector('svg')).toBeTruthy();
     wrapper.unmount();
     expect(el.querySelector('svg')).toBeFalsy();

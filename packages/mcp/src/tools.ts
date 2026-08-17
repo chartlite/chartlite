@@ -5,6 +5,8 @@
  */
 
 import { z } from 'zod';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlexibleDataInput } from '@chartlite/core';
 import {
   renderToString,
   CHART_TYPES,
@@ -24,18 +26,70 @@ export const CHART_TYPE_TUPLE = [
   'sparkline',
 ] as const;
 
+const THEME_TUPLE = [
+  'default',
+  'midnight',
+  'minimal',
+  'tailwind',
+  'nord',
+  'high-contrast',
+] as const;
+
+type JSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JSONValue[]
+  | { [key: string]: JSONValue };
+
+const jsonValueSchema: z.ZodType<JSONValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValueSchema),
+    z.record(jsonValueSchema),
+  ])
+);
+
+const xValueSchema = z.union([z.string(), z.number().finite()]);
+const finiteNumberArraySchema = z.array(z.number().finite());
+const flexibleDataSchema: z.ZodType<FlexibleDataInput> = z.union([
+  z.array(z.object({
+    x: xValueSchema,
+    y: z.number().finite(),
+    label: z.string().optional(),
+  })),
+  finiteNumberArraySchema,
+  z.object({
+    x: z.array(xValueSchema),
+    y: z.union([finiteNumberArraySchema, z.record(finiteNumberArraySchema)]),
+  }),
+  z.object({
+    series: z.array(z.object({
+      name: z.string(),
+      dataKey: z.string(),
+      type: z.enum(['line', 'bar', 'area']).optional(),
+      color: z.string().optional(),
+    })),
+    data: z.array(z.record(jsonValueSchema)),
+    xKey: z.string().optional(),
+  }),
+]);
+
 /**
- * Input schema for `render_chart` — a single `spec` object. Kept permissive
- * (`passthrough`) so every Chartlite option is accepted; the core constructors
- * validate and apply defaults. `data` is intentionally `any`: Chartlite accepts
- * four data shapes and normalizes them.
+ * Input schema for `render_chart` — a single `spec` object.
+ * Chart-specific options pass through to core, while the shared fields and all
+ * four supported data shapes are validated at the MCP boundary.
  */
 export const renderChartInput = {
   spec: z
     .object({
       type: z.enum(CHART_TYPE_TUPLE),
-      data: z.any(),
-      theme: z.string().optional(),
+      data: flexibleDataSchema,
+      theme: z.enum(THEME_TUPLE).optional(),
       title: z.string().optional(),
       width: z.number().positive().optional(),
       height: z.number().positive().optional(),
@@ -44,13 +98,7 @@ export const renderChartInput = {
     .describe('A Chartlite ChartSpec: { type, data, ...options }.'),
 };
 
-export interface ToolResult {
-  content: { type: 'text'; text: string }[];
-  isError?: boolean;
-  // MCP's CallToolResult carries an open index signature; mirror it so our
-  // results are assignable to the SDK handler return type.
-  [key: string]: unknown;
-}
+export type ToolResult = CallToolResult;
 
 /** Render a chart spec to SVG. Returns a tool error (not a throw) on bad input. */
 export function renderChartResult(spec: ChartSpec): ToolResult {
@@ -58,8 +106,9 @@ export function renderChartResult(spec: ChartSpec): ToolResult {
     const svg = renderToString(spec);
     return { content: [{ type: 'text', text: svg }] };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
-      content: [{ type: 'text', text: `Error rendering chart: ${(error as Error).message}` }],
+      content: [{ type: 'text', text: `Error rendering chart: ${message}` }],
       isError: true,
     };
   }

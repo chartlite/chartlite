@@ -68,8 +68,8 @@ describe('CSS-variable theming (cssVars)', () => {
       new BarChart(container, { data: multi, cssVars: true }).render();
       const rects = Array.from(container.querySelectorAll('rect'));
       const fills = rects.map((r) => r.getAttribute('fill')).filter(Boolean);
-      expect(fills.some((f) => /^var\(--cl-series-0,/.test(f!))).toBe(true);
-      expect(fills.some((f) => /^var\(--cl-series-1,/.test(f!))).toBe(true);
+      expect(fills.some((f) => f?.startsWith('var(--cl-series-0,') === true)).toBe(true);
+      expect(fills.some((f) => f?.startsWith('var(--cl-series-1,') === true)).toBe(true);
     });
 
     it('uses a custom color as the var fallback', () => {

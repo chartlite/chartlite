@@ -80,7 +80,7 @@ describe('PieChart', () => {
     new PieChart(container, { data }).render();
     // Only the accessibility data-table lives in a foreignObject; no percentage <text>
     const percentTexts = Array.from(container.querySelectorAll('text')).filter((t) =>
-      /%$/.test(t.textContent || '')
+      t.textContent?.endsWith('%') === true
     );
     expect(percentTexts).toHaveLength(0);
   });
@@ -111,11 +111,4 @@ describe('PieChart', () => {
     expect(svg?.getAttribute('aria-label')).toContain('pie chart');
   });
 
-  it('exports to an SVG string after rendering', () => {
-    const chart = new PieChart(container, { data });
-    chart.render();
-    const svg = chart.toSVG();
-    expect(svg).toContain('<svg');
-    expect(svg).toContain('data-point');
-  });
 });

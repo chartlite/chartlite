@@ -30,16 +30,16 @@ export function interactive(options: InteractiveOptions = {}): ChartPlugin[] {
   const plugins: ChartPlugin[] = [];
 
   if (options.tooltip !== false) {
-    plugins.push(tooltip(typeof options.tooltip === 'object' ? options.tooltip : {}));
+    plugins.push(tooltip(options.tooltip === true || options.tooltip === undefined ? {} : options.tooltip));
   }
   if (options.crosshair) {
-    plugins.push(crosshair(typeof options.crosshair === 'object' ? options.crosshair : {}));
+    plugins.push(crosshair(options.crosshair === true ? {} : options.crosshair));
   }
   if (options.legend) {
     plugins.push(legendToggle());
   }
   if (options.callbacks !== false) {
-    plugins.push(callbacks(typeof options.callbacks === 'object' ? options.callbacks : {}));
+    plugins.push(callbacks(options.callbacks === true || options.callbacks === undefined ? {} : options.callbacks));
   }
 
   return plugins;

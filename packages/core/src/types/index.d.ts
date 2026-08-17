@@ -31,13 +31,28 @@ export interface SeriesDefinition {
   color?: string;
 }
 
+/** JSON-compatible values allowed in unused series-first row metadata. */
+export type SeriesFirstValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | SeriesFirstValue[]
+  | { [key: string]: SeriesFirstValue };
+
+/** A row in series-first input: one x value plus numeric series values. */
+export interface SeriesFirstRecord {
+  [key: string]: SeriesFirstValue;
+}
+
 /**
  * Series-first data format
  * Example: { series: [{ name: 'Revenue', dataKey: 'revenue' }], data: [{ month: 'Jan', revenue: 100 }] }
  */
 export interface SeriesFirstData {
   series: SeriesDefinition[];
-  data: Record<string, any>[];
+  data: SeriesFirstRecord[];
   xKey?: string; // Optional key for x-axis, defaults to first non-series key
 }
 
@@ -279,7 +294,7 @@ export interface AreaChartConfig extends BaseChartConfig {
 }
 
 export interface PieChartConfig extends BaseChartConfig {
-  data: DataPoint[];
+  data: FlexibleDataInput;
   /** Inner radius for donut chart (0-1) */
   innerRadius?: number;
   /** Show labels */
