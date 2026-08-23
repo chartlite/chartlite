@@ -14,11 +14,16 @@ import {
   Sparkline as CoreSparkline,
 } from '@chartlite/core';
 import { defineChartComponent } from './ChartFrame';
-import type { ChartConstructor } from './useChart';
+import type {
+  ChartConfig,
+  ChartConstructor,
+} from './useChart';
 
 /* @__NO_SIDE_EFFECTS__ */
-const named = (name: string, ctor: unknown) =>
-  defineChartComponent(name, () => ctor as ChartConstructor);
+const named = <C extends ChartConfig>(
+  name: string,
+  ctor: ChartConstructor<C>
+) => defineChartComponent(name, () => ctor);
 
 export const LineChart = /* @__PURE__ */ named('LineChart', CoreLine);
 export const BarChart = /* @__PURE__ */ named('BarChart', CoreBar);

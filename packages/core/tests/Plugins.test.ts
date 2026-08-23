@@ -143,10 +143,10 @@ describe('Plugin System', () => {
       expect(capturedContext!.data).toEqual(testData);
       expect(capturedContext!.dimensions).toBeDefined();
       expect(capturedContext!.container).toBe(container);
-      expect(typeof capturedContext!.createSVGElement).toBe('function');
-      expect(typeof capturedContext!.emit).toBe('function');
-      expect(typeof capturedContext!.on).toBe('function');
-      expect(typeof capturedContext!.off).toBe('function');
+      expect(capturedContext?.createSVGElement).toEqual(expect.any(Function));
+      expect(capturedContext?.emit).toEqual(expect.any(Function));
+      expect(capturedContext?.on).toEqual(expect.any(Function));
+      expect(capturedContext?.off).toEqual(expect.any(Function));
     });
 
     it('should provide createSVGElement helper that works', () => {
@@ -181,12 +181,10 @@ describe('Plugin System', () => {
   describe('Event System', () => {
     it('should emit and receive custom events', () => {
       const eventHandler = vi.fn();
-      let pluginContext: PluginContext | null = null;
 
       const plugin: ChartPlugin = {
         name: 'test-plugin',
         afterRender: (context) => {
-          pluginContext = context;
           context.on('custom-event', eventHandler);
           context.emit('custom-event', { test: 'data' });
         },

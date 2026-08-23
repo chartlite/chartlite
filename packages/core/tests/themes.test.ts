@@ -56,7 +56,13 @@ describe('charts accept the new theme presets', () => {
   }
 
   it('still rejects an invalid theme', () => {
-    expect(() => new LineChart(container, { data, theme: 'neon' as never })).toThrow(
+    expect(() =>
+      new LineChart(container, {
+        data,
+        // @ts-expect-error: this test intentionally exercises runtime theme validation.
+        theme: 'neon',
+      })
+    ).toThrow(
       /Invalid theme/
     );
   });

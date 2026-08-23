@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { RadialChart } from '../src/charts/RadialChart';
 
+function dataArcPath(container: HTMLElement): string {
+  const path = container.querySelector('path.data-point')?.getAttribute('d');
+  if (!path) throw new Error('Expected a radial data arc');
+  return path;
+}
+
 describe('RadialChart', () => {
   let container: HTMLDivElement;
   beforeEach(() => {
@@ -58,17 +64,27 @@ describe('RadialChart', () => {
   });
 
   it('clamps values above max to a full arc', () => {
+    new RadialChart(container, { data: [{ x: 'Max', y: 100 }], max: 100 }).render();
+    const maxPath = dataArcPath(container);
+
+    container.innerHTML = '';
     new RadialChart(container, { data: [{ x: 'Over', y: 150 }], max: 100 }).render();
-    expect(container.querySelectorAll('path.data-point')).toHaveLength(1);
+    expect(dataArcPath(container)).toBe(maxPath);
+    expect(container.querySelector('path.data-point')?.getAttribute('aria-label'))
+      .toBe('Over: 150 (100%)');
   });
 
-  it('supports a gauge sweep (startAngle/endAngle)', () => {
+  it('uses startAngle/endAngle to change the rendered sweep', () => {
+    new RadialChart(container, { data: [{ x: 'Speed', y: 60 }], max: 100 }).render();
+    const fullSweepPath = dataArcPath(container);
+
+    container.innerHTML = '';
     new RadialChart(container, {
       data: [{ x: 'Speed', y: 60 }],
       max: 100,
       startAngle: -90,
       endAngle: 90,
     }).render();
-    expect(container.querySelector('path.data-point')).toBeTruthy();
+    expect(dataArcPath(container)).not.toBe(fullSweepPath);
   });
 });

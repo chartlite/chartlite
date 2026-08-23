@@ -34,12 +34,14 @@ examples          Next.js demo/docs site (deployed via .github/workflows/static.
 ```bash
 pnpm install
 pnpm build                              # turbo build all packages
+pnpm lint                               # anti-slop + workspace lint/typecheck
+pnpm lint:anti-slop                     # vendored anti-slop Oxlint gate
 pnpm --filter @chartlite/core test      # 400+ vitest tests (jsdom)
 pnpm --filter @chartlite/core lint      # tsc --noEmit
 pnpm --filter @chartlite/core gen:schema  # regenerate schema.json from src/server/schema.ts
 ```
 
-Node ≥ 20, pnpm, TypeScript strict. Windows-friendly (avoid Unix-only shell in scripts).
+Node ^20.19 or ≥ 22.12, pnpm, TypeScript strict. Windows-friendly (avoid Unix-only shell in scripts).
 
 ## Non-negotiable conventions
 
@@ -55,11 +57,19 @@ Node ≥ 20, pnpm, TypeScript strict. Windows-friendly (avoid Unix-only shell in
   read these. Keep them when adding shapes.
 - **Zero runtime dependencies** in `@chartlite/core`. (`@chartlite/mcp` may depend on the
   MCP SDK + zod; that's its own package.)
-- **Tests first-class:** add/extend vitest coverage with any behavior change; keep the
-  suite green. Don't weaken assertions to pass.
+- **Tests first-class:** add or extend Vitest coverage for behavior changes, but
+  optimize for regression signal rather than test count or coverage percentage.
+  Assert the contract that should break, test shared `BaseChart` behavior once,
+  and avoid redundant "renders/does not throw" cases. Keep timing experiments in
+  the dedicated benchmark script. Don't weaken assertions to pass.
 - **Schema can't drift:** `src/server/schema.ts` is the source of truth; run `gen:schema`
   and commit `schema.json` (a test enforces they match and that the type enum matches the
   render registry).
+- **Anti-slop is enforced:** the vendored plugin lives in
+  `tools/oxlint/anti-slop/` and every rule is an error in `oxlint.config.mjs`.
+  Fix findings with stronger contracts or checked invariants; do not suppress
+  the rules. Runtime `typeof` belongs only in named type guards. The exact chart
+  domain names `shape` and `pointShape` are the sole local naming exceptions.
 
 ## Release process (Changesets + npm OIDC)
 

@@ -31,9 +31,9 @@ export function callbacks(handlers: CallbackHandlers = {}): ChartPlugin {
       const onHover = handlers.onHover ?? ctx.config.onHover;
       if (!onPointClick && !onHover) return;
 
-      ctx.svg.querySelectorAll('.data-point').forEach((pt) => {
+      ctx.svg.querySelectorAll<SVGElement>('.data-point').forEach((pt) => {
         if (onPointClick) {
-          (pt as SVGElement).style.cursor = 'pointer';
+          pt.style.cursor = 'pointer';
           pt.addEventListener('click', (e) => onPointClick(readPointEvent(pt, e)));
         }
         if (onHover) {

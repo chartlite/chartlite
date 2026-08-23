@@ -1,4 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
+import type {
+  AreaChartConfig,
+  BarChartConfig,
+  ComboChartConfig,
+  LineChartConfig,
+  PieChartConfig,
+  RadialChartConfig,
+  ScatterChartConfig,
+  SparklineConfig,
+} from '@chartlite/core';
+
+export type ChartType =
+  | 'line'
+  | 'bar'
+  | 'area'
+  | 'scatter'
+  | 'pie'
+  | 'radial'
+  | 'combo'
+  | 'sparkline';
+
+/** Configuration accepted by each React chart wrapper. */
+export interface ChartConfigByType {
+  line: LineChartConfig;
+  bar: BarChartConfig;
+  area: AreaChartConfig;
+  scatter: ScatterChartConfig;
+  pie: PieChartConfig;
+  radial: RadialChartConfig;
+  combo: ComboChartConfig;
+  sparkline: SparklineConfig;
+}
+
+export type ChartConfig = ChartConfigByType[ChartType];
 
 /** The subset of the core chart instance the wrapper relies on. */
 interface ChartInstance {
@@ -7,19 +41,19 @@ interface ChartInstance {
 }
 
 /** Any core chart constructor: `new Ctor(container, config)`. */
-export type ChartConstructor = new (
+export type ChartConstructor<C extends ChartConfig> = new (
   container: HTMLElement,
-  config: Record<string, unknown>
+  config: C
 ) => ChartInstance;
 
 /**
  * Build a stable dependency key from a config object. Functions are compared by
  * identity so callback, formatter, and plugin changes recreate the chart too.
  */
-const identities = new WeakMap<object, number>();
+const identities = new WeakMap<WeakKey, number>();
 let nextIdentity = 0;
 
-function identity(value: object): number {
+function identity(value: WeakKey): number {
   let id = identities.get(value);
   if (id === undefined) {
     id = ++nextIdentity;
@@ -28,10 +62,10 @@ function identity(value: object): number {
   return id;
 }
 
-function configSignature(config: Record<string, unknown>): string {
+function configSignature(config: ChartConfig): string {
   try {
     return JSON.stringify(config, (_key, value) =>
-      typeof value === 'function' ? `__chartlite_fn_${identity(value)}` : value
+      value instanceof Function ? `__chartlite_fn_${identity(value)}` : value
     );
   } catch {
     return `__chartlite_config_${identity(config)}`;
@@ -46,11 +80,16 @@ function configSignature(config: Record<string, unknown>): string {
  * Named components pass a concrete `Ctor` so only that chart class is bundled;
  * the generic `<Chart>` resolves `Ctor` from the registry.
  */
-export function useChart(
-  Ctor: ChartConstructor | undefined,
-  config: Record<string, unknown>,
+export interface UseChartResult {
+  containerRef: React.RefObject<HTMLDivElement>;
+  error: Error | null;
+}
+
+export function useChart<C extends ChartConfig>(
+  Ctor: ChartConstructor<C> | undefined,
+  config: C,
   onError?: (error: Error) => void
-): { containerRef: React.RefObject<HTMLDivElement>; error: Error | null } {
+): UseChartResult {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ChartInstance | null>(null);
   const [error, setError] = useState<Error | null>(null);

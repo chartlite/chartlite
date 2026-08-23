@@ -1,0 +1,8 @@
+/** Return a queried element after enforcing the DOM invariant in the test. */
+export function requireElement<T extends Element>(root: ParentNode, selector: string): T {
+  const element = root.querySelector<T>(selector);
+  if (!element) {
+    throw new Error(`Expected element matching ${selector}`);
+  }
+  return element;
+}

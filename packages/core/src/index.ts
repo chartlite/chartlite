@@ -75,9 +75,16 @@ export { downsampleLTTB, downsampleEveryNth, autoDownsample } from './utils/samp
 // Export plugins (tree-shakeable - only included when explicitly imported)
 export { DebugPlugin } from './plugins/DebugPlugin';
 
-// Version — injected at build time from package.json (see tsup.config.ts). The
-// `typeof` guard is safe even when the define is absent (e.g. raw ts-node), because
-// `typeof` on an undeclared identifier yields "undefined" rather than throwing.
+// Version — injected at build time from package.json (see tsup.config.ts) and
+// supplied by vitest.config.ts under the test runner. The catch preserves raw
+// source imports in tsx/ts-node, where the injected identifier is absent.
 declare const __CHARTLITE_VERSION__: string;
-export const VERSION: string =
-  typeof __CHARTLITE_VERSION__ !== 'undefined' ? __CHARTLITE_VERSION__ : '0.0.0-dev';
+function readVersion(): string {
+  try {
+    return __CHARTLITE_VERSION__;
+  } catch {
+    return '0.0.0-dev';
+  }
+}
+
+export const VERSION: string = readVersion();

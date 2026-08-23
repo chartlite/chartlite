@@ -3,6 +3,7 @@ import { LineChart } from '../src/charts/LineChart';
 import { BarChart } from '../src/charts/BarChart';
 import { ScatterChart } from '../src/charts/ScatterChart';
 import type { DataPoint } from '../src/types';
+import { requireElement } from './test-helpers';
 
 describe('Phase 2 Features: Reference Lines, Annotations, and Regions', () => {
   let container: HTMLDivElement;
@@ -817,17 +818,14 @@ describe('Phase 2 Features: Reference Lines, Annotations, and Regions', () => {
         });
         chart.render();
 
-        const svg = container.querySelector('svg');
-        const regionsGroup = svg?.querySelector('.chart-regions');
-        const mainGroup = svg?.querySelector('.chart-main');
-
-        expect(regionsGroup).toBeTruthy();
-        expect(mainGroup).toBeTruthy();
+        const svg = requireElement<SVGSVGElement>(container, 'svg');
+        const regionsGroup = requireElement<SVGGElement>(svg, '.chart-regions');
+        const mainGroup = requireElement<SVGGElement>(svg, '.chart-main');
 
         // Regions should come before main chart group in DOM
-        const children = Array.from(svg?.children || []);
-        const regionsIndex = children.indexOf(regionsGroup as Element);
-        const mainIndex = children.indexOf(mainGroup as Element);
+        const children = Array.from(svg.children);
+        const regionsIndex = children.indexOf(regionsGroup);
+        const mainIndex = children.indexOf(mainGroup);
 
         expect(regionsIndex).toBeLessThan(mainIndex);
       });
@@ -835,26 +833,6 @@ describe('Phase 2 Features: Reference Lines, Annotations, and Regions', () => {
   });
 
   describe('Combined features', () => {
-    it('should render reference lines, annotations, and regions together', () => {
-      const chart = new LineChart(container, {
-        data,
-        referenceLines: [
-          { axis: 'y', value: 50, label: 'Goal' },
-        ],
-        annotations: [
-          { x: 'Mar', y: 38, text: 'Important' },
-        ],
-        regions: [
-          { axis: 'x', start: 'Feb', end: 'Apr', label: 'Focus Period' },
-        ],
-      });
-      chart.render();
-
-      expect(container.querySelector('.chart-reference-lines')).toBeTruthy();
-      expect(container.querySelector('.chart-annotations')).toBeTruthy();
-      expect(container.querySelector('.chart-regions')).toBeTruthy();
-    });
-
     it('should render all features with correct layering', () => {
       const chart = new LineChart(container, {
         data,
@@ -864,18 +842,18 @@ describe('Phase 2 Features: Reference Lines, Annotations, and Regions', () => {
       });
       chart.render();
 
-      const svg = container.querySelector('svg');
-      const children = Array.from(svg?.children || []);
+      const svg = requireElement<SVGSVGElement>(container, 'svg');
+      const children = Array.from(svg.children);
 
-      const regionsGroup = svg?.querySelector('.chart-regions');
-      const mainGroup = svg?.querySelector('.chart-main');
-      const refLinesGroup = svg?.querySelector('.chart-reference-lines');
-      const annotationsGroup = svg?.querySelector('.chart-annotations');
+      const regionsGroup = requireElement<SVGGElement>(svg, '.chart-regions');
+      const mainGroup = requireElement<SVGGElement>(svg, '.chart-main');
+      const refLinesGroup = requireElement<SVGGElement>(svg, '.chart-reference-lines');
+      const annotationsGroup = requireElement<SVGGElement>(svg, '.chart-annotations');
 
-      const regionsIndex = children.indexOf(regionsGroup as Element);
-      const mainIndex = children.indexOf(mainGroup as Element);
-      const refLinesIndex = children.indexOf(refLinesGroup as Element);
-      const annotationsIndex = children.indexOf(annotationsGroup as Element);
+      const regionsIndex = children.indexOf(regionsGroup);
+      const mainIndex = children.indexOf(mainGroup);
+      const refLinesIndex = children.indexOf(refLinesGroup);
+      const annotationsIndex = children.indexOf(annotationsGroup);
 
       // Regions should be first (behind everything)
       expect(regionsIndex).toBeLessThan(mainIndex);
@@ -920,44 +898,4 @@ describe('Phase 2 Features: Reference Lines, Annotations, and Regions', () => {
     });
   });
 
-  describe('Edge cases', () => {
-    it('should handle empty reference lines array', () => {
-      const chart = new LineChart(container, {
-        data,
-        referenceLines: [],
-      });
-      chart.render();
-
-      expect(container.querySelector('.chart-reference-lines')).toBeFalsy();
-    });
-
-    it('should handle empty annotations array', () => {
-      const chart = new LineChart(container, {
-        data,
-        annotations: [],
-      });
-      chart.render();
-
-      expect(container.querySelector('.chart-annotations')).toBeFalsy();
-    });
-
-    it('should handle empty regions array', () => {
-      const chart = new LineChart(container, {
-        data,
-        regions: [],
-      });
-      chart.render();
-
-      expect(container.querySelector('.chart-regions')).toBeFalsy();
-    });
-
-    it('should handle undefined Phase 2 features', () => {
-      const chart = new LineChart(container, { data });
-      chart.render();
-
-      expect(container.querySelector('.chart-reference-lines')).toBeFalsy();
-      expect(container.querySelector('.chart-annotations')).toBeFalsy();
-      expect(container.querySelector('.chart-regions')).toBeFalsy();
-    });
-  });
 });

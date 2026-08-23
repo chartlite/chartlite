@@ -7,7 +7,9 @@
     "build": "turbo build",
     "dev": "turbo dev --parallel",
     "test": "turbo test",
-    "lint": "turbo lint",
+    "lint": "pnpm lint:anti-slop && pnpm lint:workspace",
+    "lint:anti-slop": "tsc --project tools/oxlint/anti-slop/tsconfig.json && oxlint --config oxlint.config.mjs .",
+    "lint:workspace": "turbo lint",
     "clean": "turbo clean && node -e \"require('node:fs').rmSync('node_modules',{recursive:true,force:true})\"",
     "changeset": "changeset",
     "version-packages": "changeset version",
@@ -16,15 +18,17 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
+    "@oxlint/plugins": "1.78.0",
     "@types/jsdom": "^27.0.0",
     "@types/node": "^24.9.0",
+    "oxlint": "1.78.0",
     "turbo": "^2.0.0",
     "typescript": "^5.5.0",
     "vitest": "^4.1.10"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
-    "node": ">=20.0.0",
+    "node": "^20.19.0 || >=22.12.0",
     "pnpm": ">=9.0.0"
   }
 }

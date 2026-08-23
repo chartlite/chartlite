@@ -26,6 +26,18 @@ import {
   ComboChart,
   Sparkline,
 } from '@chartlite/core';
+import type {
+  AreaChartConfig,
+  BarChartConfig,
+  BaseChartConfig,
+  ComboChartConfig,
+  FlexibleDataInput,
+  LineChartConfig,
+  PieChartConfig,
+  RadialChartConfig,
+  ScatterChartConfig,
+  SparklineConfig,
+} from '@chartlite/core';
 
 /** Every chart type the action can render. */
 export type ChartType =
@@ -42,25 +54,69 @@ interface ChartInstance {
   render(): void;
   destroy(): void;
 }
-type ChartConstructor = new (el: HTMLElement, config: Record<string, unknown>) => ChartInstance;
-
-const REGISTRY: Record<ChartType, ChartConstructor> = {
-  line: LineChart as unknown as ChartConstructor,
-  bar: BarChart as unknown as ChartConstructor,
-  area: AreaChart as unknown as ChartConstructor,
-  scatter: ScatterChart as unknown as ChartConstructor,
-  pie: PieChart as unknown as ChartConstructor,
-  radial: RadialChart as unknown as ChartConstructor,
-  combo: ComboChart as unknown as ChartConstructor,
-  sparkline: Sparkline as unknown as ChartConstructor,
-};
 
 /** Parameters for the `chart` action: a `type` plus any Chartlite config. */
-export type ChartParams = {
+export interface ChartParams extends BaseChartConfig {
   type: ChartType;
+  data?: FlexibleDataInput;
+  curve?: LineChartConfig['curve'];
+  showPoints?: LineChartConfig['showPoints'];
+  orientation?: BarChartConfig['orientation'];
+  stacked?: BarChartConfig['stacked'];
+  fillOpacity?: AreaChartConfig['fillOpacity'];
+  gradient?: AreaChartConfig['gradient'];
+  innerRadius?: PieChartConfig['innerRadius'];
+  showLabels?: PieChartConfig['showLabels'];
+  max?: RadialChartConfig['max'];
+  startAngle?: RadialChartConfig['startAngle'];
+  endAngle?: RadialChartConfig['endAngle'];
+  thickness?: RadialChartConfig['thickness'];
+  showValue?: RadialChartConfig['showValue'];
+  trackColor?: RadialChartConfig['trackColor'];
+  defaultType?: ComboChartConfig['defaultType'];
+  pointSize?: ScatterChartConfig['pointSize'];
+  labelOffset?: ScatterChartConfig['labelOffset'];
+  labelPosition?: ScatterChartConfig['labelPosition'];
+  pointShape?: ScatterChartConfig['pointShape'];
+  showEndDot?: SparklineConfig['showEndDot'];
+  strokeWidth?: SparklineConfig['strokeWidth'];
   /** Called if the chart throws while rendering. */
   onError?: (error: Error) => void;
-} & Record<string, unknown>;
+}
+
+type ChartConfig = Omit<ChartParams, 'type' | 'onError'>;
+
+function requiredData(config: ChartConfig): FlexibleDataInput {
+  if (config.data === undefined) throw new Error('Chart data is required');
+  return config.data;
+}
+
+function createChart(
+  container: HTMLElement,
+  type: ChartType,
+  config: ChartConfig,
+): ChartInstance {
+  switch (type) {
+    case 'line':
+      return new LineChart(container, { ...config, data: requiredData(config) });
+    case 'bar':
+      return new BarChart(container, { ...config, data: requiredData(config) });
+    case 'area':
+      return new AreaChart(container, { ...config, data: requiredData(config) });
+    case 'scatter':
+      return new ScatterChart(container, { ...config, data: requiredData(config) });
+    case 'pie':
+      return new PieChart(container, { ...config, data: requiredData(config) });
+    case 'radial':
+      return new RadialChart(container, { ...config, data: requiredData(config) });
+    case 'combo':
+      return new ComboChart(container, { ...config, data: requiredData(config) });
+    case 'sparkline':
+      return new Sparkline(container, { ...config, data: requiredData(config) });
+    default:
+      throw new Error(`Unknown chart type: ${type}`);
+  }
+}
 
 /** The object Svelte expects an action to return. */
 export interface ActionReturn {
@@ -89,9 +145,7 @@ export function chart(node: HTMLElement, params: ChartParams): ActionReturn {
       instance?.destroy();
       instance = null;
       node.textContent = '';
-      const Ctor = REGISTRY[type];
-      if (!Ctor) throw new Error(`Unknown chart type: ${String(type)}`);
-      instance = new Ctor(node, config);
+      instance = createChart(node, type, config);
       instance.render();
     } catch (err) {
       const normalized = err instanceof Error ? err : new Error(String(err));

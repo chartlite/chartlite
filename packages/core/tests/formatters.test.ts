@@ -26,7 +26,7 @@ describe('formatters', () => {
 
   it('exposes a namespace object', () => {
     expect(formatters.abbreviate(1500)).toBe('1.5K');
-    expect(typeof formatters.currency).toBe('function');
+    expect(formatters.currency).toEqual(expect.any(Function));
   });
 });
 
@@ -54,7 +54,7 @@ describe('valueFormatter integration', () => {
 
     const texts = Array.from(container.querySelectorAll('text')).map((t) => t.textContent || '');
     // At least one y tick should be abbreviated (e.g. "10K", "5K")
-    expect(texts.some((t) => /K$/.test(t))).toBe(true);
+    expect(texts.some((t) => t.endsWith('K'))).toBe(true);
     // And no raw 5-digit numbers remain on the axis
     expect(texts.some((t) => t === '10000')).toBe(false);
   });

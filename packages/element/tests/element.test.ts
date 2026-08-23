@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import '../src'; // auto-registers <chart-lite>
+import { ChartLiteElement } from '../src'; // auto-registers <chart-lite>
 
 const data = [
   { x: 'Jan', y: 10 },
@@ -9,6 +9,14 @@ const data = [
 
 /** Wait a microtask so the element's coalesced render runs. */
 const flush = () => Promise.resolve();
+
+function createElement(): ChartLiteElement {
+  const element = document.createElement('chart-lite');
+  if (!(element instanceof ChartLiteElement)) {
+    throw new Error('chart-lite was not registered with its public element class');
+  }
+  return element;
+}
 
 describe('<chart-lite>', () => {
   let host: HTMLDivElement;
@@ -25,9 +33,7 @@ describe('<chart-lite>', () => {
   });
 
   it('renders from a spec set as a JS property', async () => {
-    const el = document.createElement('chart-lite') as HTMLElement & {
-      spec: Record<string, unknown>;
-    };
+    const el = createElement();
     el.spec = { type: 'line', data };
     host.appendChild(el);
     await flush();
@@ -46,9 +52,7 @@ describe('<chart-lite>', () => {
   });
 
   it('renders a combo chart (bars + line) from a property spec', async () => {
-    const el = document.createElement('chart-lite') as HTMLElement & {
-      spec: Record<string, unknown>;
-    };
+    const el = createElement();
     el.spec = {
       type: 'combo',
       data: {
@@ -69,9 +73,7 @@ describe('<chart-lite>', () => {
   });
 
   it('re-renders when the spec property changes', async () => {
-    const el = document.createElement('chart-lite') as HTMLElement & {
-      spec: Record<string, unknown>;
-    };
+    const el = createElement();
     el.spec = { type: 'bar', data };
     host.appendChild(el);
     await flush();
@@ -83,9 +85,7 @@ describe('<chart-lite>', () => {
   });
 
   it('emits chartlite:render on success', async () => {
-    const el = document.createElement('chart-lite') as HTMLElement & {
-      spec: Record<string, unknown>;
-    };
+    const el = createElement();
     const onRender = vi.fn();
     el.addEventListener('chartlite:render', onRender);
     el.spec = { type: 'pie', data };
@@ -95,9 +95,7 @@ describe('<chart-lite>', () => {
   });
 
   it('destroys the chart when disconnected', async () => {
-    const el = document.createElement('chart-lite') as HTMLElement & {
-      spec: Record<string, unknown>;
-    };
+    const el = createElement();
     el.spec = { type: 'pie', data };
     host.appendChild(el);
     await flush();
@@ -107,9 +105,7 @@ describe('<chart-lite>', () => {
   });
 
   it('shows a fallback and emits chartlite:error on a bad type', async () => {
-    const el = document.createElement('chart-lite') as HTMLElement & {
-      spec: Record<string, unknown>;
-    };
+    const el = createElement();
     const onError = vi.fn();
     el.addEventListener('chartlite:error', onError);
     el.spec = { type: 'donut', data };

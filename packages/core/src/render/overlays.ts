@@ -19,11 +19,22 @@ export interface ChartBounds {
 }
 
 function createXMapper(bounds: ChartBounds, width: number) {
-  const band = bounds.xValues ? createBandScale(bounds.xValues, [0, width], 0) : undefined;
-  const linear = band ? undefined : createLinearScale([bounds.xMin, bounds.xMax], [0, width]);
-  return (value: string | number, bandOffset = 0.5) => band
-    ? band.scale(String(value)) + band.bandwidth * bandOffset
-    : linear!(Number(value));
+  if (bounds.xValues) {
+    const band = createBandScale(bounds.xValues, [0, width], 0);
+    return (value: string | number, bandOffset = 0.5): number =>
+      band.scale(String(value)) + band.bandwidth * bandOffset;
+  }
+
+  const linear = createLinearScale([bounds.xMin, bounds.xMax], [0, width]);
+  return (value: string | number): number => linear(Number(value));
+}
+
+function readNumericCoordinate(value: string | number, owner: string): number {
+  const coordinate = Number(value);
+  if (!Number.isFinite(coordinate)) {
+    throw new Error(`${owner} must be a finite number`);
+  }
+  return coordinate;
 }
 
 export function renderReferenceLines(
@@ -64,7 +75,7 @@ export function renderReferenceLines(
 
     if (axis === 'y') {
       // Horizontal reference line
-      const y = yScale(value as number);
+      const y = yScale(readNumericCoordinate(value, 'Reference line value'));
 
       x1 = 0;
       y1 = y;
@@ -351,8 +362,8 @@ export function renderRegions(
       labelY = 15;
     } else {
       // Horizontal region
-      const startY = yScale(start as number);
-      const endY = yScale(end as number);
+      const startY = yScale(readNumericCoordinate(start, 'Region start'));
+      const endY = yScale(readNumericCoordinate(end, 'Region end'));
 
       rectX = 0;
       rectY = endY;

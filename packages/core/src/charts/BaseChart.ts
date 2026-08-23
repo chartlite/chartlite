@@ -26,7 +26,12 @@ import {
 } from '../a11y/descriptions';
 import { injectAccessibilityStyles } from '../a11y/styles';
 import { KeyboardNavigator } from '../a11y/keyboard';
-import { CHART_DEFAULTS, createGroup, createSVGElement } from '../render/constants';
+import {
+  CHART_DEFAULTS,
+  CHART_POINT_BUDGET,
+  createGroup,
+  createSVGElement,
+} from '../render/constants';
 import { renderTitle as drawTitle } from '../render/title';
 import { renderLegend as drawLegend } from '../render/legend';
 import {
@@ -41,6 +46,60 @@ import {
   renderLinearXCategoricalYAxes as drawLinearXCategoricalYAxes,
 } from '../render/axes';
 
+type ChartPluginHook = Exclude<keyof ChartPlugin, 'name'>;
+
+const isSelector = (value: HTMLElement | string): value is string =>
+  typeof value === 'string';
+const isStringValue = (value: any): value is string => typeof value === 'string';
+const isBooleanValue = (value: any): value is boolean => typeof value === 'boolean';
+
+function updateTable(
+  foreignObject: SVGForeignObjectElement,
+  title: string,
+  data: DataPoint[],
+  seriesData: SeriesData[]
+): boolean {
+  if (seriesData.length !== 1 || foreignObject.childNodes.length !== 1) return false;
+
+  const table = foreignObject.querySelector<HTMLTableElement>('table.sr-only');
+  if (
+    !table ||
+    table !== foreignObject.firstElementChild ||
+    table.getAttribute('aria-label') !== 'Chart data table' ||
+    table.children.length !== 3 ||
+    table.tBodies.length !== 1 ||
+    table.tHead?.rows.length !== 1
+  ) return false;
+
+  const header = table.tHead.rows[0];
+  const body = table.tBodies[0];
+  if (
+    !table.caption ||
+    header.innerHTML !== '<th scope="col">Category</th><th scope="col">Value</th>' ||
+    body.rows.length !== data.length
+  ) return false;
+
+  table.caption.textContent = `${title} - Data Table`;
+  for (let index = 0; index < body.rows.length; index += 1) {
+    const cells = body.rows[index].cells;
+    if (
+      cells.length !== 2 ||
+      cells[0].tagName !== 'TD' ||
+      cells[1].tagName !== 'TD' ||
+      cells[0].childNodes.length !== 1 ||
+      cells[1].childNodes.length !== 1
+    ) return false;
+
+    const xNode = cells[0].firstChild;
+    const yNode = cells[1].firstChild;
+    if (xNode?.nodeName !== '#text' || yNode?.nodeName !== '#text') return false;
+    const point = data[index];
+    xNode.nodeValue = String(point.x);
+    yNode.nodeValue = String(point.y);
+  }
+  return true;
+}
+
 export abstract class BaseChart implements Chart {
   protected container: HTMLElement;
   protected config: BaseChartConfig;
@@ -52,6 +111,7 @@ export abstract class BaseChart implements Chart {
   // Resolved (unwrapped) per-series colors, kept so the CSS-variable root tokens
   // can be emitted even when `seriesData[i].color` is a `var(--cl-series-i, …)` string.
   protected resolvedSeriesColors: string[] = [];
+  private tableFallback: SVGForeignObjectElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private resizeTimeout: ReturnType<typeof setTimeout> | null = null;
   private layoutWidth: number;
@@ -78,12 +138,12 @@ export abstract class BaseChart implements Chart {
   ) {
     this.chartTypeName = chartTypeName;
     // Validate and set container
-    if (typeof container === 'string') {
-      const element = document.querySelector(container);
+    if (isSelector(container)) {
+      const element = document.querySelector<HTMLElement>(container);
       if (!element) {
         throw new Error(`Container not found: ${container}`);
       }
-      this.container = element as HTMLElement;
+      this.container = element;
     } else {
       if (!container || !(container instanceof HTMLElement)) {
         throw new Error('Container must be a valid HTMLElement');
@@ -149,7 +209,7 @@ export abstract class BaseChart implements Chart {
       }
       // Basic color format validation (hex, rgb, named colors)
       config.colors.forEach((color, index) => {
-        if (typeof color !== 'string') {
+        if (!isStringValue(color)) {
           throw new Error(`Invalid color at index ${index}: ${color}`);
         }
 
@@ -161,15 +221,15 @@ export abstract class BaseChart implements Chart {
     }
 
     // Validate boolean flags
-    if (config.animate !== undefined && typeof config.animate !== 'boolean') {
+    if (config.animate !== undefined && !isBooleanValue(config.animate)) {
       throw new Error('animate must be boolean');
     }
-    if (config.responsive !== undefined && typeof config.responsive !== 'boolean') {
+    if (config.responsive !== undefined && !isBooleanValue(config.responsive)) {
       throw new Error('responsive must be boolean');
     }
     // Validate legend config if provided
     if (config.legend) {
-      if (config.legend.show !== undefined && typeof config.legend.show !== 'boolean') {
+      if (config.legend.show !== undefined && !isBooleanValue(config.legend.show)) {
         throw new Error('legend.show must be boolean');
       }
       if (config.legend.position && !['top', 'bottom'].includes(config.legend.position)) {
@@ -238,7 +298,7 @@ export abstract class BaseChart implements Chart {
    */
   protected createPluginContext(): PluginContext {
     const context: PluginContext = {
-      chart: this as unknown as Chart,
+      chart: this,
       svg: this.svg,
       config: this.config,
       data: this.isMultiSeries ? this.seriesData : this.data,
@@ -266,13 +326,13 @@ export abstract class BaseChart implements Chart {
   /**
    * Call a lifecycle hook on all plugins
    */
-  protected callPluginHook(hookName: keyof ChartPlugin): void {
+  protected callPluginHook(hookName: ChartPluginHook): void {
     const context = this.createPluginContext();
     this.plugins.forEach((plugin) => {
       const hook = plugin[hookName];
-      if (typeof hook === 'function') {
+      if (hook) {
         try {
-          (hook as Function).call(plugin, context);
+          hook.call(plugin, context);
         } catch (error) {
           console.error(`Error in plugin "${plugin.name}" ${hookName} hook:`, error);
         }
@@ -323,7 +383,10 @@ export abstract class BaseChart implements Chart {
     }
     this.isMultiSeries = this.seriesData.length > 1;
     this.assignSeriesColors();
-    const pointLimit = Math.max(3, Math.floor(500 / this.seriesData.length));
+    const pointLimit = Math.max(
+      3,
+      Math.floor(CHART_POINT_BUDGET / this.seriesData.length)
+    );
     this.seriesData = this.seriesData.map(series => series.data.length > pointLimit
       ? { ...series, data: autoDownsample(series.data, pointLimit, 'nth') }
       : series
@@ -446,17 +509,25 @@ export abstract class BaseChart implements Chart {
    * Add data table fallback for screen readers
    */
   private addDataTableFallback(svg: SVGSVGElement): void {
+    const title = this.config.title || generateDefaultTitle(this.chartTypeName);
+    const retainedFallback = this.tableFallback;
+    if (retainedFallback && updateTable(retainedFallback, title, this.data, this.seriesData)) {
+      svg.appendChild(retainedFallback);
+      return;
+    }
+
     const foreignObject = createSVGElement('foreignObject');
     foreignObject.setAttribute('width', '0');
     foreignObject.setAttribute('height', '0');
     foreignObject.setAttribute('overflow', 'hidden');
 
     foreignObject.innerHTML = generateDataTableHTML({
-      title: this.config.title || generateDefaultTitle(this.chartTypeName),
+      title,
       data: this.data,
       seriesData: this.seriesData,
     });
 
+    this.tableFallback = foreignObject;
     svg.appendChild(foreignObject);
   }
 
@@ -470,7 +541,7 @@ export abstract class BaseChart implements Chart {
       svg,
       emit: (eventName, data) => this.emit(eventName, data),
       addListener: (element, event, handler) =>
-        this.addEventListenerTracked(element as Element, event, handler),
+        this.addEventListenerTracked(element, event, handler),
     });
   }
 
@@ -493,9 +564,11 @@ export abstract class BaseChart implements Chart {
 
     if (this.svg) {
       // Reuse the SVG root, but rebuild its content and accessibility metadata.
-      while (this.svg.firstChild) {
-        this.svg.removeChild(this.svg.firstChild);
+      const retainedFallback = this.tableFallback;
+      if (retainedFallback?.parentNode) {
+        retainedFallback.parentNode.removeChild(retainedFallback);
       }
+      this.svg.replaceChildren();
       this.prepareSVG(this.svg);
     } else {
       // First render: create SVG
@@ -541,7 +614,7 @@ export abstract class BaseChart implements Chart {
     }
 
     // Set up resize observer if responsive
-    if (this.config.responsive && !this.resizeObserver && typeof ResizeObserver !== 'undefined') {
+    if (this.config.responsive && !this.resizeObserver && 'ResizeObserver' in globalThis) {
       this.setupResizeObserver();
     }
 
@@ -553,7 +626,7 @@ export abstract class BaseChart implements Chart {
    * Set up resize observer for responsive charts with throttling
    */
   private setupResizeObserver(): void {
-    this.resizeObserver = new ResizeObserver((entries) => {
+    this.resizeObserver = new globalThis.ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
 
       // Only resize if dimensions have actually changed and are valid
@@ -638,8 +711,7 @@ export abstract class BaseChart implements Chart {
     // Call beforeUpdate plugin hook
     this.callPluginHook('beforeUpdate');
 
-    const dataInput = data as FlexibleDataInput;
-    this.setData(dataInput);
+    this.setData(data);
 
     // Series count can change the amount of space reserved for the legend.
     this.dimensions = this.calculateDimensions(this.layoutWidth, this.layoutHeight);
@@ -692,6 +764,7 @@ export abstract class BaseChart implements Chart {
       this.svg.parentNode.removeChild(this.svg);
     }
     this.svg = null;
+    this.tableFallback = null;
 
     // Clear event handlers
     this.eventHandlers.clear();

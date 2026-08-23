@@ -64,7 +64,7 @@ export function createBandScale(
   domain: string[],
   range: [number, number],
   padding: number = 0.1
-): { scale: (value: string) => number; bandwidth: number } {
+): BandScale {
   const [rangeMin, rangeMax] = range;
   const rangeSpan = rangeMax - rangeMin;
   const count = domain.length;
@@ -82,6 +82,11 @@ export function createBandScale(
   };
 
   return { scale, bandwidth };
+}
+
+export interface BandScale {
+  scale: (value: string) => number;
+  bandwidth: number;
 }
 
 /**
@@ -240,7 +245,11 @@ const THEMES = {
 };
 
 export function getThemeColors(theme: string): typeof THEMES.default {
-  return THEMES[theme as keyof typeof THEMES] || THEMES.default;
+  return isThemeName(theme) ? THEMES[theme] : THEMES.default;
+}
+
+function isThemeName(theme: string): theme is keyof typeof THEMES {
+  return Object.hasOwn(THEMES, theme);
 }
 
 /**

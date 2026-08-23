@@ -28,19 +28,31 @@ const PALETTES = {
 
 type PaletteName = keyof typeof PALETTES;
 
+interface ThemeStyle extends CSSProperties {
+  '--cl-series-0': string;
+  '--cl-series-1': string;
+  '--cl-bg': string;
+  '--cl-text': string;
+  '--cl-grid': string;
+}
+
+function isPaletteName(value: string): value is PaletteName {
+  return value in PALETTES;
+}
+
 export default function Theming() {
   const [palette, setPalette] = useState<PaletteName>('Aurora');
   const [light, setLight] = useState(false);
 
   const [s0, s1] = PALETTES[palette];
-  const style = {
+  const style: ThemeStyle = {
     '--cl-series-0': s0,
     '--cl-series-1': s1,
     '--cl-bg': light ? '#ffffff' : 'transparent',
     '--cl-text': light ? '#475569' : '#8b8ba7',
     '--cl-grid': light ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)',
     transition: 'background-color .4s',
-  } as CSSProperties;
+  };
 
   return (
     <section id="theming" className="relative mx-auto max-w-6xl px-6 py-24 scroll-mt-24">
@@ -63,7 +75,7 @@ export default function Theming() {
             <div>
               <p className="mb-2 text-xs uppercase tracking-widest text-mist-600">Palette</p>
               <div className="flex flex-wrap gap-2">
-                {(Object.keys(PALETTES) as PaletteName[]).map((name) => (
+                {Object.keys(PALETTES).filter(isPaletteName).map((name) => (
                   <button
                     key={name}
                     onClick={() => setPalette(name)}

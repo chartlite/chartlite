@@ -41,8 +41,8 @@ class StyleShim {
   }
 
   /** Any other assignment (e.g. `.fontFamily = ...`) is trapped by the Proxy below. */
-  _set(name: string, value: unknown): void {
-    this.props.set(name, String(value));
+  _set(name: string, value: string): void {
+    this.props.set(name, value);
   }
 
   _serialize(): string {
@@ -57,19 +57,10 @@ function makeStyle(): StyleShim {
   const target = new StyleShim();
   return new Proxy(target, {
     set(t, prop, value) {
-      if (typeof prop === 'string' && !(prop in t)) {
-        t._set(prop, value);
-        return true;
-      }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (t as any)[prop] = value;
+      t._set(String(prop), String(value));
       return true;
     },
-    get(t, prop) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (t as any)[prop];
-    },
-  }) as StyleShim;
+  });
 }
 
 /** Minimal DOMTokenList stand-in for `classList`. */
@@ -177,6 +168,13 @@ export class ShimElement {
   get firstChild(): ShimElement | null {
     return this.children[0] ?? null;
   }
+  get firstElementChild(): ShimElement | null {
+    return this.firstChild;
+  }
+
+  attributeEntries(): ReadonlyMap<string, string> {
+    return this.attributes;
+  }
 
   // Event handling is a no-op server-side (there is no interaction), but the
   // methods must exist because keyboard-nav setup wires listeners during render.
@@ -233,9 +231,7 @@ function serialize(node: ShimElement): string {
   const styleAttr = node.getAttribute('style');
   const style = [styleAttr, styleFromObj].filter(Boolean).join('; ').trim();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rawAttrs = (node as any).attributes as Map<string, string>;
-  for (const [k, v] of rawAttrs) {
+  for (const [k, v] of node.attributeEntries()) {
     if (k === 'class' || k === 'style') continue;
     attrs.push(`${k}="${escapeAttr(v)}"`);
   }
@@ -284,6 +280,14 @@ class ShimDocument {
   }
 }
 
+type DocumentOwner = Document | ShimDocument;
+type HTMLElementOwner = typeof HTMLElement | typeof ShimElement;
+
+interface GlobalDOMOwner {
+  document?: DocumentOwner;
+  HTMLElement?: HTMLElementOwner;
+}
+
 /**
  * Install the shim as the global `document`/`HTMLElement` if no real DOM exists.
  * Returns a restore function. No-op (still returns a restore) when a real DOM is
@@ -291,20 +295,21 @@ class ShimDocument {
  */
 export function installDOM(): () => void {
   // A real DOM (browser or jsdom) is already usable — don't touch globals.
-  if (typeof (globalThis as { document?: unknown }).document !== 'undefined') {
+  // SAFETY: this contract lists the only globals this synchronous shim owns.
+  const owner = globalThis as GlobalDOMOwner;
+  if (owner.document !== undefined) {
     return () => {};
   }
 
-  const g = globalThis as Record<string, unknown>;
-  const prevDoc = g.document;
-  const prevHTMLElement = g.HTMLElement;
+  const prevDoc = owner.document;
+  const prevHTMLElement = owner.HTMLElement;
 
-  g.document = new ShimDocument();
+  owner.document = new ShimDocument();
   // BaseChart validates `container instanceof HTMLElement`; make shim elements pass.
-  g.HTMLElement = ShimElement;
+  owner.HTMLElement = ShimElement;
 
   return () => {
-    g.document = prevDoc;
-    g.HTMLElement = prevHTMLElement;
+    owner.document = prevDoc;
+    owner.HTMLElement = prevHTMLElement;
   };
 }

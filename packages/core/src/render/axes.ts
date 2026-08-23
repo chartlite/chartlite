@@ -5,6 +5,25 @@ import { CHART_DEFAULTS, createSVGElement } from './constants';
 type ThemeColors = ReturnType<typeof getThemeColors>;
 type ValueFormat = (value: number) => string;
 const defaultFormat: ValueFormat = String;
+const MIN_CATEGORICAL_LABEL_SPACING = CHART_DEFAULTS.AXIS_LABEL_FONT_SIZE * 4;
+
+/** Select evenly spaced categorical labels while retaining both endpoints. */
+function selectCategoricalLabelIndices(labelCount: number, axisLength: number): number[] {
+  if (labelCount <= 0) return [];
+
+  const maxLabels = Math.max(
+    2,
+    Math.floor(Math.max(0, axisLength) / MIN_CATEGORICAL_LABEL_SPACING) + 1,
+  );
+  if (labelCount <= maxLabels) {
+    return Array.from({ length: labelCount }, (_, index) => index);
+  }
+
+  return Array.from(
+    { length: maxLabels },
+    (_, index) => Math.round((index * (labelCount - 1)) / (maxLabels - 1)),
+  );
+}
 
 function boundedTicks(min: number, max: number): number[] {
   const ticks = calculateNiceTicks(min, max, 5).filter(tick => tick >= min && tick <= max);
@@ -116,7 +135,8 @@ export function renderCategoricalXLinearYAxes(
   appendAxisLines(group, chartWidth, chartHeight, colors.grid);
   appendNumericY(group, yMin, yMax, chartWidth, chartHeight, colors, formatValue);
   const scale = createBandScale(xValues, [0, chartWidth], 0);
-  for (const value of xValues) {
+  for (const index of selectCategoricalLabelIndices(xValues.length, chartWidth)) {
+    const value = xValues[index];
     appendLabel(
       group,
       scale.scale(value) + scale.bandwidth / 2,
@@ -156,7 +176,8 @@ export function renderLinearXCategoricalYAxes(
   appendAxisLines(group, chartWidth, chartHeight, colors.grid);
   appendNumericX(group, xMin, xMax, chartWidth, chartHeight, colors, formatValue);
   const scale = createBandScale(yValues, [0, chartHeight], 0.2);
-  for (const value of yValues) {
+  for (const index of selectCategoricalLabelIndices(yValues.length, chartHeight)) {
+    const value = yValues[index];
     appendLabel(
       group,
       -CHART_DEFAULTS.AXIS_LABEL_OFFSET,

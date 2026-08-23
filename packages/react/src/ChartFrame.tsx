@@ -1,5 +1,9 @@
 import type { CSSProperties, ReactElement } from 'react';
-import { useChart, type ChartConstructor } from './useChart';
+import {
+  useChart,
+  type ChartConfig,
+  type ChartConstructor,
+} from './useChart';
 
 /** Props shared by every Chartlite React component. */
 export interface ChartFrameOwnProps {
@@ -25,15 +29,15 @@ const errorBoxStyle: CSSProperties = {
  * This is the single mount/render/cleanup path behind both `<Chart>` and every
  * named component.
  */
-export function ChartFrame({
+export function ChartFrame<C extends ChartConfig>({
   ctor,
   config,
   className,
   style,
   onError,
 }: {
-  ctor: ChartConstructor | undefined;
-  config: Record<string, unknown>;
+  ctor: ChartConstructor<C> | undefined;
+  config: C;
 } & ChartFrameOwnProps): ReactElement {
   const { containerRef, error } = useChart(ctor, config, onError);
 

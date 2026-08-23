@@ -59,58 +59,130 @@ export type ChartSpec =
   | ({ type: 'pie' } & PieChartConfig)
   | ({ type: 'radial' } & RadialChartConfig)
   | ({ type: 'combo' } & ComboChartConfig)
-  | ({ type: 'sparkline' } & SparklineConfig);
+  | ({ type: 'sparkline' } & Omit<SparklineConfig, 'type'>);
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ChartCtor = new (container: any, config: any) => { render(): void };
+type ChartSpecFor<Type extends ChartType> = Extract<ChartSpec, { type: Type }>;
 
-const REGISTRY: Record<ChartType, ChartCtor> = {
-  line: LineChart,
-  bar: BarChart,
-  area: AreaChart,
-  scatter: ScatterChart,
-  pie: PieChart,
-  radial: RadialChart,
-  combo: ComboChart,
-  sparkline: Sparkline,
-};
+interface ChartRegistry {
+  line(container: HTMLElement, spec: ChartSpecFor<'line'>): void;
+  bar(container: HTMLElement, spec: ChartSpecFor<'bar'>): void;
+  area(container: HTMLElement, spec: ChartSpecFor<'area'>): void;
+  scatter(container: HTMLElement, spec: ChartSpecFor<'scatter'>): void;
+  pie(container: HTMLElement, spec: ChartSpecFor<'pie'>): void;
+  radial(container: HTMLElement, spec: ChartSpecFor<'radial'>): void;
+  combo(container: HTMLElement, spec: ChartSpecFor<'combo'>): void;
+  sparkline(container: HTMLElement, spec: ChartSpecFor<'sparkline'>): void;
+}
+
+function stripType<T extends { type: string }>(spec: T): Omit<T, 'type'> {
+  const { type, ...config } = spec;
+  if (!type) {
+    throw new Error('renderToString: chart type is required.');
+  }
+  return config;
+}
+
+const REGISTRY = {
+  line(container, spec) {
+    new LineChart(container, { ...stripType(spec), responsive: false }).render();
+  },
+  bar(container, spec) {
+    new BarChart(container, { ...stripType(spec), responsive: false }).render();
+  },
+  area(container, spec) {
+    new AreaChart(container, { ...stripType(spec), responsive: false }).render();
+  },
+  scatter(container, spec) {
+    new ScatterChart(container, { ...stripType(spec), responsive: false }).render();
+  },
+  pie(container, spec) {
+    new PieChart(container, { ...stripType(spec), responsive: false }).render();
+  },
+  radial(container, spec) {
+    new RadialChart(container, { ...stripType(spec), responsive: false }).render();
+  },
+  combo(container, spec) {
+    new ComboChart(container, { ...stripType(spec), responsive: false }).render();
+  },
+  sparkline(container, spec) {
+    new Sparkline(container, { ...stripType(spec), responsive: false }).render();
+  },
+} satisfies ChartRegistry;
+
+const CHART_KEYS = [
+  'line',
+  'bar',
+  'area',
+  'scatter',
+  'pie',
+  'radial',
+  'combo',
+  'sparkline',
+] as const;
+
+function isChartType(value: string): value is ChartType {
+  for (const chartType of CHART_KEYS) {
+    if (chartType === value) return true;
+  }
+  return false;
+}
+
+function renderFromRegistry(container: HTMLElement, spec: ChartSpec): void {
+  switch (spec.type) {
+    case 'line':
+      REGISTRY.line(container, spec);
+      return;
+    case 'bar':
+      REGISTRY.bar(container, spec);
+      return;
+    case 'area':
+      REGISTRY.area(container, spec);
+      return;
+    case 'scatter':
+      REGISTRY.scatter(container, spec);
+      return;
+    case 'pie':
+      REGISTRY.pie(container, spec);
+      return;
+    case 'radial':
+      REGISTRY.radial(container, spec);
+      return;
+    case 'combo':
+      REGISTRY.combo(container, spec);
+      return;
+    case 'sparkline':
+      REGISTRY.sparkline(container, spec);
+      return;
+  }
+}
 
 /** The chart types this build can render, for callers/validators. */
-export const CHART_TYPES = Object.keys(REGISTRY) as ChartType[];
+export const CHART_TYPES = [...CHART_KEYS];
 
 /**
  * Render a chart spec to an SVG string. Throws (with a message that names the
  * valid types) when `spec.type` is unknown.
  */
 export function renderToString(spec: ChartSpec): string {
-  if (!spec || typeof spec !== 'object') {
+  if (!spec) {
     throw new Error('renderToString(spec): spec must be an object with a "type".');
   }
   const { type } = spec;
-  const Ctor = REGISTRY[type as ChartType];
-  if (!Ctor) {
+  if (!isChartType(type)) {
     throw new Error(
       `renderToString: unknown chart type "${type}". Expected one of: ${CHART_TYPES.join(', ')}.`
     );
   }
 
-  // Strip the discriminator; the rest is the chart config.
-  const config = { ...(spec as unknown as Record<string, unknown>) };
-  delete config.type;
-  // Responsive observers can't run headless; make sure they're off.
-  config.responsive = false;
-
   const restore = installDOM();
   try {
     const container = document.createElement('div');
-    const chart = new Ctor(container, config);
-    chart.render();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svg = (container as any).firstChild;
+    renderFromRegistry(container, spec);
+    const svg = container.firstElementChild;
     if (!svg) {
       throw new Error('renderToString: chart produced no SVG output.');
     }
-    return svg.outerHTML as string;
+    return svg.outerHTML;
   } finally {
     restore();
   }
