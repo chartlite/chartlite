@@ -3,88 +3,62 @@
 import { useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
+import { AreaChart } from '@chartlite/react';
 
-/** A pleasing upward-trending series in viewBox (600×360) coordinates. */
-const POINTS = [
-  { x: 30, y: 300 },
-  { x: 82, y: 280 },
-  { x: 134, y: 292 },
-  { x: 186, y: 240 },
-  { x: 238, y: 258 },
-  { x: 290, y: 196 },
-  { x: 342, y: 214 },
-  { x: 394, y: 150 },
-  { x: 446, y: 168 },
-  { x: 498, y: 96 },
-  { x: 550, y: 70 },
-  { x: 570, y: 58 },
+/** Illustrative data for the live hero figure. */
+const signups = [
+  { x: 'Jan', y: 18 },
+  { x: 'Feb', y: 22 },
+  { x: 'Mar', y: 21 },
+  { x: 'Apr', y: 29 },
+  { x: 'May', y: 34 },
+  { x: 'Jun', y: 31 },
+  { x: 'Jul', y: 42 },
+  { x: 'Aug', y: 47 },
+  { x: 'Sep', y: 63 },
+  { x: 'Oct', y: 68 },
+  { x: 'Nov', y: 74 },
+  { x: 'Dec', y: 86 },
 ];
 
-/** Catmull-Rom → cubic bezier smoothing. */
-function smoothPath(pts: { x: number; y: number }[]): string {
-  if (pts.length < 2) return '';
-  let d = `M ${pts[0].x},${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] ?? pts[i];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2] ?? p2;
-    const t = 0.2;
-    d += ` C ${p1.x + (p2.x - p0.x) * t},${p1.y + (p2.y - p0.y) * t} ${
-      p2.x - (p3.x - p1.x) * t
-    },${p2.y - (p3.y - p1.y) * t} ${p2.x},${p2.y}`;
-  }
-  return d;
-}
-
-const line = smoothPath(POINTS);
-const area = `${line} L ${POINTS[POINTS.length - 1].x},340 L ${POINTS[0].x},340 Z`;
+const SPECS = [
+  { value: 15, suffix: 'KB', label: 'gzipped core, budget enforced in CI' },
+  { value: 0, suffix: '', label: 'runtime dependencies' },
+  { value: 8, suffix: '', label: 'chart types, one API' },
+  { value: 4, suffix: '', label: 'data formats accepted as-is' },
+  { value: 0, text: 'AA', suffix: '', label: 'WCAG 2.1, with keyboard & screen-reader support' },
+];
 
 export default function Hero() {
   const scope = useRef<HTMLDivElement>(null);
-  const lineRef = useRef<SVGPathElement>(null);
   const [copied, setCopied] = useState(false);
 
   useGSAP(
     () => {
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-      // Headline words rise in.
-      tl.from('.hero-word', { yPercent: 120, opacity: 0, duration: 0.9, stagger: 0.08 });
-      tl.from('.hero-sub', { y: 20, opacity: 0, duration: 0.7 }, '-=0.5');
-      tl.from('.hero-cta', { y: 16, opacity: 0, duration: 0.6, stagger: 0.1 }, '-=0.4');
-      tl.from('.hero-stat', { y: 16, opacity: 0, duration: 0.5, stagger: 0.08 }, '-=0.3');
+      tl.from('.hero-rule', { scaleX: 0, transformOrigin: 'left', duration: 1, ease: 'power2.inOut' });
+      tl.from('.hero-mast', { y: 8, opacity: 0, duration: 0.5, stagger: 0.06 }, 0.2);
+      tl.from('.hero-word', { yPercent: 110, duration: 1, stagger: 0.07 }, 0.25);
+      tl.from('.hero-swash', { strokeDashoffset: 1, duration: 1.1, ease: 'power2.inOut' }, 0.9);
+      tl.from('.hero-sub', { y: 16, opacity: 0, duration: 0.7 }, 0.7);
+      tl.from('.hero-cta', { y: 12, opacity: 0, duration: 0.6, stagger: 0.08 }, 0.8);
+      tl.from('.hero-fig', { y: 30, opacity: 0, duration: 1.1 }, 0.35);
+      tl.from('.hero-spec', { y: 12, opacity: 0, duration: 0.5, stagger: 0.07 }, 1);
 
-      // Chart card floats in.
-      tl.from('.hero-card', { y: 40, opacity: 0, scale: 0.96, duration: 1 }, 0.2);
-
-      // Line draws itself.
-      const path = lineRef.current;
-      if (path && !reduce) {
-        const len = path.getTotalLength();
-        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
-        gsap.set('.hero-area', { opacity: 0 });
-        gsap.set('.hero-dot', { scale: 0, transformOrigin: 'center' });
-        gsap.set('.hero-pulse', { scale: 0, transformOrigin: 'center' });
-        const draw = gsap.timeline({ delay: 0.7 });
-        draw.to(path, { strokeDashoffset: 0, duration: 1.6, ease: 'power2.inOut' });
-        draw.to('.hero-area', { opacity: 1, duration: 0.8 }, 0.5);
-        draw.to('.hero-dot', { scale: 1, duration: 0.4, stagger: 0.05, ease: 'back.out(2)' }, 0.8);
-        draw.to('.hero-pulse', { scale: 1, duration: 0.5, ease: 'back.out(2)' }, '-=0.2');
-      }
-
-      // Animated counters.
       document.querySelectorAll<HTMLElement>('.hero-count').forEach((el) => {
         const to = Number(el.dataset.to);
-        const dec = Number(el.dataset.dec ?? 0);
         const obj = { v: 0 };
+        el.textContent = obj.v.toFixed(0);
         gsap.to(obj, {
           v: to,
-          duration: 1.6,
-          delay: 0.6,
+          duration: 1.4,
+          delay: 1,
           ease: 'power2.out',
-          onUpdate: () => (el.textContent = obj.v.toFixed(dec)),
+          onUpdate: () => {
+            el.textContent = obj.v.toFixed(0);
+          },
         });
       });
     },
@@ -98,132 +72,116 @@ export default function Hero() {
   };
 
   return (
-    <section ref={scope} className="relative mx-auto max-w-6xl px-6 pt-40 pb-24 md:pt-48">
-      <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
+    <section ref={scope} className="relative mx-auto max-w-6xl px-6 pt-28 pb-6 md:pt-32">
+      {/* Masthead */}
+      <div className="hero-rule h-px bg-ink" />
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">
+        <span className="hero-mast">No. 1.1</span>
+        <span className="hero-mast hidden sm:inline">An almanac of small, honest charts</span>
+        <span className="hero-mast">MIT · Zero dependencies</span>
+      </div>
+      <div className="hero-rule h-px bg-rule" />
+
+      <div className="mt-12 grid items-end gap-14 lg:mt-16 lg:grid-cols-[1.15fr_1fr]">
         {/* Copy */}
         <div>
-          <div className="hero-cta mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-ink-800/60 px-3.5 py-1.5 text-xs text-mist-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-glow-cyan shadow-[0_0_8px_2px] shadow-glow-cyan/60" />
-            v1.0 · 8 chart types · SSR + agent-native
-          </div>
-
-          <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight text-mist-100 sm:text-6xl md:text-7xl">
-            <span className="block overflow-hidden">
+          <h1 className="font-serif text-[3.6rem] leading-[0.95] tracking-[-0.02em] text-ink sm:text-[5rem] lg:text-[6.2rem]">
+            <span className="block overflow-hidden pb-1">
               <span className="hero-word inline-block">Beautiful</span>{' '}
               <span className="hero-word inline-block">charts,</span>
             </span>
-            <span className="block overflow-hidden pb-1">
-              <span className="hero-word inline-block text-gradient">honestly</span>{' '}
-              <span className="hero-word inline-block text-gradient">tiny.</span>
+            <span className="relative block overflow-hidden pb-4">
+              <span className="hero-word inline-block italic text-accent">honestly</span>{' '}
+              <span className="hero-word inline-block italic text-accent">tiny.</span>
+              <svg
+                aria-hidden
+                viewBox="0 0 440 24"
+                preserveAspectRatio="none"
+                className="absolute bottom-0 left-0 h-4 w-[min(100%,29rem)] overflow-visible"
+              >
+                <path
+                  className="hero-swash stroke-accent"
+                  d="M4 16 C 70 6, 150 4, 230 11 S 380 20, 436 8"
+                  fill="none"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  pathLength={1}
+                  strokeDasharray="1"
+                  strokeDashoffset="0"
+                />
+              </svg>
             </span>
           </h1>
 
-          <p className="hero-sub mt-6 max-w-lg text-lg text-mist-500">
-            A zero-dependency SVG charting library. ~15KB gzipped, fast by default,
-            WCAG&nbsp;AA, server-renderable — with React, Vue, Svelte, and a
-            <span className="text-mist-300"> &lt;chart-lite&gt;</span> web component.
+          <p className="hero-sub mt-8 max-w-xl text-lg leading-relaxed text-ink-soft">
+            A zero-dependency SVG charting library for landing pages, docs, and
+            dashboards that should load instantly. Accessible by default,
+            server-renderable, and at home in React, Vue, Svelte, or plain HTML.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-9 flex flex-wrap items-center gap-4">
             <button
               onClick={copy}
-              className="hero-cta group flex items-center gap-3 rounded-xl border border-white/10 bg-ink-800/70 px-4 py-3 font-mono text-sm text-mist-200 transition-colors hover:border-white/20"
+              className="hero-cta code-plate group flex items-center gap-3 rounded-lg px-4 py-3 font-mono text-sm transition-transform hover:-translate-y-0.5"
             >
-              <span className="text-glow-cyan">$</span>
+              <span className="text-accent">$</span>
               npm i @chartlite/core
-              <span className="text-mist-500 transition-colors group-hover:text-mist-100">
-                {copied ? '✓ copied' : '⧉'}
+              <span className="text-slate-muted transition-colors group-hover:text-slate-text">
+                {copied ? '✓ copied' : 'copy'}
               </span>
             </button>
             <a
               href="#gallery"
-              className="hero-cta rounded-xl bg-mist-100 px-5 py-3 text-sm font-semibold text-ink-950 transition-transform hover:-translate-y-0.5"
+              className="hero-cta group text-sm font-medium text-ink underline decoration-rule decoration-2 underline-offset-[6px] transition-colors hover:decoration-accent"
             >
-              See the charts →
+              Browse the plates{' '}
+              <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
             </a>
           </div>
-
-          <dl className="mt-12 grid max-w-md grid-cols-4 gap-4">
-            {[
-              { to: 13, dec: 0, suffix: 'KB', label: 'gzipped' },
-              { to: 0, dec: 0, suffix: '', label: 'deps' },
-              { to: 8, dec: 0, suffix: '', label: 'chart types' },
-              { to: 100, dec: 0, suffix: '%', label: 'WCAG AA' },
-            ].map((s) => (
-              <div key={s.label} className="hero-stat">
-                <dd className="font-display text-2xl font-semibold text-mist-100">
-                  <span className="hero-count" data-to={s.to} data-dec={s.dec}>
-                    0
-                  </span>
-                  {s.suffix}
-                </dd>
-                <dt className="mt-1 text-xs text-mist-600">{s.label}</dt>
-              </div>
-            ))}
-          </dl>
         </div>
 
-        {/* Chart card */}
-        <div className="hero-card border-glow glow-shadow relative rounded-3xl glass p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-mist-600">Revenue</p>
-              <p className="font-display text-2xl font-semibold text-mist-100">
-                $<span className="hero-count" data-to={72.4} data-dec={1}>0</span>k
-              </p>
+        {/* Fig. 1 — a live Chartlite chart */}
+        <figure className="hero-fig">
+          <div className="plate crop-marks rounded-sm p-5">
+            <div className="mb-1 flex items-baseline justify-between">
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Monthly signups (k)</p>
+              <p className="font-mono text-xs text-teal">▲ 4.8× YoY</p>
             </div>
-            <span className="rounded-full bg-glow-cyan/10 px-2.5 py-1 text-xs font-semibold text-glow-cyan">
-              ▲ 34%
-            </span>
-          </div>
-
-          <svg viewBox="0 0 600 360" className="w-full" role="img" aria-label="Animated revenue line chart">
-            <defs>
-              <linearGradient id="hero-area-grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id="hero-line-grad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#22d3ee" />
-                <stop offset="100%" stopColor="#a855f7" />
-              </linearGradient>
-            </defs>
-
-            {/* gridlines */}
-            {[70, 140, 210, 280].map((y) => (
-              <line key={y} x1="20" y1={y} x2="580" y2={y} stroke="#ffffff" strokeOpacity="0.05" />
-            ))}
-
-            <path className="hero-area" d={area} fill="url(#hero-area-grad)" />
-            <path
-              ref={lineRef}
-              d={line}
-              fill="none"
-              stroke="url(#hero-line-grad)"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            <AreaChart
+              data={signups}
+              curve="smooth"
+              cssVars
+              height={290}
+              referenceLines={[{ axis: 'y', value: 60, label: 'Target', style: 'dashed' }]}
+              annotations={[{ x: 'Sep', y: 63, text: 'v1.0 launch', anchor: 'top-left', offset: { x: -8, y: -6 }, showArrow: true }]}
             />
-
-            {POINTS.filter((_, i) => i % 2 === 0).map((p, i) => (
-              <circle key={i} className="hero-dot" cx={p.x} cy={p.y} r="4" fill="#0a0a12" stroke="#22d3ee" strokeWidth="2.5" />
-            ))}
-
-            {/* live pulse at the end */}
-            <g className="hero-pulse">
-              <circle cx={POINTS[POINTS.length - 1].x} cy={POINTS[POINTS.length - 1].y} r="6" fill="#a855f7" />
-              <circle cx={POINTS[POINTS.length - 1].x} cy={POINTS[POINTS.length - 1].y} r="6" fill="none" stroke="#a855f7" strokeWidth="2">
-                <animate attributeName="r" from="6" to="16" dur="1.6s" repeatCount="indefinite" />
-                <animate attributeName="opacity" from="0.6" to="0" dur="1.6s" repeatCount="indefinite" />
-              </circle>
-            </g>
-          </svg>
-
-          <div className="mt-3 flex justify-between font-mono text-[11px] text-mist-600">
-            <span>Jan</span><span>Mar</span><span>May</span><span>Jul</span><span>Sep</span><span>Nov</span>
           </div>
-        </div>
+          <figcaption className="mt-4 flex gap-3 text-sm text-muted">
+            <span className="shrink-0 whitespace-nowrap pt-0.5 font-mono text-[11px] uppercase tracking-[0.16em] text-accent-ink">Fig. 1</span>
+            <span className="font-serif text-base italic leading-snug">
+              Drawn live by Chartlite: a smooth area, a reference line, and an
+              annotation, themed with CSS variables. Illustrative data.
+            </span>
+          </figcaption>
+        </figure>
       </div>
+
+      {/* Spec sheet */}
+      <dl className="mt-20 grid grid-cols-2 border-t border-ink sm:grid-cols-3 lg:grid-cols-5">
+        {SPECS.map((s) => (
+          <div key={s.label} className="hero-spec border-b border-rule py-5 pr-5 lg:border-b-0 lg:border-r lg:pl-5 lg:first:pl-0 lg:last:border-r-0">
+            <dd className="font-serif text-5xl leading-none text-ink">
+              {s.text ?? (
+                <span className="hero-count" data-to={s.value}>
+                  {s.value}
+                </span>
+              )}
+              <span className="text-3xl text-accent">{s.suffix}</span>
+            </dd>
+            <dt className="mt-2 text-sm leading-snug text-muted">{s.label}</dt>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

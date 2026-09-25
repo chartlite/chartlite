@@ -1,14 +1,19 @@
 import type { Metadata } from 'next';
-import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
 import './globals.css';
 import SmoothScroll from '@/components/site/SmoothScroll';
-import Aurora from '@/components/site/Aurora';
+import Backdrop from '@/components/site/Backdrop';
 import SiteNav from '@/components/site/SiteNav';
 import SiteFooter from '@/components/site/SiteFooter';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const display = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' });
-const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
+const sans = Geist({ subsets: ['latin'], variable: '--nf-sans' });
+const serif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+  variable: '--nf-serif',
+});
+const mono = Geist_Mono({ subsets: ['latin'], variable: '--nf-mono' });
 
 export const metadata: Metadata = {
   title: 'Chartlite — beautiful charts, honestly tiny',
@@ -25,18 +30,23 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${serif.variable} ${mono.variable}`}
+      // The inline script below sets `data-theme` before hydration.
+      suppressHydrationWarning
+    >
       <head>
-        {/* Apply the persisted chart theme before hydration to avoid a flash. */}
+        {/* Apply the persisted theme before hydration to avoid a flash. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('cl-chart-theme');document.documentElement.dataset.chartTheme=t==='light'?'light':'dark';}catch(e){}",
+              "try{var t=localStorage.getItem('cl-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light';}catch(e){}",
           }}
         />
       </head>
       <body className="grain antialiased">
-        <Aurora />
+        <Backdrop />
         <SmoothScroll>
           <SiteNav />
           <main>{children}</main>

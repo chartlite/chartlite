@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { gruvboxDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useFramework } from './FrameworkContext';
 
 export interface CodeExample {
@@ -36,21 +36,23 @@ export default function CodeViewer({ code }: CodeViewerProps) {
   };
 
   return (
-    <div className="mt-4 rounded-lg overflow-hidden bg-gray-900">
+    <div className="code-plate flex flex-col overflow-hidden rounded-sm lg:mt-[4.5rem]">
       {/* Tab Bar */}
-      <div className="flex items-center justify-between bg-gray-800 px-4 py-2 border-b border-gray-700">
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-line px-4">
+        <div role="tablist" aria-label="Framework" className="flex gap-4">
           {frameworks.map((framework) => (
             <button
               key={framework.id}
+              role="tab"
+              aria-selected={selectedFramework === framework.id}
               onClick={() => setSelectedFramework(framework.id)}
               disabled={!framework.available}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              className={`-mb-px border-b-2 py-3 text-sm transition-colors ${
                 selectedFramework === framework.id
-                  ? 'bg-blue-600 text-white'
+                  ? 'border-accent text-slate-text'
                   : framework.available
-                  ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  : 'text-gray-600 cursor-not-allowed'
+                  ? 'border-transparent text-slate-muted hover:text-slate-text'
+                  : 'cursor-not-allowed border-transparent text-slate-muted/40'
               }`}
             >
               {framework.label}
@@ -61,23 +63,25 @@ export default function CodeViewer({ code }: CodeViewerProps) {
         {/* Copy Button */}
         <button
           onClick={handleCopy}
-          className="px-3 py-1.5 rounded text-sm font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white transition-colors"
+          className="font-mono text-xs text-slate-muted transition-colors hover:text-accent"
         >
-          {copied ? '✓ Copied!' : 'Copy Code'}
+          {copied ? '✓ copied' : 'copy'}
         </button>
       </div>
 
       {/* Code Display */}
-      <div className="overflow-x-auto">
+      <div className="flex-1 overflow-x-auto">
         <SyntaxHighlighter
           language={selectedFramework === 'vanilla' ? 'javascript' : 'jsx'}
-          style={vscDarkPlus}
+          style={gruvboxDark}
           customStyle={{
             margin: 0,
-            padding: '1rem',
+            padding: '1.25rem',
             background: 'transparent',
-            fontSize: '0.875rem',
+            fontSize: '0.84rem',
+            lineHeight: 1.65,
           }}
+          codeTagProps={{ style: { fontFamily: 'var(--font-mono)', background: 'transparent' } }}
         >
           {currentCode}
         </SyntaxHighlighter>
