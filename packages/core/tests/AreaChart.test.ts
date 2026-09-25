@@ -124,7 +124,18 @@ describe('AreaChart', () => {
       expect(stops[1].getAttribute('stop-color')).toBe(customColor);
     });
 
-    it('gives each series its own gradient (unique ids)', () => {
+    it('gives every chart on the page its own gradient id', () => {
+      const other = document.createElement('div');
+      document.body.appendChild(other);
+      new AreaChart(container, { data }).render();
+      new AreaChart(other, { data }).render();
+      const ids = Array.from(document.querySelectorAll('linearGradient')).map((g) => g.getAttribute('id'));
+      expect(ids).toHaveLength(2);
+      expect(new Set(ids).size).toBe(2);
+      other.remove();
+    });
+
+    it('uses flat fills for stacked (multi-series) areas', () => {
       const multi = {
         series: [
           { name: 'A', dataKey: 'a' },
@@ -135,12 +146,11 @@ describe('AreaChart', () => {
           { x: 'Feb', a: 20, b: 8 },
         ],
       };
-      const chart = new AreaChart(container, { data: multi });
-      chart.render();
-      const gradients = container.querySelectorAll('linearGradient');
-      expect(gradients).toHaveLength(2);
-      const ids = Array.from(gradients).map((g) => g.getAttribute('id'));
-      expect(new Set(ids).size).toBe(2);
+      new AreaChart(container, { data: multi }).render();
+      expect(container.querySelector('linearGradient')).toBeNull();
+      const fills = Array.from(container.querySelectorAll('path.area-fill'));
+      expect(fills).toHaveLength(2);
+      expect(new Set(fills.map((p) => p.getAttribute('fill'))).size).toBe(2);
     });
 
     it('falls back to a flat fill when gradient is disabled', () => {

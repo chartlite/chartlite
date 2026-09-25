@@ -1,7 +1,7 @@
 /**
  * Click-to-toggle legend plugin. Clicking a legend item shows/hides that series
- * by toggling the `display` of every element inside the plot area that carries a
- * matching `data-series-index`, and dims the legend item. Fires the chart's
+ * (or, on pie and radial charts, that slice or ring) by toggling the `display`
+ * of its marks inside the plot area, and dims the legend item. Fires the chart's
  * `onLegendToggle` callback if present.
  *
  * Hidden state is kept across re-renders (e.g. responsive resize) so a series a
@@ -9,7 +9,7 @@
  *
  * ```ts
  * import { legendToggle } from '@chartlite/core/interactive';
- * new BarChart(el, { data, legend: { show: true }, plugins: [legendToggle()] }).render();
+ * new BarChart(el, { data, plugins: [legendToggle()] }).render();
  * ```
  */
 
@@ -25,9 +25,12 @@ export function legendToggle(): ChartPlugin {
       const svg = ctx.svg;
       const main = svg.querySelector<SVGGElement>('g.chart-main');
 
+      // Pie/radial legends list the points (slices, rings) of a single series.
+      const key = main?.querySelector('.data-point:not([data-series-index="0"])') ? 'data-series-index' : 'data-index';
+
       const apply = (idx: number): void => {
         const isHidden = hidden.has(idx);
-        main?.querySelectorAll<SVGElement>(`[data-series-index="${idx}"]`).forEach((el) => {
+        main?.querySelectorAll<SVGElement>(`[${key}="${idx}"]`).forEach((el) => {
           el.style.display = isHidden ? 'none' : '';
         });
         const item = svg.querySelector<SVGElement>(

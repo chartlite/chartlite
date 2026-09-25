@@ -67,7 +67,10 @@ export const baseProps = {
   theme: optional<Theme>(String),
   colors: optional<string[]>(Array),
   title: optional<string>(String),
-  legend: optional<LegendConfig>(Object),
+  /** Shown automatically for 2+ series; `false` hides it, an object positions it. */
+  legend: optional<boolean | LegendConfig>([Boolean, Object]),
+  /** Point budget before downsampling (default 500; 0 disables). */
+  maxPoints: optional<number>(Number),
   animate: optional<boolean>(Boolean),
   responsive: optional<boolean>(Boolean),
   cssVars: optional<boolean>(Boolean),
@@ -76,6 +79,7 @@ export const baseProps = {
   regions: optional<Region[]>(Array),
   plugins: optional<ChartPlugin[]>(Array),
   valueFormatter: optional<(value: number) => string>(Function),
+  xFormatter: optional<(value: string | number) => string>(Function),
   /** Point click. Listen with `@point-click`; adds `callbacks()` automatically. */
   onPointClick: optional<(event: ChartPointEvent) => void>(Function),
   /** Point hover (`null` on leave). Listen with `@hover`; adds `callbacks()`. */
@@ -167,6 +171,8 @@ const sparklineOnlyProps = {
   showEndDot: optional<boolean>(Boolean),
   strokeWidth: optional<number>(Number),
   fillOpacity,
+  /** Sparkline shape: `'line'` or `'area'` (alias of `type`). */
+  variant: optional<SparklineConfig['variant']>(String),
 };
 
 /* @__NO_SIDE_EFFECTS__ */

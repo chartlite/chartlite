@@ -139,11 +139,11 @@ describe('<chart-lite>', () => {
     el.setAttribute('tooltip', '');
     host.appendChild(el);
     await flush();
-    el.querySelector('.data-point')?.dispatchEvent(new MouseEvent('mouseenter'));
+    el.querySelector('.data-point')?.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
     const tip = [...document.body.querySelectorAll('div')].find(
       (div) => div.style.position === 'fixed'
     );
-    expect(tip?.textContent).toContain('Jan: 10');
+    expect(tip?.textContent).toMatch(/Jan.*10/);
     host.removeChild(el);
     // The tooltip element is removed with the chart.
     expect(
@@ -157,7 +157,7 @@ describe('<chart-lite>', () => {
     el.spec = { type: 'line', data, onPointClick };
     host.appendChild(el);
     await flush();
-    el.querySelector('.data-point')?.dispatchEvent(new MouseEvent('click'));
+    el.querySelector('.data-point')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(onPointClick).toHaveBeenCalledWith(expect.objectContaining({ x: 'Jan', y: 10 }));
   });
 

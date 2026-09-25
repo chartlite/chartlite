@@ -1,130 +1,95 @@
 /**
- * Legend rendering for multi-series charts, measured with getBBox where available.
+ * Legend rendering. Item widths are estimated from the label length rather than
+ * measured with getBBox, so legends never force a synchronous layout and render
+ * identically in the browser and during server-side rendering. Items wrap onto
+ * extra rows instead of running off the canvas.
  */
 
-import type { BaseChartConfig, Dimensions, SeriesData } from '../types';
-import { getThemeColors, getDefaultDimensions } from '../utils';
-import { CHART_DEFAULTS, createGroup, createSVGElement } from './constants';
+import type { BaseChartConfig, Dimensions, LegendConfig } from '../types';
+import type { getThemeColors } from '../utils';
+import { CHART_DEFAULTS, createGroup, svgEl, textWidth } from './constants';
+
+export interface LegendItem {
+  name: string;
+  color: string;
+}
+
+const { LEGEND_ICON_SIZE: ICON, LEGEND_ICON_MARGIN, LEGEND_ITEM_SPACING: SPACING, LEGEND_ROW_HEIGHT: ROW } =
+  CHART_DEFAULTS;
+
+const itemWidth = (item: LegendItem): number => ICON + LEGEND_ICON_MARGIN + textWidth(item.name);
+
+const isLegendConfig = (legend: BaseChartConfig['legend']): legend is LegendConfig =>
+  typeof legend === 'object';
+
+/** The legend options object, whether `legend` was given as a boolean or an object. */
+export const legendOptions = (config: BaseChartConfig): LegendConfig =>
+  isLegendConfig(config.legend) ? config.legend : {};
+
+/** Split items into rows no wider than `maxWidth` (one item per row when vertical). */
+export function legendRows(items: LegendItem[], maxWidth: number, vertical: boolean): number[][] {
+  const rows: number[][] = [];
+  let used = Infinity;
+  items.forEach((item, index) => {
+    const width = itemWidth(item);
+    if (vertical || used + SPACING + width > maxWidth) {
+      rows.push([index]);
+      used = width;
+    } else {
+      rows[rows.length - 1].push(index);
+      used += SPACING + width;
+    }
+  });
+  return rows;
+}
 
 export function renderLegend(
   svg: SVGSVGElement,
   config: BaseChartConfig,
   dimensions: Dimensions,
-  seriesData: SeriesData[]
+  items: LegendItem[],
+  colors: ReturnType<typeof getThemeColors>,
+  top: number
 ): void {
-  const colors = getThemeColors(config.theme || 'default');
-  const position = config.legend?.position || 'top';
-  const layout = config.legend?.layout || 'horizontal';
+  const { PADDING } = CHART_DEFAULTS;
+  const options = legendOptions(config);
+  const vertical = options.layout === 'vertical';
+  const rows = legendRows(items, dimensions.width - 2 * PADDING, vertical);
+  const y = options.position === 'bottom' ? dimensions.height - rows.length * ROW - 4 : top;
 
-  // Create legend group
-  const legendGroup = createGroup();
+  const legendGroup = createGroup(0, y);
   legendGroup.classList.add('chart-legend');
+  const blockWidth = vertical ? Math.max(...items.map(itemWidth)) : 0;
 
-  // Calculate legend item dimensions
-  const itemSpacing = CHART_DEFAULTS.LEGEND_ITEM_SPACING;
-  const iconSize = CHART_DEFAULTS.LEGEND_ICON_SIZE;
-  const iconMargin = CHART_DEFAULTS.LEGEND_ICON_MARGIN;
+  rows.forEach((row, rowIndex) => {
+    const rowWidth = blockWidth ||
+      row.reduce((sum, index) => sum + itemWidth(items[index]), 0) + SPACING * (row.length - 1);
+    let x = options.align === 'center'
+      ? (dimensions.width - rowWidth) / 2
+      : options.align === 'right'
+        ? dimensions.width - PADDING - rowWidth
+        : PADDING;
 
-  const rowGap = 8;
-  const itemWidths: number[] = [];
-  const itemGroups: SVGGElement[] = [];
-  const labels: SVGTextElement[] = [];
-
-  // First pass: create items. Append once so browsers can measure all labels.
-  seriesData.forEach((series, seriesIndex) => {
-    const itemGroup = createGroup();
-    // Tag each item so the tree-shakeable legendToggle() plugin can bind clicks
-    // and match the item to its series. Purely additive; no effect when unused.
-    itemGroup.classList.add('legend-item');
-    itemGroup.setAttribute('data-series-index', String(seriesIndex));
-    itemGroup.setAttribute('data-series', series.name);
-
-    // Color indicator (square)
-    const rect = createSVGElement('rect');
-    rect.setAttribute('width', String(iconSize));
-    rect.setAttribute('height', String(iconSize));
-    rect.setAttribute('fill', series.color || colors.primary);
-    rect.setAttribute('rx', '2');
-    itemGroup.appendChild(rect);
-
-    // Label
-    const label = createSVGElement('text');
-    label.setAttribute('x', String(iconSize + iconMargin));
-    label.setAttribute('y', String(iconSize / 2));
-    label.setAttribute('dominant-baseline', 'middle');
-    label.setAttribute('fill', colors.text);
-    label.setAttribute('font-size', String(CHART_DEFAULTS.LEGEND_FONT_SIZE));
-    label.textContent = series.name;
-    itemGroup.appendChild(label);
-
-    legendGroup.appendChild(itemGroup);
-    itemGroups.push(itemGroup);
-    labels.push(label);
+    row.forEach((index) => {
+      const item = items[index];
+      // Tag each item so the tree-shakeable legendToggle() plugin can bind clicks
+      // and match the item to its series. Purely additive; no effect when unused.
+      const itemGroup = createGroup(x, rowIndex * ROW);
+      itemGroup.classList.add('legend-item');
+      itemGroup.setAttribute('data-series-index', String(index));
+      itemGroup.setAttribute('data-series', item.name);
+      svgEl('circle', { cx: ICON / 2, cy: ROW / 2, r: ICON / 2, fill: item.color }, itemGroup);
+      svgEl('text', {
+        x: ICON + LEGEND_ICON_MARGIN,
+        y: ROW / 2,
+        dy: '.32em',
+        fill: colors.text,
+        'font-size': CHART_DEFAULTS.LEGEND_FONT_SIZE,
+      }, itemGroup).textContent = item.name;
+      legendGroup.appendChild(itemGroup);
+      x += itemWidth(item) + SPACING;
+    });
   });
-
-  svg.appendChild(legendGroup);
-  labels.forEach((label, index) => {
-    let textWidth: number;
-    try {
-      const bbox = label.getBBox();
-      textWidth = bbox.width;
-    } catch (e) {
-      // getBBox not available (e.g., in test environment or SSR)
-      // Fallback to estimation: ~7px per character
-      textWidth = seriesData[index].name.length * 7;
-    }
-    const itemWidth = iconSize + iconMargin + textWidth;
-    itemWidths.push(itemWidth);
-  });
-  svg.removeChild(legendGroup);
-
-  const totalWidth = layout === 'vertical'
-    ? Math.max(...itemWidths)
-    : itemWidths.reduce((sum, width) => sum + width, 0) +
-      itemSpacing * (seriesData.length - 1);
-  let offset = 0;
-  itemGroups.forEach((item, index) => {
-    const x = layout === 'horizontal' ? offset : 0;
-    const y = layout === 'vertical' ? index * (iconSize + rowGap) : 0;
-    item.setAttribute('transform', `translate(${x}, ${y})`);
-    if (layout === 'horizontal') offset += itemWidths[index] + itemSpacing;
-  });
-
-  // Calculate horizontal position based on alignment
-  const align = config.legend?.align || 'left';
-  const chartWidth = dimensions.width - dimensions.margin.left - dimensions.margin.right;
-
-  let legendX: number;
-  if (align === 'center') {
-    legendX = dimensions.margin.left + (chartWidth - totalWidth) / 2;
-  } else if (align === 'right') {
-    legendX = dimensions.margin.left + chartWidth - totalWidth;
-  } else {
-    legendX = dimensions.margin.left;
-  }
-
-  // Position legend in the expanded margin area (outside data area)
-  if (position === 'top') {
-    let legendY: number;
-
-    if (config.title) {
-      // Title is present - position legend below title
-      const titleY = CHART_DEFAULTS.TITLE_FONT_SIZE + CHART_DEFAULTS.TITLE_TOP_PADDING;
-      legendY = titleY + CHART_DEFAULTS.TITLE_BOTTOM_PADDING;
-    } else {
-      // No title - position legend near top of SVG
-      legendY = CHART_DEFAULTS.LEGEND_FONT_SIZE + CHART_DEFAULTS.TITLE_TOP_PADDING;
-    }
-
-    legendGroup.setAttribute('transform', `translate(${legendX}, ${legendY})`);
-  } else {
-    // Position legend in the bottom margin area
-    const baseDims = getDefaultDimensions(dimensions.width, CHART_DEFAULTS.DEFAULT_HEIGHT);
-    const dataAreaBottom =
-      dimensions.height - dimensions.margin.bottom + baseDims.margin.bottom;
-    const legendY = dataAreaBottom + CHART_DEFAULTS.LEGEND_FONT_SIZE;
-    legendGroup.setAttribute('transform', `translate(${legendX}, ${legendY})`);
-  }
 
   svg.appendChild(legendGroup);
 }

@@ -1,29 +1,23 @@
 /**
- * Chart title rendering. Positioned at the top of the SVG, outside the data area.
+ * Chart title rendering. Left-aligned at the top of the SVG, outside the data
+ * area, so it lines up with the legend and the widest axis label.
  */
 
-import type { BaseChartConfig, Dimensions } from '../types';
-import { getThemeColors } from '../utils';
-import { CHART_DEFAULTS, createSVGElement } from './constants';
+import type { BaseChartConfig } from '../types';
+import type { getThemeColors } from '../utils';
+import { CHART_DEFAULTS, svgEl } from './constants';
 
 export function renderTitle(
   svg: SVGSVGElement,
   config: BaseChartConfig,
-  dimensions: Dimensions
+  colors: ReturnType<typeof getThemeColors>
 ): void {
-  const colors = getThemeColors(config.theme || 'default');
-
-  // Position title near the top of SVG
-  const titleY = CHART_DEFAULTS.TITLE_FONT_SIZE + CHART_DEFAULTS.TITLE_TOP_PADDING;
-
-  const text = createSVGElement('text');
-  text.setAttribute('x', String(dimensions.width / 2));
-  text.setAttribute('y', String(titleY));
-  text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('fill', colors.text);
-  text.setAttribute('font-size', String(CHART_DEFAULTS.TITLE_FONT_SIZE));
-  text.setAttribute('font-weight', '600');
-  text.textContent = config.title || '';
-
-  svg.appendChild(text);
+  svgEl('text', {
+    class: 'chart-title',
+    x: CHART_DEFAULTS.PADDING,
+    y: CHART_DEFAULTS.PADDING + 13,
+    fill: colors.text,
+    'font-size': CHART_DEFAULTS.TITLE_FONT_SIZE,
+    'font-weight': 600,
+  }, svg).textContent = config.title || '';
 }

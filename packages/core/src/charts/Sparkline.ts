@@ -9,24 +9,35 @@
 import { BaseChart } from './BaseChart';
 import type { SparklineConfig, Dimensions } from '../types';
 import { createLinearScale, generateLinePath } from '../utils';
-import { setDataPointAttrs } from '../render/dataAttrs';
-import { createSVGElement } from '../render/constants';
+import { markDataPoint } from '../render/dataAttrs';
+import { round, svgEl } from '../render/constants';
+import type { LegendItem } from '../render/legend';
 
 export class Sparkline extends BaseChart {
-  protected config: SparklineConfig;
+  declare protected config: SparklineConfig;
 
   constructor(container: HTMLElement | string, config: SparklineConfig) {
     // Sparklines default to a small, fixed size and no responsive observer.
-    super(container, { width: 120, height: 32, responsive: false, ...config }, config.data, 'Sparkline');
+    super(
+      container,
+      {
+        width: 120,
+        height: 32,
+        responsive: false,
+        curve: 'linear',
+        showEndDot: true,
+        strokeWidth: 1.5,
+        fillOpacity: 0.15,
+        ...config,
+      },
+      config.data,
+      'Sparkline'
+    );
+  }
 
-    this.config = {
-      type: 'line',
-      curve: 'linear',
-      showEndDot: true,
-      strokeWidth: 1.5,
-      fillOpacity: 0.15,
-      ...config,
-    };
+  /** Sparklines never show a legend. */
+  protected legendItems(): LegendItem[] {
+    return [];
   }
 
   /** Sparklines use tight uniform padding instead of axis margins. */
@@ -76,56 +87,46 @@ export class Sparkline extends BaseChart {
     }));
 
     // Filled area under the line (drawn first, behind the line)
-    if (this.config.type === 'area' && n > 1) {
-      const linePath = generateLinePath(points, this.config.curve);
-      const areaPath = `${linePath} L ${points[n - 1].x},${h} L ${points[0].x},${h} Z`;
-      const area = createSVGElement('path');
-      area.setAttribute('d', areaPath);
-      area.setAttribute('fill', color);
-      area.setAttribute('opacity', String(this.config.fillOpacity));
-      mainGroup.appendChild(area);
+    const line = n > 1 ? generateLinePath(points, this.config.curve) : '';
+    if ((this.config.variant ?? this.config.type) === 'area' && line) {
+      svgEl('path', {
+        d: `${line}L${round(points[n - 1].x)},${round(h)}L${round(points[0].x)},${round(h)}Z`,
+        fill: color,
+        opacity: this.config.fillOpacity,
+      }, mainGroup);
     }
 
     // The line itself
-    if (n > 1) {
-      const path = createSVGElement('path');
-      path.setAttribute('d', generateLinePath(points, this.config.curve));
-      path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', color);
-      path.setAttribute('stroke-width', String(this.config.strokeWidth));
-      path.setAttribute('stroke-linecap', 'round');
-      path.setAttribute('stroke-linejoin', 'round');
-      path.classList.add('sparkline-line');
-      mainGroup.appendChild(path);
+    if (line) {
+      svgEl('path', {
+        class: 'sparkline-line',
+        d: line,
+        fill: 'none',
+        stroke: color,
+        'stroke-width': this.config.strokeWidth,
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+      }, mainGroup);
     }
 
     // Dot on the most recent point
     if (this.config.showEndDot) {
       const last = points[n - 1];
-      const dot = createSVGElement('circle');
-      dot.setAttribute('cx', String(last.x));
-      dot.setAttribute('cy', String(last.y));
-      dot.setAttribute('r', String(Math.max(1.5, (this.config.strokeWidth ?? 1.5) + 0.5)));
-      dot.setAttribute('fill', color);
-      dot.setAttribute('aria-hidden', 'true');
-      dot.classList.add('sparkline-end-dot');
-      mainGroup.appendChild(dot);
+      svgEl('circle', {
+        class: 'sparkline-end-dot',
+        cx: last.x,
+        cy: last.y,
+        r: Math.max(1.5, (this.config.strokeWidth ?? 1.5) + 0.5),
+        fill: color,
+        'aria-hidden': 'true',
+      }, mainGroup);
     }
 
     // Point-level hit targets keep tiny sparklines keyboard- and plugin-accessible.
     data.forEach((point, index) => {
-      const position = points[index];
-      const hitTarget = createSVGElement('circle');
-      hitTarget.setAttribute('cx', String(position.x));
-      hitTarget.setAttribute('cy', String(position.y));
-      hitTarget.setAttribute('r', '6');
-      hitTarget.setAttribute('fill', 'transparent');
-      hitTarget.setAttribute('role', 'img');
-      hitTarget.setAttribute('tabindex', '-1');
-      hitTarget.setAttribute('aria-label', `${point.x}: ${point.y}`);
-      hitTarget.classList.add('data-point');
-      setDataPointAttrs(hitTarget, point.x, point.y, this.seriesData[0]?.name, 0, index, position.x, position.y);
-      mainGroup.appendChild(hitTarget);
+      const { x, y } = points[index];
+      const hitTarget = svgEl('circle', { cx: x, cy: y, r: 6, fill: 'transparent' }, mainGroup);
+      markDataPoint(hitTarget, `${point.x}: ${point.y}`, point.x, point.y, this.seriesData[0]?.name, 0, index, x, y);
     });
   }
 }

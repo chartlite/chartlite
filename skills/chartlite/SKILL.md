@@ -1,16 +1,16 @@
 ---
 name: chartlite
 description: >-
-  Create charts (line, bar, area, scatter, pie/donut, sparkline) as lightweight,
+  Create charts (line, bar, area, scatter, pie/donut, radial, combo, sparkline) as lightweight,
   accessible SVG using the Chartlite library. Use when asked to visualize data,
   generate a chart image/SVG, add charts to a page, or render charts server-side or
-  inside an agent sandbox (no browser needed). Covers chart-type selection, the four
+  inside an agent sandbox (no browser needed). Covers chart-type selection, the five
   data formats, theming, and both the JS API and the MCP server.
 ---
 
 # Chartlite
 
-Chartlite renders data to **accessible SVG** with zero dependencies (~13 KB gzipped). It
+Chartlite renders data to **accessible SVG** with zero dependencies (~15 KB gzipped). It
 runs in the browser, on the server (headless, no DOM), and via an MCP server — so it works
 inside an agent sandbox where heavier libraries can't.
 
@@ -21,9 +21,11 @@ inside an agent sandbox where heavier libraries can't.
 - **bar** — compare categories. `orientation: 'horizontal'` for long labels.
 - **scatter** — correlation between two numeric axes.
 - **pie** (or donut via `innerRadius`) — parts of a whole; keep to ≤ ~6 slices.
+- **radial** — progress rings or a gauge for a single KPI (value out of `max`, default 100).
+- **combo** — bars plus a line/area trend on shared axes (set `type` per series).
 - **sparkline** — a tiny, axis-less inline chart for a single metric.
 
-## Data — four accepted formats
+## Data — five accepted formats
 
 ```ts
 [{ x: 'Jan', y: 30 }, { x: 'Feb', y: 45 }]        // DataPoint[]
@@ -31,6 +33,8 @@ inside an agent sandbox where heavier libraries can't.
 { x: ['Q1','Q2'], y: [45000, 52000] }              // column-oriented
 { series: [{ name: 'Revenue', dataKey: 'rev' }],   // series-first (multi-series)
   data: [{ x: 'Jan', rev: 4200 }, { x: 'Feb', rev: 4800 }] }
+[{ month: 'Jan', revenue: 10, costs: 4 }]          // row objects: first non-numeric key
+                                                   // is x, each numeric key a series
 ```
 
 ## The declarative spec (preferred for generation)
@@ -41,8 +45,12 @@ A **ChartSpec** is one JSON object: `{ type, data, ...options }`. It is the inpu
 
 Common options: `theme` (`default` | `midnight` | `minimal` | `tailwind` | `nord` |
 `high-contrast`), `title`, `colors: string[]`, `width`, `height`,
-`legend: { show, position, align }`, `valueFormatter`, plus per-type options (`curve`,
-`orientation`, `fillOpacity`, `innerRadius`, `showLabels`, `pointSize`, `pointShape`).
+`legend` (`true` | `false` | `{ show, position, align, layout }`; shown automatically for
+2+ series, slices, or rings), `maxPoints` (default 500; `0` disables downsampling),
+`valueFormatter`, `xFormatter`, plus per-type options (`curve`, `showPoints`, `orientation`,
+`stacked`, `fillOpacity`, `innerRadius`, `showLabels`, `pointSize`, `pointShape`, sparkline
+`variant: 'line' | 'area'`). Point markers default to shown only when each series has ≤24
+points. Formatter functions can't go in JSON specs.
 
 ## Rendering
 
@@ -70,7 +78,9 @@ new LineChart('#chart', { data: [{ x: 'Jan', y: 4200 }], curve: 'smooth' }).rend
 ```
 
 Add interactivity (opt-in, tree-shakeable) from `@chartlite/core/interactive`:
-`plugins: [tooltip(), crosshair(), legendToggle()]`.
+`plugins: [tooltip(), crosshair(), legendToggle(), callbacks()]` (`callbacks()` fires
+`onPointClick` / `onHover`). The tooltip snaps to the nearest x on line/area/combo and lists
+every series. Update in place with `chart.update(data, options?)`.
 
 ## Rules
 

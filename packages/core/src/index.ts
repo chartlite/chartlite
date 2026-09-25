@@ -9,6 +9,7 @@ export type {
   DataPoint,
   SeriesDefinition,
   SeriesFirstData,
+  SeriesFirstRecord,
   ColumnOrientedData,
   FlexibleDataInput,
   SeriesData,

@@ -48,17 +48,31 @@ describe('LineChart', () => {
   });
 
   describe('Data points', () => {
-    it('should not render data points when showPoints is false', () => {
+    it('should not render visible data points when showPoints is false', () => {
       const chart = new LineChart(container, { data, showPoints: false });
       chart.render();
-      const circles = container.querySelectorAll('circle');
-      expect(circles.length).toBe(0);
+      // Points stay as transparent hit targets so tooltips and keyboard nav work.
+      const circles = Array.from(container.querySelectorAll('circle.data-point'));
+      expect(circles).toHaveLength(data.length);
+      circles.forEach((c) => expect(c.getAttribute('fill')).toBe('transparent'));
+    });
+
+    it('hides markers automatically on dense series unless showPoints is true', () => {
+      const dense = Array.from({ length: 40 }, (_, i) => ({ x: `P${i}`, y: i % 7 }));
+      new LineChart(container, { data: dense }).render();
+      const circles = Array.from(container.querySelectorAll('circle.data-point'));
+      expect(circles).toHaveLength(40);
+      circles.forEach((c) => expect(c.getAttribute('fill')).toBe('transparent'));
+
+      container.innerHTML = '';
+      new LineChart(container, { data: dense, showPoints: true }).render();
+      expect(container.querySelector('circle.data-point[fill="transparent"]')).toBeNull();
     });
 
     it('should render points by default', () => {
       const chart = new LineChart(container, { data });
       chart.render();
-      const circles = container.querySelectorAll('circle');
+      const circles = container.querySelectorAll('circle.data-point');
       expect(circles.length).toBe(data.length);
     });
   });
@@ -67,7 +81,7 @@ describe('LineChart', () => {
     it('should render linear curve by default', () => {
       const chart = new LineChart(container, { data });
       chart.render();
-      const path = container.querySelector('path');
+      const path = container.querySelector('path[data-series-index]');
       const pathData = path?.getAttribute('d') || '';
       // Linear paths use L commands
       expect(pathData).toContain('L');
@@ -76,7 +90,7 @@ describe('LineChart', () => {
     it('should render smooth curve when specified', () => {
       const chart = new LineChart(container, { data, curve: 'smooth' });
       chart.render();
-      const path = container.querySelector('path');
+      const path = container.querySelector('path[data-series-index]');
       const pathData = path?.getAttribute('d') || '';
       // Smooth paths use C (cubic bezier) commands
       expect(pathData).toContain('C');
@@ -88,7 +102,7 @@ describe('LineChart', () => {
       const customColor = '#ff0000';
       const chart = new LineChart(container, { data, colors: [customColor] });
       chart.render();
-      const path = container.querySelector('path');
+      const path = container.querySelector('path[data-series-index]');
       expect(path?.getAttribute('stroke')).toBe(customColor);
     });
 
@@ -96,7 +110,7 @@ describe('LineChart', () => {
       const customColor = '#00ff00';
       const chart = new LineChart(container, { data, colors: [customColor], showPoints: true });
       chart.render();
-      const circles = container.querySelectorAll('circle');
+      const circles = container.querySelectorAll('circle.data-point');
       circles.forEach(circle => {
         expect(circle.getAttribute('fill')).toBe(customColor);
       });
@@ -108,11 +122,11 @@ describe('LineChart', () => {
       const chart = new LineChart(container, { data, title: 'Original' });
       chart.render();
       const originalSvg = container.querySelector('svg');
-      const originalCircles = container.querySelectorAll('circle').length;
+      const originalCircles = container.querySelectorAll('circle.data-point').length;
 
       chart.update([{ x: 'A', y: 10 }]);
       const updatedSvg = container.querySelector('svg');
-      const updatedCircles = container.querySelectorAll('circle').length;
+      const updatedCircles = container.querySelectorAll('circle.data-point').length;
 
       expect(updatedSvg).toBeTruthy();
       // Updates reuse the SVG root.
@@ -127,14 +141,14 @@ describe('LineChart', () => {
     it('should add animation class when animate is true', () => {
       const chart = new LineChart(container, { data, animate: true });
       chart.render();
-      const mainGroup = container.querySelector('.chart-main');
+      const mainGroup = container.querySelector('.chart-marks');
       expect(mainGroup?.classList.contains('chart-animated')).toBe(true);
     });
 
     it('should not add animation class when animate is false', () => {
       const chart = new LineChart(container, { data, animate: false });
       chart.render();
-      const mainGroup = container.querySelector('.chart-main');
+      const mainGroup = container.querySelector('.chart-marks');
       expect(mainGroup?.classList.contains('chart-animated')).toBe(false);
     });
   });
@@ -158,7 +172,7 @@ describe('LineChart', () => {
         const chart = new LineChart(container, { data: multiSeriesData });
         chart.render();
 
-        const paths = container.querySelectorAll('path');
+        const paths = container.querySelectorAll('path[data-series-index]');
         // Should have 3 line paths (one per series)
         expect(paths.length).toBe(3);
       });
@@ -205,7 +219,7 @@ describe('LineChart', () => {
         const chart = new LineChart(container, { data: multiSeriesData });
         chart.render();
 
-        const paths = container.querySelectorAll('path');
+        const paths = container.querySelectorAll('path[data-series-index]');
         // Each path should have a stroke color
         expect(paths[0].getAttribute('stroke')).toBeTruthy();
         expect(paths[1].getAttribute('stroke')).toBeTruthy();
@@ -228,7 +242,7 @@ describe('LineChart', () => {
         const chart = new LineChart(container, { data: multiSeriesData });
         chart.render();
 
-        const paths = container.querySelectorAll('path');
+        const paths = container.querySelectorAll('path[data-series-index]');
         expect(paths[0].getAttribute('stroke')).toBe('#ff0000');
         expect(paths[1].getAttribute('stroke')).toBe('#00ff00');
       });
@@ -249,7 +263,7 @@ describe('LineChart', () => {
         const chart = new LineChart(container, { data: multiSeriesData, showPoints: true });
         chart.render();
 
-        const circles = container.querySelectorAll('circle');
+        const circles = container.querySelectorAll('circle.data-point');
         // 2 series × 3 data points = 6 circles
         expect(circles.length).toBe(6);
       });
@@ -269,7 +283,7 @@ describe('LineChart', () => {
         const chart = new LineChart(container, { data: columnData });
         chart.render();
 
-        const paths = container.querySelectorAll('path');
+        const paths = container.querySelectorAll('path[data-series-index]');
         expect(paths.length).toBe(3);
       });
 
@@ -282,7 +296,7 @@ describe('LineChart', () => {
         const chart = new LineChart(container, { data: columnData });
         chart.render();
 
-        const paths = container.querySelectorAll('path');
+        const paths = container.querySelectorAll('path[data-series-index]');
         expect(paths.length).toBe(1);
       });
     });
@@ -384,7 +398,7 @@ describe('LineChart', () => {
         const chart = new LineChart(container, { data: numberData });
         chart.render();
 
-        const paths = container.querySelectorAll('path');
+        const paths = container.querySelectorAll('path[data-series-index]');
         expect(paths.length).toBe(1);
       });
     });

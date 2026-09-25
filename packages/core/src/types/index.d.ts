@@ -63,7 +63,8 @@ export type FlexibleDataInput =
   | DataPoint[]                  // Original format: [{ x: 'Jan', y: 30 }]
   | number[]                     // Simple values: [30, 45, 38]
   | ColumnOrientedData           // Column format: { x: [...], y: [...] }
-  | SeriesFirstData;             // Series format: { series: [...], data: [...] }
+  | SeriesFirstData              // Series format: { series: [...], data: [...] }
+  | SeriesFirstRecord[];         // Row objects: [{ month: 'Jan', revenue: 30 }] (one series per numeric key)
 
 /**
  * Internal series data structure after normalization
@@ -92,6 +93,7 @@ export type LegendAlign = 'left' | 'center' | 'right';
  * Legend configuration
  */
 export interface LegendConfig {
+  /** Show the legend (default: true whenever there is more than one series, slice, or ring). */
   show?: boolean;
   position?: LegendPosition;
   layout?: 'horizontal' | 'vertical';
@@ -206,9 +208,15 @@ export interface LegendToggleEvent {
  */
 
 export interface BaseChartConfig {
-  /** Chart width in pixels. If not provided, fills container */
+  /**
+   * Chart width in pixels. If not provided, the container's width (and, with
+   * `responsive`, it tracks the container as it resizes).
+   */
   width?: number;
-  /** Chart height in pixels. If not provided, fills container */
+  /**
+   * Chart height in pixels, including the title and legend. If not provided,
+   * the container's height, or 400 when the container has no height of its own.
+   */
   height?: number;
   /** Theme preset */
   theme?: Theme;
@@ -216,12 +224,21 @@ export interface BaseChartConfig {
   colors?: string[];
   /** Chart title */
   title?: string;
-  /** Legend configuration */
-  legend?: LegendConfig;
+  /**
+   * Legend configuration. Shown by default for multi-series data (and for pie
+   * slices / radial rings); `false` hides it, `true` or an object configures it.
+   */
+  legend?: boolean | LegendConfig;
   /** Whether to animate on initial load (animations are disabled by default for performance) */
   animate?: boolean;
-  /** Whether to resize chart when container size changes */
+  /** Whether to re-render when the container is resized (default: true) */
   responsive?: boolean;
+  /**
+   * Maximum number of points rendered across all series (default: 500). Larger
+   * inputs are downsampled — with LTTB for a single series, which preserves
+   * peaks and dips. `0` disables sampling.
+   */
+  maxPoints?: number;
   /**
    * Emit theme colors as CSS custom properties (`--cl-bg`, `--cl-text`,
    * `--cl-grid`, `--cl-primary`, `--cl-series-0..N`) on the SVG root and render
@@ -245,6 +262,11 @@ export interface BaseChartConfig {
    */
   valueFormatter?: (value: number) => string;
   /**
+   * Format x-axis labels: category labels, or numeric ticks on scatter charts.
+   * Defaults to the raw category / a compact number format.
+   */
+  xFormatter?: (value: string | number) => string;
+  /**
    * Called when a data point is clicked. Requires the tree-shakeable `callbacks()`
    * (or `interactive()`) plugin from `@chartlite/core/interactive`.
    */
@@ -265,7 +287,10 @@ export interface LineChartConfig extends BaseChartConfig {
   data: FlexibleDataInput;
   /** Line curve style */
   curve?: 'linear' | 'smooth';
-  /** Show data points */
+  /**
+   * Show data point markers (default: only when each series has 24 points or
+   * fewer). Points stay hoverable and keyboard-focusable either way.
+   */
   showPoints?: boolean;
 }
 
@@ -297,7 +322,7 @@ export interface PieChartConfig extends BaseChartConfig {
   data: FlexibleDataInput;
   /** Inner radius for donut chart (0-1) */
   innerRadius?: number;
-  /** Show labels */
+  /** Show percentage labels on slices large enough to hold them (default: false) */
   showLabels?: boolean;
 }
 
@@ -308,6 +333,11 @@ export interface SparklineConfig extends BaseChartConfig {
   data: FlexibleDataInput;
   /** Sparkline style (default: 'line') */
   type?: 'line' | 'area';
+  /**
+   * Alias of `type`, for declarative specs (`renderToString`, MCP) where `type`
+   * names the chart itself: `{ type: 'sparkline', variant: 'area' }`.
+   */
+  variant?: 'line' | 'area';
   /** Line curve style (default: 'linear') */
   curve?: 'linear' | 'smooth';
   /** Draw a dot at the last data point (default: true) */
@@ -350,7 +380,7 @@ export interface ComboChartConfig extends BaseChartConfig {
   defaultType?: 'line' | 'bar' | 'area';
   /** Line curve style for line/area series (default: 'linear'). */
   curve?: 'linear' | 'smooth';
-  /** Draw points on line/area series (default: true). */
+  /** Draw point markers on line/area series (default: only when a series has 24 points or fewer). */
   showPoints?: boolean;
   /** Fill opacity for area-type series (default: 0.25). */
   fillOpacity?: number;
@@ -358,7 +388,7 @@ export interface ComboChartConfig extends BaseChartConfig {
 
 export interface ScatterChartConfig extends BaseChartConfig {
   data: FlexibleDataInput;
-  /** Point size in pixels (default: 6) */
+  /** Point size in pixels (default: 4) */
   pointSize?: number;
   /** Show labels for data points */
   showLabels?: boolean;
@@ -373,8 +403,8 @@ export interface ScatterChartConfig extends BaseChartConfig {
 export interface Chart {
   /** Render the chart to the container */
   render(): void;
-  /** Update chart data */
-  update(data: DataPoint[] | FlexibleDataInput): void;
+  /** Update chart data, and optionally other options, then re-render */
+  update(data: DataPoint[] | FlexibleDataInput, options?: Partial<BaseChartConfig>): void;
   /** Destroy the chart and cleanup */
   destroy(): void;
   /** Export as SVG string */

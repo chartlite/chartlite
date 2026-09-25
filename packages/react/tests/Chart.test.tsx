@@ -219,21 +219,21 @@ describe('@chartlite/react', () => {
       const { container, rerender } = render(
         <LineChart data={data} valueFormatter={(value) => `old-${value}`} />
       );
-      expect(container.textContent).toContain('old-0');
+      expect(container.textContent).toContain('old-20');
       rerender(<LineChart data={data} valueFormatter={(value) => `new-${value}`} />);
-      expect(container.textContent).toContain('new-0');
-      expect(container.textContent).not.toContain('old-0');
+      expect(container.textContent).toContain('new-20');
+      expect(container.textContent).not.toContain('old-20');
     });
   });
 
   describe('interactivity', () => {
     it('`tooltip` adds the tooltip plugin', () => {
       const { container } = render(<LineChart data={data} tooltip />);
-      fireEvent.mouseEnter(container.querySelector('.data-point')!);
+      fireEvent.pointerMove(container.querySelector('.data-point')!);
       const tip = [...document.body.querySelectorAll('div')].find(
         (el) => el.style.position === 'fixed'
       );
-      expect(tip?.textContent).toContain('Jan: 10');
+      expect(tip?.textContent).toMatch(/Jan.*10/);
     });
 
     it('`tooltip` options use the latest formatter', () => {
@@ -241,7 +241,7 @@ describe('@chartlite/react', () => {
         <LineChart data={data} tooltip={{ formatter: (e) => `a ${e.y}` }} />
       );
       rerender(<LineChart data={data} tooltip={{ formatter: (e) => `b ${e.y}` }} />);
-      fireEvent.mouseEnter(container.querySelector('.data-point')!);
+      fireEvent.pointerMove(container.querySelector('.data-point')!);
       const tip = [...document.body.querySelectorAll('div')].find(
         (el) => el.style.position === 'fixed'
       );
@@ -250,7 +250,7 @@ describe('@chartlite/react', () => {
 
     it('does not add a second tooltip when one is already in plugins', () => {
       const { container } = render(<LineChart data={data} tooltip plugins={[tooltip()]} />);
-      fireEvent.mouseEnter(container.querySelector('.data-point')!);
+      fireEvent.pointerMove(container.querySelector('.data-point')!);
       const tips = [...document.body.querySelectorAll('div')].filter(
         (el) => el.style.position === 'fixed'
       );
@@ -261,8 +261,8 @@ describe('@chartlite/react', () => {
       const onHover = vi.fn();
       const { container } = render(<LineChart data={data} onHover={onHover} />);
       const point = container.querySelector('.data-point')!;
-      fireEvent.mouseEnter(point);
-      fireEvent.mouseLeave(point);
+      fireEvent.pointerMove(point);
+      fireEvent.pointerLeave(container.querySelector('svg')!);
       expect(onHover).toHaveBeenCalledTimes(2);
       expect(onHover.mock.calls[1][0]).toBeNull();
     });

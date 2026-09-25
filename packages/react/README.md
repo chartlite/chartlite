@@ -431,6 +431,19 @@ Chartlite React supports multiple data formats:
 />
 ```
 
+### 5. Row Objects
+
+The first non-numeric key is x; each numeric key becomes a series:
+
+```tsx
+<LineChart
+  data={[
+    { month: 'Jan', revenue: 4200, costs: 2800 },
+    { month: 'Feb', revenue: 4800, costs: 3200 }
+  ]}
+/>
+```
+
 ## Themes
 
 Choose from six built-in themes:
@@ -484,17 +497,19 @@ interface CommonProps {
   responsive?: boolean;
   cssVars?: boolean;
   title?: string;
-  legend?: {
+  legend?: boolean | {             // shown automatically for 2+ series, slices, or rings
     show?: boolean;
     position?: 'top' | 'bottom';
     align?: 'left' | 'center' | 'right';
     layout?: 'horizontal' | 'vertical';
   };
+  maxPoints?: number;              // downsampling budget (default 500; 0 disables)
   referenceLines?: ReferenceLine[];
   annotations?: Annotation[];
   regions?: Region[];
   plugins?: ChartPlugin[];
   valueFormatter?: (value: number) => string;
+  xFormatter?: (value: string | number) => string;
   // Wrapper props
   tooltip?: boolean | TooltipOptions;
   onPointClick?: (event: ChartPointEvent) => void;
@@ -512,7 +527,7 @@ interface CommonProps {
 ```tsx
 interface LineChartProps extends CommonProps {
   curve?: 'linear' | 'smooth';
-  showPoints?: boolean;
+  showPoints?: boolean;            // default: only when each series has ≤24 points
 }
 ```
 

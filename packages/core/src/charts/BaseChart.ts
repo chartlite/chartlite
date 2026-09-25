@@ -16,8 +16,10 @@ import {
   getDefaultDimensions,
   getThemeColors,
   normalizeToSeriesData,
-  autoDownsample,
+  createLinearScale,
+  createBandScale,
 } from '../utils';
+import { downsampleEveryNth, downsampleLTTB } from '../utils/sampling';
 import {
   generateAriaLabel,
   generateDefaultTitle,
@@ -33,17 +35,21 @@ import {
   createSVGElement,
 } from '../render/constants';
 import { renderTitle as drawTitle } from '../render/title';
-import { renderLegend as drawLegend } from '../render/legend';
 import {
-  renderReferenceLines as drawReferenceLines,
-  renderAnnotations as drawAnnotations,
-  renderRegions as drawRegions,
-  type ChartBounds,
-} from '../render/overlays';
+  renderLegend as drawLegend,
+  legendOptions,
+  legendRows,
+  type LegendItem,
+} from '../render/legend';
+import { renderOverlays, type ChartBounds } from '../render/overlays';
 import {
-  renderCategoricalXLinearYAxes as drawCategoricalXLinearYAxes,
-  renderLinearXLinearYAxes as drawLinearXLinearYAxes,
-  renderLinearXCategoricalYAxes as drawLinearXCategoricalYAxes,
+  linearAxis,
+  labelWidth,
+  drawLinearX,
+  drawLinearY,
+  drawCategoryX,
+  drawCategoryY,
+  drawBaseline,
 } from '../render/axes';
 
 type ChartPluginHook = Exclude<keyof ChartPlugin, 'name'>;
@@ -100,6 +106,26 @@ function updateTable(
   return true;
 }
 
+/** A laid-out cartesian plot area, returned by {@link BaseChart.plot}. */
+export interface Plot {
+  /** Group for data marks (inside `g.chart-main`, above grid and axes). */
+  g: SVGGElement;
+  /** Plot width/height in px. */
+  w: number;
+  h: number;
+  /** Pixel position on x: band start for categories, position for numbers. */
+  x: (value: string | number) => number;
+  /** Pixel position on y: band start for categories, position for numbers. */
+  y: (value: string | number) => number;
+  /** Band width of the categorical axis (0 when both axes are linear). */
+  bw: number;
+}
+
+/** A categorical axis (its labels) or a linear axis (its data extent). */
+type AxisDomain = string[] | [number, number];
+
+const isCategories = (domain: AxisDomain): domain is string[] => typeof domain[0] === 'string';
+
 export abstract class BaseChart implements Chart {
   protected container: HTMLElement;
   protected config: BaseChartConfig;
@@ -154,9 +180,9 @@ export abstract class BaseChart implements Chart {
     // Validate config
     this.validateConfig(config);
 
-    // Set config with performance-optimized defaults
+    // Base defaults sit below the config, which subclasses have already merged
+    // with their own chart-type defaults, so `responsive` survives everywhere.
     this.config = {
-      // Visual defaults
       theme: 'default',
       responsive: true,
       // Performance defaults (animations off for speed)
@@ -166,12 +192,11 @@ export abstract class BaseChart implements Chart {
 
     this.setData(dataInput);
 
-    // Set up dimensions with space for title and legend
-    const baseWidth = this.config.width ?? (this.container.clientWidth || CHART_DEFAULTS.DEFAULT_WIDTH);
-    const baseHeight = this.config.height ?? (this.container.clientHeight || CHART_DEFAULTS.DEFAULT_HEIGHT);
-
-    this.layoutWidth = baseWidth;
-    this.layoutHeight = baseHeight;
+    // Size to the container unless explicit. A container without a usable
+    // height (auto-height, or collapsed by flex/grid) falls back to the default.
+    const { clientWidth, clientHeight } = this.container;
+    this.layoutWidth = this.config.width ?? (clientWidth || CHART_DEFAULTS.DEFAULT_WIDTH);
+    this.layoutHeight = this.config.height ?? (clientHeight > 50 ? clientHeight : CHART_DEFAULTS.DEFAULT_HEIGHT);
     this.dimensions = this.calculateDimensions(this.layoutWidth, this.layoutHeight);
 
     // Initialize plugins
@@ -213,8 +238,9 @@ export abstract class BaseChart implements Chart {
           throw new Error(`Invalid color at index ${index}: ${color}`);
         }
 
-        // Allow hex, rgb/rgba, hsl/hsla formats, or CSS named colors.
-        if (!/^(?:#[\da-f]{3,8}$|rgba?\(|hsla?\(|[a-z]{3,20}$)/i.test(color)) {
+        // Allow hex, CSS named colors, and any CSS color function
+        // (rgb, hsl, oklch, color-mix, var(--brand), ...).
+        if (!/^(?:#[\da-f]{3,8}|[a-z]{3,20}|[a-z-]+\(.+\))$/i.test(color.trim())) {
           throw new Error(`Invalid color at index ${index}: ${color}`);
         }
       });
@@ -227,8 +253,11 @@ export abstract class BaseChart implements Chart {
     if (config.responsive !== undefined && !isBooleanValue(config.responsive)) {
       throw new Error('responsive must be boolean');
     }
+    if (config.maxPoints !== undefined && !(config.maxPoints >= 0)) {
+      throw new Error('maxPoints must be a non-negative number (0 disables sampling)');
+    }
     // Validate legend config if provided
-    if (config.legend) {
+    if (config.legend && !isBooleanValue(config.legend)) {
       if (config.legend.show !== undefined && !isBooleanValue(config.legend.show)) {
         throw new Error('legend.show must be boolean');
       }
@@ -245,48 +274,55 @@ export abstract class BaseChart implements Chart {
   }
 
   /**
-   * Calculate dimensions - expand SVG to accommodate title and legend OUTSIDE the data area
-   * The data area size remains unchanged, but we add extra space above/below for UI elements
+   * Calculate dimensions. The SVG is exactly `width` × `height`; the title and
+   * legend take their space from the margins, never by growing the chart.
    */
   protected calculateDimensions(width: number, height: number): Dimensions {
-    const baseDims = getDefaultDimensions(width, height);
+    const { PADDING, TITLE_HEIGHT, LEGEND_ROW_HEIGHT } = CHART_DEFAULTS;
+    const margin = this.hasAxes()
+      ? getDefaultDimensions(width, height).margin
+      : { top: PADDING, right: PADDING, bottom: PADDING, left: PADDING };
 
-    // Calculate additional space needed for title and legend
-    let extraTopSpace = 0;
-    let extraBottomSpace = 0;
+    if (this.config.title) margin.top += TITLE_HEIGHT;
 
-    // Title adds space at top
-    if (this.config.title) {
-      extraTopSpace += CHART_DEFAULTS.TITLE_FONT_SIZE + CHART_DEFAULTS.TITLE_BOTTOM_PADDING;
+    const rows = this.legendLayout(width).length;
+    if (rows) {
+      const legendHeight = rows * LEGEND_ROW_HEIGHT + 8;
+      if (legendOptions(this.config).position === 'bottom') margin.bottom += legendHeight;
+      else margin.top += legendHeight;
     }
 
-    // Legend adds space based on position
-    const showLegend = this.config.legend?.show ?? false;
-    if (showLegend && this.seriesData.length > 1) {
-      const legendHeight = this.config.legend?.layout === 'vertical'
-        ? this.seriesData.length * CHART_DEFAULTS.LEGEND_ICON_SIZE +
-          (this.seriesData.length - 1) * 8 + CHART_DEFAULTS.LEGEND_PADDING
-        : CHART_DEFAULTS.LEGEND_FONT_SIZE + CHART_DEFAULTS.LEGEND_PADDING;
+    return { width, height, margin };
+  }
 
-      const position = this.config.legend?.position || 'top';
-      if (position === 'top') {
-        extraTopSpace += legendHeight;
-      } else {
-        extraBottomSpace += legendHeight;
-      }
-    }
+  /**
+   * Whether the chart draws cartesian axes (and so reserves axis margins). A
+   * method rather than a field so it is correct while the base constructor runs.
+   */
+  protected hasAxes(): boolean {
+    return true;
+  }
 
-    // Return expanded dimensions
-    return {
-      width: baseDims.width,
-      height: baseDims.height + extraTopSpace + extraBottomSpace,
-      margin: {
-        top: baseDims.margin.top + extraTopSpace,
-        right: baseDims.margin.right,
-        bottom: baseDims.margin.bottom + extraBottomSpace,
-        left: baseDims.margin.left,
-      },
-    };
+  /** Colors for per-point marks (pie slices, radial rings): `colors`, else the theme palette. */
+  protected palette(): string[] {
+    return this.config.colors?.length ? this.config.colors : this.themeColors().seriesColors;
+  }
+
+  /** Items shown in the legend: one per series, or per point (slice/ring) on pie and radial charts. */
+  protected legendItems(): LegendItem[] {
+    if (this.hasAxes()) return this.seriesData.map((series) => ({ name: series.name, color: series.color! }));
+    const palette = this.palette();
+    return this.data.map((d, i) => ({ name: String(d.label ?? d.x), color: palette[i % palette.length] }));
+  }
+
+  /** Legend rows for the given width, or none when the legend is hidden. */
+  private legendLayout(width: number): number[][] {
+    const { legend } = this.config;
+    const options = legendOptions(this.config);
+    const items = this.legendItems();
+    // A legend needs at least two entries to tell apart (as in 1.0).
+    if (legend === false || options.show === false || items.length < 2) return [];
+    return legendRows(items, width - 2 * CHART_DEFAULTS.PADDING, options.layout === 'vertical');
   }
 
   /**
@@ -383,12 +419,13 @@ export abstract class BaseChart implements Chart {
     }
     this.isMultiSeries = this.seriesData.length > 1;
     this.assignSeriesColors();
-    const pointLimit = Math.max(
-      3,
-      Math.floor(CHART_POINT_BUDGET / this.seriesData.length)
-    );
-    this.seriesData = this.seriesData.map(series => series.data.length > pointLimit
-      ? { ...series, data: autoDownsample(series.data, pointLimit, 'nth') }
+    // Chart-wide point budget. A single series uses LTTB, which keeps peaks and
+    // dips; multiple series sample every nth point so their x values stay aligned.
+    const budget = this.config.maxPoints ?? CHART_POINT_BUDGET;
+    const pointLimit = Math.max(3, Math.floor(budget / this.seriesData.length));
+    const sample = this.isMultiSeries ? downsampleEveryNth : downsampleLTTB;
+    this.seriesData = this.seriesData.map(series => budget && series.data.length > pointLimit
+      ? { ...series, data: sample(series.data, pointLimit) }
       : series
     );
     this.data = this.seriesData[0].data;
@@ -417,17 +454,15 @@ export abstract class BaseChart implements Chart {
   }
 
   /**
-   * Theme colors for the current config. When `cssVars` is on, the `text`,
-   * `grid`, `primary`, `foreground` and `seriesColors` fields are wrapped as
-   * `var(--cl-*, fallback)` so the whole chart is re-themeable with CSS.
-   * `background` is left raw here; the root token + background var are applied in
-   * {@link createSVG}.
+   * Theme colors for the current config. When `cssVars` is on, every field is
+   * wrapped as `var(--cl-*, fallback)` so the whole chart is re-themeable with
+   * CSS, including the background-coloured label halos and marker outlines.
    */
   protected themeColors(): ReturnType<typeof getThemeColors> {
     const colors = getThemeColors(this.config.theme || 'default');
     if (!this.useCssVars) return colors;
     return {
-      background: colors.background,
+      background: `var(--cl-bg, ${colors.background})`,
       foreground: `var(--cl-fg, ${colors.foreground})`,
       primary: `var(--cl-primary, ${colors.primary})`,
       grid: `var(--cl-grid, ${colors.grid})`,
@@ -452,7 +487,10 @@ export abstract class BaseChart implements Chart {
     svg.setAttribute('width', String(this.dimensions.width));
     svg.setAttribute('height', String(this.dimensions.height));
     svg.setAttribute('viewBox', `0 0 ${this.dimensions.width} ${this.dimensions.height}`);
-    svg.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+    // Standalone-valid SVG (files, <img>, data URIs), fluid when its container
+    // is narrower, and block-level so there is no inline descender gap (which
+    // also kept auto-height containers growing on every resize).
+    svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
     // Apply theme background. In cssVars mode, reference the background through
     // `var(--cl-bg, …)` and — crucially — do NOT set `--cl-bg` (or any `--cl-*`)
@@ -460,12 +498,15 @@ export abstract class BaseChart implements Chart {
     // so the fallback is the default and an ancestor (`:root`, a wrapper, a global
     // theme toggle) can override every token via the normal CSS cascade. Setting
     // the tokens on the SVG here would win over ancestors and make theming inert.
-    const colors = getThemeColors(this.config.theme || 'default');
-    if (this.useCssVars) {
-      svg.style.backgroundColor = `var(--cl-bg, ${colors.background})`;
-    } else {
-      svg.style.backgroundColor = colors.background;
-    }
+    const { background } = getThemeColors(this.config.theme || 'default');
+    Object.assign(svg.style, {
+      display: 'block',
+      maxWidth: '100%',
+      height: 'auto',
+      fontFamily: 'system-ui,sans-serif',
+      fontVariantNumeric: 'tabular-nums',
+      backgroundColor: this.useCssVars ? `var(--cl-bg, ${background})` : background,
+    } satisfies Partial<CSSStyleDeclaration>);
 
     // ARIA role and label for accessibility
     svg.setAttribute('role', 'img');
@@ -552,7 +593,7 @@ export abstract class BaseChart implements Chart {
     return createGroup(x, y);
   }
 
-  public render(): void {
+  public render(): this {
     // Call beforeRender plugin hook
     this.callPluginHook('beforeRender');
 
@@ -581,26 +622,24 @@ export abstract class BaseChart implements Chart {
     // This must happen before title/legend so we know the data bounds
     this.renderChart();
 
-    // Render Phase 2 features (regions, reference lines, annotations)
-    if (this.config.regions && this.config.regions.length > 0) {
-      this.renderRegions();
-    }
-    if (this.config.referenceLines && this.config.referenceLines.length > 0) {
-      this.renderReferenceLines();
-    }
-    if (this.config.annotations && this.config.annotations.length > 0) {
-      this.renderAnnotations();
+    // Regions, reference lines and annotations (cartesian charts only).
+    if (this.chartBounds) {
+      renderOverlays(this.svg, this.config, this.dimensions, this.chartBounds, this.themeColors());
     }
 
-    // Add title and legend AFTER chart rendering
-    // This allows us to position them based on actual chart bounds
+    // Title and legend sit in the top/bottom margins, outside the data area.
     if (this.config.title) {
-      this.renderTitle();
+      drawTitle(this.svg!, this.config, this.themeColors());
     }
-
-    const showLegend = this.config.legend?.show ?? false;
-    if (showLegend && this.seriesData.length > 1) {
-      this.renderLegend();
+    if (this.legendLayout(this.dimensions.width).length) {
+      drawLegend(
+        this.svg!,
+        this.config,
+        this.dimensions,
+        this.legendItems(),
+        this.themeColors(),
+        CHART_DEFAULTS.PADDING + (this.config.title ? CHART_DEFAULTS.TITLE_HEIGHT : 0)
+      );
     }
 
     // Apply animation if enabled
@@ -620,6 +659,7 @@ export abstract class BaseChart implements Chart {
 
     // Call afterRender plugin hook
     this.callPluginHook('afterRender');
+    return this;
   }
 
   /**
@@ -631,12 +671,12 @@ export abstract class BaseChart implements Chart {
 
       // Only resize if dimensions have actually changed and are valid
       if (width > 0 && height > 0) {
-        const newWidth = this.config.width ?? width;
-        // An auto-height container often reports the SVG's own expanded height
-        // (title/legend included). Treat that as stable output, not new input,
-        // or every observer delivery grows the chart again.
+        const newWidth = this.config.width ?? Math.round(width);
+        // The SVG is block-level and exactly layoutHeight tall, so an
+        // auto-height container reports our own height back; ignore sub-pixel
+        // differences so that can never feed a resize loop.
         const newHeight = this.config.height ??
-          (height === this.dimensions.height ? this.layoutHeight : height);
+          (Math.abs(height - this.layoutHeight) < 2 || height <= 50 ? this.layoutHeight : Math.round(height));
 
         // Update dimensions if changed - but throttle to avoid excessive re-renders
         if (newWidth !== this.layoutWidth || newHeight !== this.layoutHeight) {
@@ -670,22 +710,6 @@ export abstract class BaseChart implements Chart {
   }
 
   /**
-   * Render title - positioned at top of SVG, outside the data area
-   */
-  protected renderTitle(): void {
-    if (!this.svg) return;
-    drawTitle(this.svg, this.config, this.dimensions);
-  }
-
-  /**
-   * Render legend for multi-series charts
-   */
-  protected renderLegend(): void {
-    if (!this.svg || this.seriesData.length <= 1) return;
-    drawLegend(this.svg, this.config, this.dimensions, this.seriesData);
-  }
-
-  /**
    * Apply entrance animation
    */
   protected applyAnimation(): void {
@@ -697,20 +721,25 @@ export abstract class BaseChart implements Chart {
     style.textContent = '@keyframes clFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@media (prefers-reduced-motion: no-preference){.chart-animated{animation:clFade .6s ease-out}}';
     this.svg.appendChild(style);
 
-    // Add animation class to main chart group
-    const mainGroup = this.svg.querySelector('g.chart-main');
-    if (mainGroup) {
-      mainGroup.classList.add('chart-animated');
-    }
+    // Animate the data marks only; axes and gridlines stay put.
+    const marks = this.svg.querySelector('g.chart-marks') ?? this.svg.querySelector('g.chart-main');
+    marks?.classList.add('chart-animated');
   }
 
   /**
-   * Update chart data
+   * Update the chart's data and, optionally, any other options (theme, title,
+   * colors, ...), then re-render in place.
    */
-  public update(data: DataPoint[] | FlexibleDataInput): void {
+  public update(data: DataPoint[] | FlexibleDataInput, options?: Partial<BaseChartConfig>): this {
     // Call beforeUpdate plugin hook
     this.callPluginHook('beforeUpdate');
 
+    if (options) {
+      this.validateConfig(options);
+      Object.assign(this.config, options);
+      this.layoutWidth = options.width ?? this.layoutWidth;
+      this.layoutHeight = options.height ?? this.layoutHeight;
+    }
     this.setData(data);
 
     // Series count can change the amount of space reserved for the legend.
@@ -720,6 +749,7 @@ export abstract class BaseChart implements Chart {
 
     // Call afterUpdate plugin hook
     this.callPluginHook('afterUpdate');
+    return this;
   }
 
   /**
@@ -783,101 +813,78 @@ export abstract class BaseChart implements Chart {
   }
 
   /**
-   * Render reference lines
+   * Lay out and draw a cartesian plot: nice the linear axes, fit the left
+   * margin to the y labels, draw grid, baseline and tick labels into a new
+   * `g.chart-main`, record the chart bounds for overlays, and return the scales.
+   * `zero` keeps the value axis anchored at zero; `padding` is the band padding.
    */
-  protected renderReferenceLines(): void {
-    if (!this.svg || !this.chartBounds) return;
-    drawReferenceLines(this.svg, this.config, this.dimensions, this.chartBounds);
-  }
+  protected plot(xDomain: AxisDomain, yDomain: AxisDomain, zero = false, padding = 0): Plot {
+    const { PADDING, AXIS_LABEL_OFFSET } = CHART_DEFAULTS;
+    const svg = this.svg;
+    if (!svg) throw new Error('plot() requires a rendered SVG');
+    const colors = this.themeColors();
+    const { width, height, margin } = this.dimensions;
+    const h = Math.max(0, height - margin.top - margin.bottom);
+    const { valueFormatter, xFormatter } = this.config;
 
-  /**
-   * Render annotations
-   */
-  protected renderAnnotations(): void {
-    if (!this.svg || !this.chartBounds) return;
-    drawAnnotations(this.svg, this.config, this.dimensions, this.chartBounds);
-  }
+    // The y axis decides the left margin, which decides the plot width.
+    const yAxis = isCategories(yDomain) ? undefined : linearAxis(yDomain[0], yDomain[1], h, 60, zero, valueFormatter);
+    const yLabelWidth = isCategories(yDomain)
+      ? Math.min(labelWidth(yDomain), width * 0.3)
+      : labelWidth(yAxis ? yAxis.ticks.map(yAxis.format) : []);
+    margin.left = PADDING + yLabelWidth + AXIS_LABEL_OFFSET;
+    const w = Math.max(0, width - margin.left - margin.right);
+    // Horizontal (categorical y) charts put the values on x.
+    const xAxis = isCategories(xDomain)
+      ? undefined
+      : isCategories(yDomain)
+        ? linearAxis(xDomain[0], xDomain[1], w, 90, zero, valueFormatter)
+        : linearAxis(xDomain[0], xDomain[1], w, 90, false, xFormatter);
 
-  /**
-   * Render region highlighting
-   */
-  protected renderRegions(): void {
-    if (!this.svg || !this.chartBounds) return;
-    drawRegions(this.svg, this.config, this.dimensions, this.chartBounds);
-  }
+    const main = createGroup(margin.left, margin.top);
+    main.classList.add('chart-main');
+    svg.appendChild(main);
 
-  /**
-   * Render categorical X-axis with linear Y-axis (most common: LineChart, BarChart, AreaChart)
-   */
-  protected renderCategoricalXLinearYAxes(
-    group: SVGGElement,
-    xValues: string[],
-    yMin: number,
-    yMax: number,
-    chartWidth: number,
-    chartHeight: number,
-    colors: ReturnType<typeof getThemeColors>
-  ): void {
-    drawCategoricalXLinearYAxes(
-      group,
-      xValues,
-      yMin,
-      yMax,
-      chartWidth,
-      chartHeight,
-      colors,
-      this.config.valueFormatter
-    );
-  }
+    const band = (domain: string[], extent: number) => {
+      const scale = createBandScale(domain, [0, extent], padding);
+      return { at: (v: string | number) => scale.scale(String(v)), bw: scale.bandwidth };
+    };
+    const xBand = isCategories(xDomain) ? band(xDomain, w) : undefined;
+    const yBand = isCategories(yDomain) ? band(yDomain, h) : undefined;
+    const xLinear = xAxis ? createLinearScale([xAxis.min, xAxis.max], [0, w]) : undefined;
+    const yLinear = yAxis ? createLinearScale([yAxis.min, yAxis.max], [h, 0]) : undefined;
 
-  /**
-   * Render linear X-axis with linear Y-axis (ScatterChart)
-   */
-  protected renderLinearXLinearYAxes(
-    group: SVGGElement,
-    xMin: number,
-    xMax: number,
-    yMin: number,
-    yMax: number,
-    chartWidth: number,
-    chartHeight: number,
-    colors: ReturnType<typeof getThemeColors>
-  ): void {
-    drawLinearXLinearYAxes(
-      group,
-      xMin,
-      xMax,
-      yMin,
-      yMax,
-      chartWidth,
-      chartHeight,
-      colors,
-      this.config.valueFormatter
-    );
-  }
+    if (yAxis && yLinear) drawLinearY(main, yAxis, yLinear, w, colors);
+    if (xAxis && xLinear) drawLinearX(main, xAxis, xLinear, h, colors);
+    if (xBand && isCategories(xDomain)) {
+      const labels = xFormatter ? xDomain.map(xFormatter) : xDomain;
+      drawCategoryX(main, labels, (i) => xBand.at(xDomain[i]) + xBand.bw / 2, w, h, colors);
+      drawBaseline(main, `M0,${Math.round(h) + 0.5}H${Math.round(w)}`, colors);
+    }
+    if (yBand && isCategories(yDomain)) {
+      drawCategoryY(main, yDomain, (i) => yBand.at(yDomain[i]) + yBand.bw / 2, h, yLabelWidth, colors);
+      drawBaseline(main, `M${Math.round(xLinear ? xLinear(0) : 0) + 0.5},0V${Math.round(h)}`, colors);
+    }
 
-  /**
-   * Render linear X-axis with categorical Y-axis (horizontal BarChart)
-   */
-  protected renderLinearXCategoricalYAxes(
-    group: SVGGElement,
-    yValues: string[],
-    xMin: number,
-    xMax: number,
-    chartWidth: number,
-    chartHeight: number,
-    colors: ReturnType<typeof getThemeColors>
-  ): void {
-    drawLinearXCategoricalYAxes(
-      group,
-      yValues,
-      xMin,
-      xMax,
-      chartWidth,
-      chartHeight,
-      colors,
-      this.config.valueFormatter
-    );
+    this.chartBounds = {
+      xMin: xAxis ? xAxis.min : 0,
+      xMax: xAxis ? xAxis.max : xDomain.length - 1,
+      yMin: yAxis ? yAxis.min : 0,
+      yMax: yAxis ? yAxis.max : yDomain.length - 1,
+      xValues: isCategories(xDomain) ? xDomain : undefined,
+    };
+
+    const g = createGroup();
+    g.classList.add('chart-marks');
+    main.appendChild(g);
+    return {
+      g,
+      w,
+      h,
+      x: xBand ? xBand.at : (v) => (xLinear ? xLinear(Number(v)) : 0),
+      y: yBand ? yBand.at : (v) => (yLinear ? yLinear(Number(v)) : 0),
+      bw: (xBand || yBand)?.bw ?? 0,
+    };
   }
 
   /**

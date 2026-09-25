@@ -81,10 +81,10 @@ describe('@chartlite/vue', () => {
     const wrapper = mount(LineChart, {
       props: { data, valueFormatter: (value: number) => `old-${value}` },
     });
-    expect(wrapper.text()).toContain('old-0');
+    expect(wrapper.text()).toContain('old-20');
     await wrapper.setProps({ valueFormatter: (value: number) => `new-${value}` });
-    expect(wrapper.text()).toContain('new-0');
-    expect(wrapper.text()).not.toContain('old-0');
+    expect(wrapper.text()).toContain('new-20');
+    expect(wrapper.text()).not.toContain('old-20');
     wrapper.unmount();
   });
 
@@ -147,7 +147,10 @@ describe('@chartlite/vue', () => {
       const wrapper = mount(LineChart, {
         attrs: { data, 'show-points': false, 'css-vars': '' },
       });
-      expect(wrapper.findAll('.data-point')).toHaveLength(0);
+      // Points stay as transparent hit targets; no visible markers are drawn.
+      const points = wrapper.findAll('.data-point');
+      expect(points.length).toBeGreaterThan(0);
+      points.forEach((point) => expect(point.attributes('fill')).toBe('transparent'));
       expect(wrapper.find('svg').html()).toContain('var(--cl-');
       wrapper.unmount();
     });
@@ -258,9 +261,9 @@ describe('@chartlite/vue', () => {
   describe('interactivity', () => {
     it('`tooltip` boolean shorthand adds the tooltip plugin', async () => {
       const wrapper = mount(LineChart, { attrs: { data, tooltip: '' } });
-      await wrapper.find('.data-point').trigger('mouseenter');
+      wrapper.find('.data-point').element.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
       expect(fixedTooltips()).toHaveLength(1);
-      expect(fixedTooltips()[0].textContent).toContain('Jan: 10');
+      expect(fixedTooltips()[0].textContent).toMatch(/Jan.*10/);
       wrapper.unmount();
     });
 

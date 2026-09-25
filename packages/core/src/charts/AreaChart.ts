@@ -4,14 +4,9 @@
 
 import { BaseChart } from './BaseChart';
 import type { AreaChartConfig } from '../types';
-import {
-  createLinearScale,
-  createBandScale,
-  generateLinePath,
-  getAllXValues,
-} from '../utils';
-import { setDataPointAttrs, setSeriesAttrs } from '../render/dataAttrs';
-import { createSVGElement } from '../render/constants';
+import { generateLinePath, getAllXValues } from '../utils';
+import { markDataPoint, setSeriesAttrs } from '../render/dataAttrs';
+import { svgEl } from '../render/constants';
 
 /**
  * Module-level sequence so every chart instance gets gradient ids that are
@@ -21,40 +16,21 @@ import { createSVGElement } from '../render/constants';
 let areaInstanceSeq = 0;
 
 export class AreaChart extends BaseChart {
-  protected config: AreaChartConfig;
+  declare protected config: AreaChartConfig;
   private readonly instanceId = ++areaInstanceSeq;
 
   constructor(container: HTMLElement | string, config: AreaChartConfig) {
-    super(container, config, config.data, 'Area');
-
-    this.config = {
-      curve: 'linear',
-      fillOpacity: 0.3,
-      gradient: true,
-      ...config,
-    };
+    super(container, { curve: 'linear', fillOpacity: 0.3, gradient: true, ...config }, config.data, 'Area');
   }
 
   protected renderChart(): void {
     if (!this.svg) return;
 
     const colors = this.themeColors();
-    const { margin } = this.dimensions;
-    const chartWidth = this.dimensions.width - margin.left - margin.right;
-    const chartHeight = this.dimensions.height - margin.top - margin.bottom;
-
-    // Create main group
-    const mainGroup = this.createGroup(margin.left, margin.top);
-    mainGroup.classList.add('chart-main');
-    this.svg.appendChild(mainGroup);
-
-    // Get all unique x values
     const xValues = getAllXValues(this.seriesData).map(String);
 
-    // For stacked areas, we need to calculate cumulative values
+    // Multi-series areas stack; positive and negative values diverge from zero.
     const stackedData = this.calculateStackedData(xValues);
-
-    // Diverging stacks keep positive and negative values on opposite sides of zero.
     let yMin = 0;
     let yMax = 0;
     for (const series of stackedData) {
@@ -63,112 +39,69 @@ export class AreaChart extends BaseChart {
         yMax = Math.max(yMax, point.y0, point.y1);
       }
     }
-    if (yMin === yMax) yMax = yMin + 1;
 
-    // Set chart bounds for Phase 2 features
-    this.chartBounds = {
-      xMin: 0,
-      xMax: xValues.length - 1,
-      yMin,
-      yMax,
-      xValues,
-    };
+    const plot = this.plot(xValues, [yMin, yMax], true);
+    const centerX = (x: string | number) => plot.x(x) + plot.bw / 2;
 
-    // Create scales
-    const xScale = createBandScale(xValues, [0, chartWidth], 0);
-    const yScale = createLinearScale([yMin, yMax], [chartHeight, 0]);
+    // A fade to transparent flatters a single area, but washes out the lower
+    // bands of a stack, so stacked (multi-series) areas use a flat fill.
+    const useGradient = this.config.gradient !== false && stackedData.length === 1;
+    const opacity = this.config.fillOpacity ?? 0.3;
 
-    // Render axes using shared method
-    this.renderCategoricalXLinearYAxes(mainGroup, xValues, yMin, yMax, chartWidth, chartHeight, colors);
-
-    // Gradient fills need a <defs> to hold the <linearGradient> definitions.
-    const useGradient = this.config.gradient !== false;
-    let defs: SVGDefsElement | null = null;
-    if (useGradient) {
-      defs = createSVGElement('defs');
-      this.svg.appendChild(defs);
-    }
-
-    // Render each series as a stacked area (in reverse order so first series is on top)
     stackedData.forEach((seriesStack, seriesIndex) => {
-      // Generate points for the top line
-      const topPoints = seriesStack.cumulativeData.map((d) => ({
-        x: xScale.scale(String(d.x)) + xScale.bandwidth / 2,
-        y: yScale(d.y1),
-      }));
+      const topPoints = seriesStack.cumulativeData.map((d) => ({ x: centerX(d.x), y: plot.y(d.y1) }));
+      const bottomPoints = seriesStack.cumulativeData
+        .map((d) => ({ x: centerX(d.x), y: plot.y(d.y0) }))
+        .reverse();
+      const topPath = generateLinePath(topPoints, this.config.curve);
 
-      // Generate points for the bottom line (reversed)
-      const bottomPoints = seriesStack.cumulativeData.map((d) => ({
-        x: xScale.scale(String(d.x)) + xScale.bandwidth / 2,
-        y: yScale(d.y0),
-      })).reverse();
-
-      // Create area path (fill)
       const seriesColor = seriesStack.color || colors.primary;
-      const areaPath = this.generateStackedAreaPath(topPoints, bottomPoints);
-      const area = createSVGElement('path');
-      area.setAttribute('d', areaPath);
-      if (useGradient && defs) {
-        // Vertical fade from the series color (at fillOpacity) down to transparent —
-        // the classic "beautiful area" look. Stops carry the alpha, so no flat opacity.
-        const gradientId = `cl-area-grad-${this.instanceId}-${seriesIndex}`;
-        defs.appendChild(this.createFillGradient(gradientId, seriesColor));
-        area.setAttribute('fill', `url(#${gradientId})`);
-      } else {
-        area.setAttribute('fill', seriesColor);
-        area.setAttribute('opacity', String(this.config.fillOpacity));
+      let fill = seriesColor;
+      if (useGradient) {
+        // Vertical fade (top→bottom of the area's box) from the series color at
+        // fillOpacity down to transparent.
+        const id = `cl-area-grad-${this.instanceId}-${seriesIndex}`;
+        const gradient = svgEl('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, svgEl('defs', {}, plot.g));
+        svgEl('stop', { offset: '0%', 'stop-color': seriesColor, 'stop-opacity': opacity }, gradient);
+        svgEl('stop', { offset: '100%', 'stop-color': seriesColor, 'stop-opacity': 0 }, gradient);
+        fill = `url(#${id})`;
       }
+      const seriesLabel = this.seriesData.length > 1 ? `${seriesStack.name}, ` : '';
+      const area = svgEl('path', {
+        // Top edge forward, bottom edge back.
+        d: topPath && `${topPath}${generateLinePath(bottomPoints, this.config.curve).replace('M', 'L')}Z`,
+        fill,
+        opacity: useGradient ? undefined : opacity,
+        role: 'img',
+        'aria-label': `${seriesLabel}Area series with ${seriesStack.cumulativeData.length} data points`,
+        tabindex: '-1',
+      }, plot.g);
       area.classList.add('area-fill');
       area.classList.add('data-series');
-
-      // ARIA attributes for the area series
-      area.setAttribute('role', 'img');
-      const dataPoints = seriesStack.cumulativeData.length;
-      const seriesLabel = this.seriesData.length > 1 ? `${seriesStack.name}, ` : '';
-      area.setAttribute('aria-label', `${seriesLabel}Area series with ${dataPoints} data points`);
-      area.setAttribute('tabindex', '-1');
       setSeriesAttrs(area, seriesIndex, seriesStack.name);
 
-      mainGroup.appendChild(area);
-
-      // Create line path (stroke) for top edge
-      const linePath = generateLinePath(topPoints, this.config.curve);
-      const line = createSVGElement('path');
-      line.setAttribute('d', linePath);
-      line.setAttribute('fill', 'none');
-      line.setAttribute('stroke', seriesStack.color || colors.primary);
-      line.setAttribute('stroke-width', '2');
-      line.setAttribute('stroke-linecap', 'round');
-      line.setAttribute('stroke-linejoin', 'round');
+      // Top edge stroke: decorative, the area already carries the semantics.
+      const line = svgEl('path', {
+        d: topPath,
+        fill: 'none',
+        stroke: seriesColor,
+        'stroke-width': 2,
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+        role: 'presentation',
+        'aria-hidden': 'true',
+      }, plot.g);
       line.classList.add('area-line');
-
-      // ARIA attributes for the line
-      line.setAttribute('role', 'presentation'); // Decorative - area already has semantics
-      line.setAttribute('aria-hidden', 'true'); // Hide from screen readers (area is sufficient)
       setSeriesAttrs(line, seriesIndex, seriesStack.name);
-
-      mainGroup.appendChild(line);
 
       // Transparent hit targets provide point-level keyboard and interaction parity
       // without changing the visual appearance of the area.
       seriesStack.cumulativeData.forEach((point) => {
         if (point.index === undefined) return;
-        const cx = xScale.scale(String(point.x)) + xScale.bandwidth / 2;
-        const cy = yScale(point.y1);
-        const hitTarget = createSVGElement('circle');
-        hitTarget.setAttribute('cx', String(cx));
-        hitTarget.setAttribute('cy', String(cy));
-        hitTarget.setAttribute('r', '8');
-        hitTarget.setAttribute('fill', 'transparent');
-        hitTarget.setAttribute('role', 'img');
-        hitTarget.setAttribute('tabindex', '-1');
-        hitTarget.setAttribute(
-          'aria-label',
-          `${seriesStack.name}, ${point.x}: ${point.value}`
-        );
-        hitTarget.classList.add('data-point');
-        setDataPointAttrs(hitTarget, point.x, point.value, seriesStack.name, seriesIndex, point.index, cx, cy);
-        mainGroup.appendChild(hitTarget);
+        const cx = centerX(point.x);
+        const cy = plot.y(point.y1);
+        const hitTarget = svgEl('circle', { cx, cy, r: 8, fill: 'transparent' }, plot.g);
+        markDataPoint(hitTarget, `${seriesStack.name}, ${point.x}: ${point.value}`, point.x, point.value, seriesStack.name, seriesIndex, point.index, cx, cy);
       });
     });
   }
@@ -210,53 +143,5 @@ export class AreaChart extends BaseChart {
         cumulativeData,
       };
     });
-  }
-
-  /**
-   * Generate SVG path for stacked area
-   */
-  private generateStackedAreaPath(
-    topPoints: Array<{ x: number; y: number }>,
-    bottomPoints: Array<{ x: number; y: number }>
-  ): string {
-    if (topPoints.length === 0) return '';
-
-    // Generate top edge path
-    const topPath = generateLinePath(topPoints, this.config.curve);
-
-    // Generate bottom edge path
-    const bottomPath = generateLinePath(bottomPoints, this.config.curve);
-
-    // Combine: top edge + bottom edge + close
-    return `${topPath} ${bottomPath.replace('M', 'L')} Z`;
-  }
-
-  /**
-   * Build a vertical `<linearGradient>` fading `color` from `fillOpacity` at the
-   * top to fully transparent at the bottom.
-   */
-  private createFillGradient(id: string, color: string): SVGLinearGradientElement {
-    const topOpacity = this.config.fillOpacity ?? 0.3;
-    const gradient = createSVGElement('linearGradient');
-    gradient.setAttribute('id', id);
-    // Gradient runs top→bottom in the element's own coordinate box.
-    gradient.setAttribute('x1', '0');
-    gradient.setAttribute('y1', '0');
-    gradient.setAttribute('x2', '0');
-    gradient.setAttribute('y2', '1');
-
-    const stopTop = createSVGElement('stop');
-    stopTop.setAttribute('offset', '0%');
-    stopTop.setAttribute('stop-color', color);
-    stopTop.setAttribute('stop-opacity', String(topOpacity));
-    gradient.appendChild(stopTop);
-
-    const stopBottom = createSVGElement('stop');
-    stopBottom.setAttribute('offset', '100%');
-    stopBottom.setAttribute('stop-color', color);
-    stopBottom.setAttribute('stop-opacity', '0');
-    gradient.appendChild(stopBottom);
-
-    return gradient;
   }
 }

@@ -120,7 +120,7 @@ describe('@chartlite/svelte use:chart', () => {
     const instance = action.chart;
     action.update({ type: 'line', data, onPointClick: second, plugins: [tooltip()] });
     expect(action.chart).toBe(instance);
-    point(node).dispatchEvent(new MouseEvent('click'));
+    point(node).dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledWith(expect.objectContaining({ x: 'Jan', y: 10 }));
     action.destroy();
@@ -128,9 +128,9 @@ describe('@chartlite/svelte use:chart', () => {
 
   it('`tooltip: true` adds the tooltip plugin', () => {
     const action = chart(node, { type: 'line', data, tooltip: true });
-    point(node).dispatchEvent(new MouseEvent('mouseenter'));
+    point(node).dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
     expect(fixedTooltips()).toHaveLength(1);
-    expect(fixedTooltips()[0].textContent).toContain('Jan: 10');
+    expect(fixedTooltips()[0].textContent).toMatch(/Jan.*10/);
     action.destroy();
     // The tooltip element is cleaned up with the chart.
     expect(fixedTooltips()).toHaveLength(0);
@@ -139,7 +139,7 @@ describe('@chartlite/svelte use:chart', () => {
   it('adds callbacks() automatically for onHover', () => {
     const onHover = vi.fn();
     const action = chart(node, { type: 'line', data, onHover });
-    point(node).dispatchEvent(new MouseEvent('mouseenter'));
+    point(node).dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
     expect(onHover).toHaveBeenCalledWith(expect.objectContaining({ x: 'Jan' }));
     action.destroy();
   });

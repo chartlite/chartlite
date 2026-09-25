@@ -113,6 +113,8 @@ export class KeyboardNavigator {
     element.setAttribute('data-focused', 'true');
     this.focusedElement = element;
     this.announceToScreenReader(element);
+    // Lets plugins (e.g. the tooltip) follow keyboard focus.
+    this.emit('datapoint:focus', { element, index: this.focusedIndex, ariaLabel: element.getAttribute('aria-label') });
   }
 
   private clearDataPointFocus(): void {
@@ -120,6 +122,7 @@ export class KeyboardNavigator {
     this.focusedElement.classList.remove('data-point-focused');
     this.focusedElement.removeAttribute('data-focused');
     this.focusedElement = null;
+    this.emit('datapoint:blur');
   }
 
   private activateCurrentElement(): void {

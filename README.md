@@ -134,18 +134,35 @@ data: {
     { month: 'Feb', revenue: 4800 }
   ]
 }
+
+// 5. Row objects (first text field is x, each numeric field becomes a series)
+data: [
+  { month: 'Jan', revenue: 4200, costs: 2800 },
+  { month: 'Feb', revenue: 4800, costs: 3200 }
+]
 ```
+
+A legend appears automatically once there are two or more series (or pie slices /
+radial rings); `legend: false` hides it.
 
 ### ⚡ Performance
 
 - **Target**: 500-2,000 data points
 - **Render time**: <16ms (60fps)
 - **Bundle size**: ~15KB gzipped (~56KB minified), zero dependencies
-- **Built in**: automatic downsampling and SVG-root reuse for fast updates
+- **Built in**: automatic downsampling (`maxPoints`, default 500; `0` disables) and SVG-root reuse for fast updates
 
 ---
 
 ## Roadmap
+
+### ✨ New in 1.1
+
+- **Better defaults:** "nice" axis ticks (line and scatter no longer force zero), crowded labels thinned or truncated, automatic legend for 2+ series, point markers only when each series has ≤24 points, monotone `smooth` curves
+- **Easier input:** row-object data (a 5th format), `legend: true | false`, `maxPoints`, `xFormatter`, `chart.update(data, options?)`, sparkline `variant`
+- **Smoother interactivity:** the tooltip snaps to the nearest x on line/area/combo and lists every series, follows keyboard focus, and stays in the viewport; `legendToggle()` works on pie and radial legends
+- **Wrappers:** a `tooltip` prop/attribute, in-place data updates, stable callbacks, and ref access
+- **Fix:** `responsive` defaults to `true` for every chart type
 
 ### ✅ Shipped in 1.0
 
@@ -232,7 +249,7 @@ More examples at [examples/](examples/) · live at **[chartlite.dev](https://cha
 | Dependencies | **0** | D3 (many) | 0 | ZRender |
 | TypeScript | **Native** | Good | Good | Good |
 | Chart Types | 8 | 10+ | 8+ | 50+ |
-| Data Formats | **4** | 1 | 1 | 2 |
+| Data Formats | **5** | 1 | 1 | 2 |
 | Learning Curve | **Low** | Medium | Low | High |
 | **Best For** | **Fast pages** | React apps | Simple charts | Dashboards |
 

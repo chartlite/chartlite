@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LineChart } from '../src/charts/LineChart';
 import { BarChart } from '../src/charts/BarChart';
+import { PieChart } from '../src/charts/PieChart';
 import {
   tooltip,
   crosshair,
@@ -32,6 +33,25 @@ function fire(el: Element, type: string): void {
   el.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: 50, clientY: 50 }));
 }
 
+/** Move the pointer onto a data point (jsdom has no layout, so the SVG sits at 0,0 unscaled). */
+function hover(pt: Element): void {
+  const main = pt.closest('svg')!.querySelector('g.chart-main')!;
+  const [, tx, ty] = /translate\(([\d.-]+),([\d.-]+)\)/.exec(main.getAttribute('transform') ?? '') ?? ['', '0', '0'];
+  pt.dispatchEvent(
+    new MouseEvent('pointermove', {
+      bubbles: true,
+      clientX: Number(tx) + Number(pt.getAttribute('data-cx')),
+      clientY: Number(ty) + Number(pt.getAttribute('data-cy')),
+    })
+  );
+}
+
+function leave(container: Element): void {
+  container.querySelector('svg')!.dispatchEvent(new MouseEvent('pointerleave'));
+}
+
+const tipEl = (): HTMLDivElement => requireElement<HTMLDivElement>(document, 'body > div[aria-hidden="true"]');
+
 describe('interactive plugins', () => {
   let container: HTMLDivElement;
 
@@ -52,14 +72,63 @@ describe('interactive plugins', () => {
       new LineChart(container, { data: single, plugins: [tooltip()] }).render();
       const pt = container.querySelector('.data-point')!;
 
-      fire(pt, 'mouseenter');
-      const tip = requireElement<HTMLDivElement>(document, 'body > div:last-child');
+      hover(pt);
+      const tip = tipEl();
       expect(tip.style.display).toBe('block');
       expect(tip.textContent).toContain('Jan');
       expect(tip.textContent).toContain('10');
 
-      fire(pt, 'mouseleave');
+      leave(container);
       expect(tip.style.display).toBe('none');
+    });
+
+    it('lists every series at the hovered x', () => {
+      new LineChart(container, { data: multi, plugins: [tooltip()] }).render();
+      hover(container.querySelector('.data-point[data-index="1"]')!);
+      const text = tipEl().textContent ?? '';
+      expect(text).toContain('Feb');
+      expect(text).toContain('Revenue');
+      expect(text).toContain('20');
+      expect(text).toContain('Cost');
+      expect(text).toContain('8');
+    });
+
+    it("formats values with the chart's valueFormatter", () => {
+      new LineChart(container, {
+        data: single,
+        valueFormatter: (v) => `$${v}.00`,
+        plugins: [tooltip()],
+      }).render();
+      hover(container.querySelector('.data-point')!);
+      expect(tipEl().textContent).toContain('$10.00');
+    });
+
+    it('reveals hidden markers while hovered', () => {
+      new LineChart(container, { data: single, showPoints: false, plugins: [tooltip()] }).render();
+      const pt = requireElement<SVGElement>(container, '.data-point');
+      hover(pt);
+      expect(pt.style.fill).not.toBe('');
+      leave(container);
+      expect(pt.style.fill).toBe('');
+    });
+
+    it('describes the hovered bar', () => {
+      new BarChart(container, { data: single, plugins: [tooltip()] }).render();
+      const bar = container.querySelectorAll('.data-point')[1];
+      fire(bar, 'pointermove');
+      expect(tipEl().textContent).toContain('Feb');
+      expect(tipEl().textContent).toContain('20');
+    });
+
+    it('follows keyboard focus', () => {
+      new LineChart(container, { data: single, plugins: [tooltip()] }).render();
+      const svg = container.querySelector('svg')!;
+      fire(svg, 'focus');
+      svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      expect(tipEl().style.display).toBe('block');
+      expect(tipEl().textContent).toContain('Jan');
+      svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(tipEl().style.display).toBe('none');
     });
 
     it('honors a custom formatter', () => {
@@ -68,9 +137,8 @@ describe('interactive plugins', () => {
         plugins: [tooltip({ formatter: (e) => `V=${e.y}` })],
       }).render();
       const pt = container.querySelector('.data-point')!;
-      fire(pt, 'mouseenter');
-      const tip = requireElement<HTMLDivElement>(document, 'body > div:last-child');
-      expect(tip.textContent).toBe('V=10');
+      hover(pt);
+      expect(tipEl().textContent).toBe('V=10');
     });
 
     it('removes its element on destroy', () => {
@@ -109,11 +177,25 @@ describe('interactive plugins', () => {
       }).render();
 
       const pt = container.querySelector('.data-point')!;
-      fire(pt, 'mouseenter');
-      fire(pt, 'mouseleave');
+      hover(pt);
+      hover(pt); // unchanged point: no duplicate event
+      leave(container);
       expect(events).toHaveLength(2);
-      expect(events[0]).not.toBeNull();
+      expect(events[0]?.x).toBe('Jan');
       expect(events[1]).toBeNull();
+    });
+
+    it('does not stack listeners across re-renders', () => {
+      const clicks: ChartPointEvent[] = [];
+      const chart = new LineChart(container, {
+        data: single,
+        plugins: [callbacks({ onPointClick: (e) => clicks.push(e) })],
+      });
+      chart.render();
+      chart.render();
+      chart.update(single);
+      fire(container.querySelector('.data-point')!, 'click');
+      expect(clicks).toHaveLength(1);
     });
 
     it('does nothing when no handlers are provided', () => {
@@ -170,6 +252,16 @@ describe('interactive plugins', () => {
       });
     });
 
+    it('hides a pie slice (and its label) from its legend item', () => {
+      new PieChart(container, { data: single, showLabels: true, plugins: [legendToggle()] }).render();
+      fire(container.querySelector('.legend-item[data-series-index="1"]')!, 'click');
+      const slice = requireElement<SVGElement>(container, '.data-point[data-index="1"]');
+      const label = requireElement<SVGElement>(container, 'text[data-index="1"]');
+      expect(slice.style.display).toBe('none');
+      expect(label.style.display).toBe('none');
+      expect(requireElement<SVGElement>(container, '.data-point[data-index="0"]').style.display).toBe('');
+    });
+
     it('exposes button semantics and toggles with the keyboard', () => {
       new BarChart(container, {
         data: multi,
@@ -192,9 +284,10 @@ describe('interactive plugins', () => {
       expect(group.style.display).toBe('none');
 
       const pt = container.querySelector('.data-point')!;
-      fire(pt, 'mouseenter');
+      hover(pt);
       expect(group.style.display).toBe('');
-      fire(pt, 'mouseleave');
+      expect(group.querySelector('line')?.getAttribute('x1')).toBe(pt.getAttribute('data-cx'));
+      leave(container);
       expect(group.style.display).toBe('none');
     });
   });

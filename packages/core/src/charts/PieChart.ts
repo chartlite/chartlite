@@ -8,22 +8,21 @@
 
 import { BaseChart } from './BaseChart';
 import type { PieChartConfig } from '../types';
-import { setDataPointAttrs } from '../render/dataAttrs';
-import { createSVGElement } from '../render/constants';
+import { markDataPoint } from '../render/dataAttrs';
+import { arcPath, svgEl } from '../render/constants';
+import { getThemeColors } from '../utils';
 
 const FULL_CIRCLE = Math.PI * 2;
 
 export class PieChart extends BaseChart {
-  protected config: PieChartConfig;
+  declare protected config: PieChartConfig;
 
   constructor(container: HTMLElement | string, config: PieChartConfig) {
-    super(container, config, config.data, 'Pie');
+    super(container, { innerRadius: 0, showLabels: false, ...config }, config.data, 'Pie');
+  }
 
-    this.config = {
-      innerRadius: 0,
-      showLabels: false,
-      ...config,
-    };
+  protected hasAxes(): boolean {
+    return false;
   }
 
   protected renderChart(): void {
@@ -43,16 +42,13 @@ export class PieChart extends BaseChart {
     if (total <= 0) return;
 
     // Center the pie in the available area; radius leaves room for the margins.
-    const cx = this.dimensions.width / 2;
+    const cx = margin.left + chartWidth / 2;
     const cy = margin.top + chartHeight / 2;
-    const radius = Math.min(chartWidth, chartHeight) / 2;
+    const radius = Math.max(0, Math.min(chartWidth, chartHeight) / 2);
     const innerRadius =
       Math.max(0, Math.min(0.95, this.config.innerRadius ?? 0)) * radius;
 
-    const palette =
-      this.config.colors && this.config.colors.length > 0
-        ? this.config.colors
-        : colors.seriesColors;
+    const palette = this.palette();
 
     let angleStart = 0;
 
@@ -62,101 +58,43 @@ export class PieChart extends BaseChart {
 
       const fraction = value / total;
       const angleEnd = angleStart + fraction * FULL_CIRCLE;
-      const sliceColor = palette[index % palette.length];
       const percent = (fraction * 100).toFixed(1);
       const midAngle = (angleStart + angleEnd) / 2;
       const dataRadius = innerRadius > 0 ? (radius + innerRadius) / 2 : radius * 0.65;
       const dataX = cx + dataRadius * Math.sin(midAngle);
       const dataY = cy - dataRadius * Math.cos(midAngle);
 
-      const path = createSVGElement('path');
-      path.setAttribute(
-        'd',
-        this.buildSlicePath(cx, cy, radius, innerRadius, angleStart, angleEnd, fraction)
+      const path = svgEl('path', {
+        d: arcPath(cx, cy, radius, innerRadius, angleStart, angleEnd),
+        fill: palette[index % palette.length],
+        stroke: colors.background,
+        'stroke-width': 2,
+      }, mainGroup);
+      markDataPoint(
+        path, `${slice.label ?? slice.x}: ${slice.y} (${percent}%)`,
+        slice.label ?? slice.x, slice.y, this.seriesData[0]?.name, 0, index, dataX, dataY
       );
-      path.setAttribute('fill', sliceColor);
-      path.setAttribute('stroke', colors.background);
-      path.setAttribute('stroke-width', '2');
 
-      // Accessibility + keyboard navigation
-      path.setAttribute('role', 'img');
-      path.setAttribute('aria-label', `${slice.label ?? slice.x}: ${slice.y} (${percent}%)`);
-      path.setAttribute('tabindex', '-1');
-      path.classList.add('data-point');
-      setDataPointAttrs(path, slice.label ?? slice.x, slice.y, this.seriesData[0]?.name, 0, index, dataX, dataY);
-      mainGroup.appendChild(path);
-
-      // Optional percentage label at the slice mid-angle
-      if (this.config.showLabels) {
-        const lx = dataX;
-        const ly = dataY;
-
-        const text = createSVGElement('text');
-        text.setAttribute('x', String(lx));
-        text.setAttribute('y', String(ly));
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('dominant-baseline', 'middle');
-        text.setAttribute('fill', colors.background);
-        text.setAttribute('font-size', '12');
-        text.setAttribute('font-weight', '600');
-        text.textContent = `${percent}%`;
-        mainGroup.appendChild(text);
+      // Optional percentage label at the slice mid-angle, only where it fits:
+      // the slice's chord at the label radius must clear "NN.N%" (~7px/char).
+      // `data-index` hides it with its slice under legendToggle().
+      const chord = 2 * dataRadius * Math.sin(Math.min(fraction, 0.5) * Math.PI);
+      if (this.config.showLabels && chord >= (percent.length + 2) * 7 && radius - innerRadius >= 16) {
+        svgEl('text', {
+          x: dataX,
+          y: dataY,
+          'text-anchor': 'middle',
+          'dominant-baseline': 'middle',
+          // The raw theme background, not `var(--cl-bg)`: labels sit on the
+          // slice colour, so they must stay visible when --cl-bg is transparent.
+          fill: getThemeColors(this.config.theme || 'default').background,
+          'font-size': 12,
+          'font-weight': 600,
+          'data-index': index,
+        }, mainGroup).textContent = `${percent}%`;
       }
 
       angleStart = angleEnd;
     });
-  }
-
-  /** Point on a circle of the given radius at `angle` (0 = 12 o'clock, clockwise). */
-  private point(cx: number, cy: number, r: number, angle: number): [number, number] {
-    return [cx + r * Math.sin(angle), cy - r * Math.cos(angle)];
-  }
-
-  /**
-   * Build the SVG path for one slice. Handles the full-circle case (a single 100%
-   * slice) by drawing two arcs, since a single arc from a point back to itself
-   * won't render.
-   */
-  private buildSlicePath(
-    cx: number,
-    cy: number,
-    r: number,
-    ir: number,
-    a0: number,
-    a1: number,
-    fraction: number
-  ): string {
-    const largeArc = a1 - a0 > Math.PI ? 1 : 0;
-    const isFull = fraction >= 0.9999;
-
-    if (isFull) {
-      // Two half-circle arcs for a complete ring/disc.
-      const [tx, ty] = this.point(cx, cy, r, 0);
-      const [bx, by] = this.point(cx, cy, r, Math.PI);
-      let path = `M ${tx} ${ty} A ${r} ${r} 0 1 1 ${bx} ${by} A ${r} ${r} 0 1 1 ${tx} ${ty} Z`;
-      if (ir > 0) {
-        const [itx, ity] = this.point(cx, cy, ir, 0);
-        const [ibx, iby] = this.point(cx, cy, ir, Math.PI);
-        // Inner circle drawn in reverse so it cuts a hole (even-odd via subpath).
-        path += ` M ${itx} ${ity} A ${ir} ${ir} 0 1 0 ${ibx} ${iby} A ${ir} ${ir} 0 1 0 ${itx} ${ity} Z`;
-      }
-      return path;
-    }
-
-    const [ox0, oy0] = this.point(cx, cy, r, a0);
-    const [ox1, oy1] = this.point(cx, cy, r, a1);
-
-    if (ir <= 0) {
-      // Solid wedge from the center.
-      return `M ${cx} ${cy} L ${ox0} ${oy0} A ${r} ${r} 0 ${largeArc} 1 ${ox1} ${oy1} Z`;
-    }
-
-    // Donut segment: outer arc forward, inner arc back.
-    const [ix0, iy0] = this.point(cx, cy, ir, a0);
-    const [ix1, iy1] = this.point(cx, cy, ir, a1);
-    return (
-      `M ${ox0} ${oy0} A ${r} ${r} 0 ${largeArc} 1 ${ox1} ${oy1} ` +
-      `L ${ix1} ${iy1} A ${ir} ${ir} 0 ${largeArc} 0 ${ix0} ${iy0} Z`
-    );
   }
 }
