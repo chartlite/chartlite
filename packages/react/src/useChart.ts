@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type {
   AreaChartConfig,
   BarChartConfig,
@@ -9,6 +9,14 @@ import type {
   ScatterChartConfig,
   SparklineConfig,
 } from '@chartlite/core';
+import {
+  ChartController,
+  type BridgeOptions,
+  type ChartConstructor,
+  type CoreConfig,
+} from './bridge';
+
+export type { ChartConstructor, ChartInstance } from './bridge';
 
 export type ChartType =
   | 'line'
@@ -34,100 +42,40 @@ export interface ChartConfigByType {
 
 export type ChartConfig = ChartConfigByType[ChartType];
 
-/** The subset of the core chart instance the wrapper relies on. */
-interface ChartInstance {
-  render(): void;
-  destroy(): void;
-}
-
-/** Any core chart constructor: `new Ctor(container, config)`. */
-export type ChartConstructor<C extends ChartConfig> = new (
-  container: HTMLElement,
-  config: C
-) => ChartInstance;
-
-/**
- * Build a stable dependency key from a config object. Functions are compared by
- * identity so callback, formatter, and plugin changes recreate the chart too.
- */
-const identities = new WeakMap<WeakKey, number>();
-let nextIdentity = 0;
-
-function identity(value: WeakKey): number {
-  let id = identities.get(value);
-  if (id === undefined) {
-    id = ++nextIdentity;
-    identities.set(value, id);
-  }
-  return id;
-}
-
-function configSignature(config: ChartConfig): string {
-  try {
-    return JSON.stringify(config, (_key, value) =>
-      value instanceof Function ? `__chartlite_fn_${identity(value)}` : value
-    );
-  } catch {
-    return `__chartlite_config_${identity(config)}`;
-  }
+export interface UseChartResult {
+  containerRef: React.RefObject<HTMLDivElement>;
+  controller: ChartController;
 }
 
 /**
- * Shared imperative bridge between React and a core chart class. Creates the
- * chart on mount, recreates it when `Ctor` or the serializable config changes,
- * and destroys it on unmount. Errors are surfaced via `onError` (or logged).
+ * Shared imperative bridge between React and a core chart class, backed by a
+ * {@link ChartController}. After every commit the controller diffs the props:
+ * unchanged props are a no-op, a data-only change calls `chart.update(data)`,
+ * and any other option change (or a new `Ctor`) recreates the chart. Callback
+ * and formatter props are read through stable proxies, so inline arrow
+ * functions never recreate the chart. The chart is destroyed on unmount.
  *
  * Named components pass a concrete `Ctor` so only that chart class is bundled;
  * the generic `<Chart>` resolves `Ctor` from the registry.
  */
-export interface UseChartResult {
-  containerRef: React.RefObject<HTMLDivElement>;
-  error: Error | null;
-}
-
-export function useChart<C extends ChartConfig>(
+export function useChart<C extends CoreConfig>(
   Ctor: ChartConstructor<C> | undefined,
   config: C,
-  onError?: (error: Error) => void
+  options: BridgeOptions = {}
 ): UseChartResult {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<ChartInstance | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+  const controllerRef = useRef<ChartController | null>(null);
+  if (controllerRef.current === null) controllerRef.current = new ChartController();
+  const controller = controllerRef.current;
 
-  // `onError` is read via a ref so a changing callback identity doesn't recreate
-  // the chart.
-  const onErrorRef = useRef(onError);
-  onErrorRef.current = onError;
-
-  const signature = configSignature(config);
-
+  // Runs after every commit; the controller decides whether anything changed.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    controller.sync(container, Ctor, config, options);
+  });
 
-    try {
-      chartRef.current?.destroy();
-      if (!Ctor) {
-        throw new Error('Chart: no chart constructor for the given `type`.');
-      }
-      const chart = new Ctor(container, config);
-      chart.render();
-      chartRef.current = chart;
-      setError(null);
-    } catch (err) {
-      const normalized = err instanceof Error ? err : new Error(String(err));
-      setError(normalized);
-      if (onErrorRef.current) onErrorRef.current(normalized);
-      else console.error('Chartlite render error:', normalized);
-    }
+  useEffect(() => () => controller.destroy(), [controller]);
 
-    return () => {
-      chartRef.current?.destroy();
-      chartRef.current = null;
-    };
-    // config is intentionally tracked via `signature`, not by reference.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Ctor, signature]);
-
-  return { containerRef, error };
+  return { containerRef, controller };
 }

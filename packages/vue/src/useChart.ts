@@ -1,4 +1,4 @@
-import { onMounted, onBeforeUnmount, ref, watch, type Ref } from 'vue';
+import { onBeforeUnmount, ref, shallowRef, watchPostEffect, type Ref, type ShallowRef } from 'vue';
 import type {
   AreaChartConfig,
   BarChartConfig,
@@ -9,6 +9,15 @@ import type {
   ScatterChartConfig,
   SparklineConfig,
 } from '@chartlite/core';
+import {
+  ChartController,
+  type BridgeOptions,
+  type ChartConstructor,
+  type ChartInstance,
+  type CoreConfig,
+} from './bridge';
+
+export type { ChartConstructor, ChartInstance } from './bridge';
 
 export type ChartType =
   | 'line'
@@ -34,88 +43,50 @@ export interface ChartConfigByType {
 
 export type ChartConfig = ChartConfigByType[ChartType];
 
-/** The subset of the core chart instance the wrapper relies on. */
-interface ChartInstance {
-  render(): void;
-  destroy(): void;
+/** One snapshot of what the component wants rendered. */
+export interface ChartInput {
+  Ctor: ChartConstructor<CoreConfig> | undefined;
+  config: CoreConfig;
+  options: BridgeOptions;
 }
 
-/** Any core chart constructor: `new Ctor(container, config)`. */
-export type ChartConstructor<C extends ChartConfig> = new (
-  container: HTMLElement,
-  config: C
-) => ChartInstance;
-
-/**
- * Stable dependency key for a config object, including callback/formatter identity.
- */
-const identities = new WeakMap<WeakKey, number>();
-let nextIdentity = 0;
-
-function identity(value: WeakKey): number {
-  let id = identities.get(value);
-  if (id === undefined) {
-    id = ++nextIdentity;
-    identities.set(value, id);
-  }
-  return id;
-}
-
-export function configSignature(config: ChartConfig): string {
-  try {
-    return JSON.stringify(config, (_key, value) =>
-      value instanceof Function ? `__chartlite_fn_${identity(value)}` : value
-    );
-  } catch {
-    return `__chartlite_config_${identity(config)}`;
-  }
-}
-
-/**
- * Shared bridge between a Vue component and a core chart class. Creates the chart
- * on mount, recreates it when the constructor (i.e. the generic `type`) or the
- * serializable config changes, and destroys it on unmount. Returns the container
- * ref to bind and a reactive `error`.
- */
 export interface UseChartResult {
   container: Ref<HTMLElement | null>;
-  error: Ref<Error | null>;
+  /** The live core chart instance (or `null`). */
+  chart: ShallowRef<ChartInstance | null>;
+  /** The current render/update error (or `null`). */
+  error: ShallowRef<Error | null>;
+  controller: ChartController;
 }
 
-export function useChart<C extends ChartConfig>(
-  getCtor: () => ChartConstructor<C> | undefined,
-  getConfig: () => C,
-  getOnError?: () => ((error: Error) => void) | undefined
-): UseChartResult {
+/**
+ * Shared bridge between a Vue component and a core chart class, backed by a
+ * {@link ChartController}. `read()` is evaluated in a post-flush effect, so every
+ * reactive prop/attr it touches (including deep reads of `data`) re-syncs the
+ * chart: unchanged input is a no-op, a data-only change calls
+ * `chart.update(data)`, and any other option change recreates the chart. Callback
+ * props are read through stable proxies, so new function identities never
+ * recreate it. The chart is destroyed on unmount.
+ */
+export function useChart(read: () => ChartInput): UseChartResult {
   const container = ref<HTMLElement | null>(null);
-  const error = ref<Error | null>(null);
-  let chart: ChartInstance | null = null;
+  const chart = shallowRef<ChartInstance | null>(null);
+  const error = shallowRef<Error | null>(null);
+  const controller = new ChartController();
 
-  const build = (): void => {
-    if (!container.value) return;
-    try {
-      chart?.destroy();
-      const Ctor = getCtor();
-      if (!Ctor) throw new Error('Chart: no chart constructor for the given `type`.');
-      chart = new Ctor(container.value, getConfig());
-      chart.render();
-      error.value = null;
-    } catch (err) {
-      const normalized = err instanceof Error ? err : new Error(String(err));
-      error.value = normalized;
-      const onError = getOnError?.();
-      if (onError) onError(normalized);
-      else console.error('Chartlite render error:', normalized);
-    }
-  };
-
-  onMounted(build);
-  // Recreate when the constructor identity or the config signature changes.
-  watch([getCtor, () => configSignature(getConfig())], build);
-  onBeforeUnmount(() => {
-    chart?.destroy();
-    chart = null;
+  watchPostEffect(() => {
+    const input = read();
+    const el = container.value;
+    if (!el) return;
+    controller.sync(el, input.Ctor, input.config, input.options);
+    chart.value = controller.chart;
+    error.value = controller.error;
   });
 
-  return { container, error };
+  onBeforeUnmount(() => {
+    controller.destroy();
+    chart.value = null;
+  });
+
+  return { container, chart, error, controller };
 }

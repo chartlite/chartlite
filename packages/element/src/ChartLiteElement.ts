@@ -6,6 +6,14 @@
  * (`<chart-lite type="line" data="[1,2,3]">`). Because it's a standard custom
  * element, it works in plain HTML, Astro/Hugo/11ty, and any framework — including
  * Angular (`<chart-lite [spec]="spec">` with `CUSTOM_ELEMENTS_SCHEMA`).
+ *
+ * - `tooltip` (boolean attribute) or `spec.tooltip` adds a hover tooltip.
+ * - A spec change that only touches `data` updates the chart in place
+ *   (`chart.update`); callbacks such as `spec.onPointClick` are picked up without
+ *   re-rendering; any other change recreates the chart.
+ * - Errors (including a malformed JSON `spec`/`data` attribute, which is named in
+ *   the message and logged via `console.error`) show a fallback box and dispatch
+ *   a `chartlite:error` event whose `detail` is the `Error`.
  */
 
 import {
@@ -18,6 +26,7 @@ import {
   ComboChart,
   Sparkline,
 } from '@chartlite/core';
+import type { TooltipOptions } from '@chartlite/core/interactive';
 import type {
   AreaChartConfig,
   BarChartConfig,
@@ -30,6 +39,7 @@ import type {
   ScatterChartConfig,
   SparklineConfig,
 } from '@chartlite/core';
+import { ChartController, type ChartConstructor, type CoreConfig } from './bridge';
 
 export type ChartType =
   | 'line'
@@ -40,11 +50,6 @@ export type ChartType =
   | 'radial'
   | 'combo'
   | 'sparkline';
-
-interface ChartInstance {
-  render(): void;
-  destroy(): void;
-}
 
 /** The supported chart options accepted by a `<chart-lite>` spec. */
 export interface ChartSpec extends BaseChartConfig {
@@ -71,9 +76,9 @@ export interface ChartSpec extends BaseChartConfig {
   pointShape?: ScatterChartConfig['pointShape'];
   showEndDot?: SparklineConfig['showEndDot'];
   strokeWidth?: SparklineConfig['strokeWidth'];
+  /** Hover tooltip (`true` or options). Adds `tooltip()` from `@chartlite/core/interactive`. */
+  tooltip?: boolean | TooltipOptions;
 }
-
-type ChartConfig = Omit<ChartSpec, 'type'>;
 
 const THEMES = ['default', 'midnight', 'minimal', 'tailwind', 'nord', 'high-contrast'] as const;
 
@@ -82,65 +87,55 @@ function parseTheme(value: string | null): BaseChartConfig['theme'] {
   return THEMES.find((theme) => theme === value);
 }
 
-function requiredData(config: ChartConfig): FlexibleDataInput {
-  if (config.data === undefined) throw new Error('Chart data is required');
-  return config.data;
-}
+const REGISTRY = {
+  line: LineChart,
+  bar: BarChart,
+  area: AreaChart,
+  scatter: ScatterChart,
+  pie: PieChart,
+  radial: RadialChart,
+  combo: ComboChart,
+  sparkline: Sparkline,
+};
 
-function createChart(
-  container: HTMLElement,
-  type: string | undefined,
-  config: ChartConfig,
-): ChartInstance {
-  switch (type) {
-    case 'line':
-      return new LineChart(container, { ...config, data: requiredData(config) });
-    case 'bar':
-      return new BarChart(container, { ...config, data: requiredData(config) });
-    case 'area':
-      return new AreaChart(container, { ...config, data: requiredData(config) });
-    case 'scatter':
-      return new ScatterChart(container, { ...config, data: requiredData(config) });
-    case 'pie':
-      return new PieChart(container, { ...config, data: requiredData(config) });
-    case 'radial':
-      return new RadialChart(container, { ...config, data: requiredData(config) });
-    case 'combo':
-      return new ComboChart(container, { ...config, data: requiredData(config) });
-    case 'sparkline':
-      return new Sparkline(container, { ...config, data: requiredData(config) });
-    default:
-      throw new Error(`Unknown chart type: ${String(type)}`);
-  }
+function lookup(type: string | undefined): ChartConstructor<CoreConfig> | undefined {
+  if (type === undefined || !Object.prototype.hasOwnProperty.call(REGISTRY, type)) return undefined;
+  // SAFETY: `type` is an own key of REGISTRY (checked above); the spec's options
+  // are validated by that chart's constructor.
+  return REGISTRY[type as ChartType] as ChartConstructor<CoreConfig>;
 }
 
 /** Attributes that, when changed, trigger a re-render. */
-const OBSERVED = ['spec', 'type', 'data', 'theme', 'title', 'width', 'height', 'css-vars'];
+const OBSERVED = ['spec', 'type', 'data', 'theme', 'title', 'width', 'height', 'css-vars', 'tooltip'];
 
 // Keep the module importable during SSR; registration remains browser-only.
 // SAFETY: globalThis.HTMLElement is the browser DOM base; SSR uses the inert fallback.
 const HTMLElementBase = (globalThis.HTMLElement ?? class {}) as typeof HTMLElement;
 
-function parseSpecJSON(value: string | null): ChartSpec | undefined {
-  if (value == null) return undefined;
+/** Parse a JSON attribute, naming the attribute in the error if it is malformed. */
+function parseJSONAttribute(name: string, value: string): ChartSpec | FlexibleDataInput {
   try {
-    const parsed = JSON.parse(value);
-    if (Object.prototype.toString.call(parsed) !== '[object Object]') return undefined;
-    // SAFETY: the object tag check establishes that JSON parsing produced a spec object;
-    // chart-specific fields are validated by the core chart constructor.
-    return parsed as ChartSpec;
-  } catch {
-    return undefined;
+    return JSON.parse(value);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`<chart-lite>: the "${name}" attribute is not valid JSON (${reason})`);
   }
 }
 
-function parseDataJSON(value: string | null): FlexibleDataInput | undefined {
-  if (value == null) return undefined;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return undefined;
+function parseSpecAttribute(value: string): ChartSpec {
+  const parsed = parseJSONAttribute('spec', value);
+  if (Object.prototype.toString.call(parsed) !== '[object Object]') {
+    throw new Error('<chart-lite>: the "spec" attribute must be a JSON object, e.g. {"type":"line","data":[1,2,3]}');
   }
+  // SAFETY: the object tag check establishes that JSON parsing produced a spec object;
+  // chart-specific fields are validated by the core chart constructor.
+  return parsed as ChartSpec;
+}
+
+function parseDataAttribute(value: string): FlexibleDataInput {
+  // SAFETY: JSON data is validated (and rejected with a clear error) by the core
+  // chart's data normalization.
+  return parseJSONAttribute('data', value) as FlexibleDataInput;
 }
 
 export class ChartLiteElement extends HTMLElementBase {
@@ -149,7 +144,7 @@ export class ChartLiteElement extends HTMLElementBase {
   }
 
   private _spec: ChartSpec | null = null;
-  private instance: ChartInstance | null = null;
+  private readonly controller = new ChartController();
   private scheduled = false;
 
   /** Set the full chart spec as a JS property (preferred for dynamic data). */
@@ -166,8 +161,7 @@ export class ChartLiteElement extends HTMLElementBase {
   }
 
   disconnectedCallback(): void {
-    this.instance?.destroy();
-    this.instance = null;
+    this.controller.destroy();
   }
 
   attributeChangedCallback(): void {
@@ -188,15 +182,15 @@ export class ChartLiteElement extends HTMLElementBase {
   private resolveSpec(): ChartSpec {
     if (this._spec) return this._spec;
 
-    const attrSpec = parseSpecJSON(this.getAttribute('spec'));
-    if (attrSpec !== undefined) return attrSpec;
+    const specAttr = this.getAttribute('spec');
+    if (specAttr !== null) return parseSpecAttribute(specAttr);
 
     const spec: ChartSpec = {};
     const type = this.getAttribute('type');
     if (type) spec.type = type;
 
-    const data = parseDataJSON(this.getAttribute('data'));
-    if (data !== undefined) spec.data = data;
+    const data = this.getAttribute('data');
+    if (data !== null) spec.data = parseDataAttribute(data);
 
     const theme = parseTheme(this.getAttribute('theme'));
     if (theme !== undefined) spec.theme = theme;
@@ -207,40 +201,38 @@ export class ChartLiteElement extends HTMLElementBase {
       if (value != null && value !== '') spec[key] = Number(value);
     }
     if (this.hasAttribute('css-vars')) spec.cssVars = true;
+    if (this.hasAttribute('tooltip')) spec.tooltip = true;
 
     return spec;
   }
 
-  private showError(message: string): void {
-    this.textContent = '';
-    const box = document.createElement('div');
-    box.setAttribute(
-      'style',
-      'padding:20px;color:#dc2626;border:1px solid #fecaca;border-radius:4px;background-color:#fee2e2'
-    );
-    const strong = document.createElement('strong');
-    strong.textContent = 'Chart Error: ';
-    box.appendChild(strong);
-    box.append(message);
-    this.appendChild(box);
-  }
-
   private rerender(): void {
     if (!this.isConnected) return;
-    const { type, ...config } = this.resolveSpec();
+    const onError = (error: Error): void => {
+      this.dispatchEvent(new CustomEvent('chartlite:error', { detail: error }));
+    };
+
+    let spec: ChartSpec;
     try {
-      this.instance?.destroy();
-      this.instance = null;
-      this.textContent = '';
-      const chart = createChart(this, type, config);
-      chart.render();
-      this.instance = chart;
-      this.dispatchEvent(new CustomEvent('chartlite:render', { detail: { type } }));
+      spec = this.resolveSpec();
     } catch (err) {
-      const normalized = err instanceof Error ? err : new Error(String(err));
-      this.showError(normalized.message);
-      this.dispatchEvent(new CustomEvent('chartlite:error', { detail: normalized }));
+      // Malformed JSON attributes: say which attribute failed instead of letting
+      // it surface later as a vague data-format error.
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error(error.message);
+      this.controller.fail(this, error, { onError });
+      return;
     }
+
+    const { type, tooltip, ...config } = spec;
+    // SAFETY: the spec's options are the chart config; a missing `data` is
+    // reported by the controller and the rest is validated by the core chart.
+    const error = this.controller.sync(this, lookup(type), config as CoreConfig, {
+      tooltip,
+      onError,
+      type,
+    });
+    if (!error) this.dispatchEvent(new CustomEvent('chartlite:render', { detail: { type } }));
   }
 }
 

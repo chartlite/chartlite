@@ -1,11 +1,13 @@
 /**
  * @chartlite/react — React components for Chartlite.
  *
- * - `<Chart type=… />` — generic, spec-driven (renders any of the 9 chart types).
+ * - `<Chart type=… />` — generic, spec-driven (renders any of the 8 chart types).
  * - `<LineChart>`, `<BarChart>`, … — named, per-type, tree-shakeable.
+ *
+ * Every component forwards a `ref` to a {@link ChartHandle}.
  */
 
-export { Chart, type ChartType } from './Chart';
+export { Chart, type ChartType, type ChartProps, type ChartSpecProps } from './Chart';
 export {
   LineChart,
   BarChart,
@@ -15,8 +17,23 @@ export {
   RadialChart,
   ComboChart,
   Sparkline,
+  type LineChartProps,
+  type BarChartProps,
+  type AreaChartProps,
+  type ScatterChartProps,
+  type PieChartProps,
+  type RadialChartProps,
+  type ComboChartProps,
+  type SparklineProps,
 } from './charts';
-export type { ChartFrameOwnProps } from './ChartFrame';
+export type {
+  ChartFrameOwnProps,
+  ChartContainerAttributes,
+  ChartComponentProps,
+  ChartHandle,
+} from './ChartFrame';
+export type { ChartInstance, WrapperOptions } from './bridge';
+export type { TooltipOptions } from '@chartlite/core/interactive';
 
 // Re-export config + data types from core so consumers get full typing.
 export type {
@@ -44,4 +61,5 @@ export type {
   Region,
   ChartPointEvent,
   LegendToggleEvent,
+  ChartPlugin,
 } from '@chartlite/core';

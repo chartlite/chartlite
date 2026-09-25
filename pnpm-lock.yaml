@@ -123,7 +123,7 @@ importers:
   packages/element:
     dependencies:
       '@chartlite/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
     devDependencies:
       jsdom:
@@ -167,7 +167,7 @@ importers:
   packages/react:
     dependencies:
       '@chartlite/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
     devDependencies:
       '@testing-library/dom':
@@ -204,7 +204,7 @@ importers:
   packages/svelte:
     dependencies:
       '@chartlite/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       svelte:
         specifier: ^4.0.0 || ^5.0.0
@@ -226,7 +226,7 @@ importers:
   packages/vue:
     dependencies:
       '@chartlite/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
     devDependencies:
       '@vue/test-utils':

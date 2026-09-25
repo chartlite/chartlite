@@ -7,7 +7,14 @@
 
 import { defineChartElement } from './ChartLiteElement';
 
-export { ChartLiteElement, defineChartElement, type ChartType } from './ChartLiteElement';
+export {
+  ChartLiteElement,
+  defineChartElement,
+  type ChartType,
+  type ChartSpec,
+} from './ChartLiteElement';
+export type { ChartInstance } from './bridge';
+export type { TooltipOptions } from '@chartlite/core/interactive';
 
 // Auto-register on import (the common case: `import '@chartlite/element'`).
 defineChartElement();
@@ -38,4 +45,5 @@ export type {
   Region,
   ChartPointEvent,
   LegendToggleEvent,
+  ChartPlugin,
 } from '@chartlite/core';
