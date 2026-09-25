@@ -16,69 +16,70 @@ const packageLinks = [
   { label: '@chartlite/svelte', href: 'https://www.npmjs.com/package/@chartlite/svelte' },
 ];
 
+function Column({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h4 className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted">{title}</h4>
+      <ul className="mt-4 space-y-2.5">{children}</ul>
+    </div>
+  );
+}
+
+const linkClass = 'text-sm text-ink-soft transition-colors hover:text-accent-ink';
+
 export default function SiteFooter() {
   return (
-    <footer className="relative z-10 mt-32 border-t border-white/5">
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 sm:grid-cols-2 md:grid-cols-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <Logo className="h-7 w-7" />
-            <span className="font-display text-lg font-semibold text-mist-100">Chartlite</span>
+    <footer className="relative z-10 mt-16 bg-paper-sunken">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="grid gap-10 border-t border-ink py-14 sm:grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <Logo className="h-6 w-6" />
+              <span className="font-serif text-2xl leading-none text-ink">Chartlite</span>
+            </div>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
+              Beautiful charts for modern web apps. Lightweight, fast, accessible,
+              and agent-native.
+            </p>
           </div>
-          <p className="mt-4 max-w-xs text-sm text-mist-500">
-            Beautiful charts for modern web apps. Lightweight, fast, accessible,
-            and agent-native.
-          </p>
-        </div>
 
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-mist-600">Product</h4>
-          <ul className="mt-4 space-y-2.5">
+          <Column title="Product">
             {NAV_LINKS.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="text-sm text-mist-500 transition-colors hover:text-mist-100">
+                <Link href={l.href} className={linkClass}>
                   {l.label}
                 </Link>
               </li>
             ))}
-          </ul>
-        </div>
+          </Column>
 
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-mist-600">Examples</h4>
-          <ul className="mt-4 space-y-2.5">
+          <Column title="Examples">
             {exampleLinks.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="text-sm text-mist-500 transition-colors hover:text-mist-100">
+                <Link href={l.href} className={linkClass}>
                   {l.label}
                 </Link>
               </li>
             ))}
-          </ul>
-        </div>
+          </Column>
 
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-mist-600">Packages</h4>
-          <ul className="mt-4 space-y-2.5">
+          <Column title="Packages">
             {packageLinks.map((l) => (
               <li key={l.label}>
-                <a
-                  href={l.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm text-mist-500 transition-colors hover:text-mist-100"
-                >
+                <a href={l.href} target="_blank" rel="noreferrer" className={`${linkClass} font-mono text-[13px]`}>
                   {l.label}
                 </a>
               </li>
             ))}
-          </ul>
+          </Column>
         </div>
-      </div>
 
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/5 px-6 py-6 text-sm text-mist-600 sm:flex-row">
-        <p>MIT © {new Date().getFullYear()} Riel St. Amand</p>
-        <p className="font-mono text-xs">Built with Chartlite · zero dependencies</p>
+        <div className="flex flex-col justify-between gap-3 border-t border-rule py-6 text-sm text-muted sm:flex-row">
+          <p>MIT © {new Date().getFullYear()} Riel St. Amand</p>
+          <p className="font-serif italic">
+            Colophon: set in Instrument Serif, Geist &amp; Geist Mono. Every chart drawn by Chartlite.
+          </p>
+        </div>
       </div>
     </footer>
   );

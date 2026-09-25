@@ -46,7 +46,7 @@
   },
   "homepage": "https://github.com/chartlite/chartlite#readme",
   "dependencies": {
-    "@chartlite/core": "workspace:*"
+    "@chartlite/core": "workspace:^"
   },
   "devDependencies": {
     "jsdom": "^25.0.0",

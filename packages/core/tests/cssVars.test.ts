@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LineChart } from '../src/charts/LineChart';
 import { BarChart } from '../src/charts/BarChart';
 import { AreaChart } from '../src/charts/AreaChart';
+import { PieChart } from '../src/charts/PieChart';
 
 const data = [
   { x: 'Jan', y: 10 },
@@ -58,9 +59,26 @@ describe('CSS-variable theming (cssVars)', () => {
       expect(svg.style.backgroundColor).toBe('var(--cl-bg, #ffffff)');
     });
 
+    it('draws label halos and marker outlines with var(--cl-bg)', () => {
+      new LineChart(container, {
+        data,
+        cssVars: true,
+        referenceLines: [{ axis: 'y', value: 12, label: 'Goal' }],
+      }).render();
+      const label = container.querySelector('.chart-reference-lines text');
+      expect(label?.getAttribute('stroke')).toBe('var(--cl-bg, #ffffff)');
+      expect(container.querySelector('circle.data-point')?.getAttribute('stroke')).toBe('var(--cl-bg, #ffffff)');
+    });
+
+    it('keeps pie percentage labels on the raw background so they survive a transparent --cl-bg', () => {
+      new PieChart(container, { data, cssVars: true, showLabels: true, width: 400, height: 400 }).render();
+      const label = container.querySelector('text[data-index]');
+      expect(label?.getAttribute('fill')).toBe('#ffffff');
+    });
+
     it('renders series colors as var(--cl-series-N, fallback)', () => {
       new LineChart(container, { data, cssVars: true }).render();
-      const stroke = container.querySelector('path')?.getAttribute('stroke') || '';
+      const stroke = container.querySelector('path[data-series-index]')?.getAttribute('stroke') || '';
       expect(stroke).toMatch(/^var\(--cl-series-0, #[0-9a-f]{6}\)$/i);
     });
 
@@ -74,7 +92,7 @@ describe('CSS-variable theming (cssVars)', () => {
 
     it('uses a custom color as the var fallback', () => {
       new LineChart(container, { data, cssVars: true, colors: ['#ff0000'] }).render();
-      expect(container.querySelector('path')?.getAttribute('stroke')).toBe(
+      expect(container.querySelector('path[data-series-index]')?.getAttribute('stroke')).toBe(
         'var(--cl-series-0, #ff0000)'
       );
     });
@@ -82,8 +100,21 @@ describe('CSS-variable theming (cssVars)', () => {
     it('routes axis grid/text through var(--cl-grid/--cl-text)', () => {
       new LineChart(container, { data, cssVars: true }).render();
       // Axis labels use fill=var(--cl-text, …); grid lines stroke=var(--cl-grid, …).
-      const texts = Array.from(container.querySelectorAll('text'));
-      expect(texts.some((t) => (t.getAttribute('fill') || '').startsWith('var(--cl-text,'))).toBe(true);
+      const labels = container.querySelector('.chart-axis-labels');
+      expect(labels?.getAttribute('fill')).toMatch(/^var\(--cl-text,/);
+      expect(container.querySelector('.chart-grid')?.getAttribute('stroke')).toMatch(/^var\(--cl-grid,/);
+    });
+
+    it('routes the title, legend and reference lines through the CSS variables', () => {
+      new LineChart(container, {
+        data: multi,
+        cssVars: true,
+        title: 'Themed',
+        referenceLines: [{ axis: 'y', value: 20 }],
+      }).render();
+      expect(container.querySelector('.chart-title')?.getAttribute('fill')).toMatch(/^var\(--cl-text,/);
+      expect(container.querySelector('.legend-item text')?.getAttribute('fill')).toMatch(/^var\(--cl-text,/);
+      expect(container.querySelector('.chart-reference-lines line')?.getAttribute('stroke')).toMatch(/^var\(--cl-text,/);
     });
 
     it('wraps area gradient stops through the series var so CSS re-themes the fill', () => {

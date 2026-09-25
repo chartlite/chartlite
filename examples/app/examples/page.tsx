@@ -23,10 +23,10 @@ const SECTIONS = [
 
 function SectionHeading({ id, kicker, title, blurb }: { id: string; kicker: string; title: string; blurb: string }) {
   return (
-    <div id={id} className="mb-8 max-w-2xl scroll-mt-44">
-      <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-glow-cyan">{kicker}</p>
-      <h2 className="font-display text-3xl font-bold tracking-tight text-mist-100 sm:text-4xl">{title}</h2>
-      <p className="mt-3 text-mist-500">{blurb}</p>
+    <div id={id} className="mb-10 scroll-mt-44 border-t border-ink pt-6">
+      <p className="kicker">{kicker}</p>
+      <h2 className="mt-3 font-serif text-4xl leading-tight text-ink sm:text-5xl">{title}</h2>
+      <p className="mt-3 max-w-2xl text-lg text-ink-soft">{blurb}</p>
     </div>
   );
 }
@@ -89,23 +89,24 @@ export default function Examples() {
   return (
     <FrameworkProvider>
       <header className="mb-10 max-w-3xl">
-        <h1 className="font-display text-4xl font-bold tracking-tight text-mist-100 sm:text-5xl">
-          Examples
+        <p className="kicker">The field guide</p>
+        <h1 className="mt-4 font-serif text-6xl leading-[0.95] tracking-[-0.02em] text-ink sm:text-7xl">
+          Examples, <em className="text-accent">worked.</em>
         </h1>
-        <p className="mt-4 text-lg text-mist-500">
-          Every chart type, all four data formats, multi-series, interactivity, and
-          performance — live, with copy-paste code for <span className="text-mist-300">every framework</span>.
-          Flip the chart theme from the nav to see it all re-theme at once.
+        <p className="mt-5 text-lg leading-relaxed text-ink-soft">
+          Every chart type, all four data formats, multi-series, overlays, and
+          live updates, each with copy-paste code for <span className="text-ink">every framework</span>.
+          Switch between Paper and Night in the nav to re-theme the whole page at once.
         </p>
       </header>
 
       {/* sticky section nav (opaque so headings don't bleed through) */}
-      <nav className="sticky top-24 z-30 mb-12 -mx-2 flex flex-wrap gap-1 rounded-xl border border-white/10 bg-ink-950/90 px-2 py-2 backdrop-blur-xl">
+      <nav className="sticky top-16 z-30 mb-14 flex flex-wrap gap-x-6 gap-y-1 border-y border-rule bg-paper/90 py-3 backdrop-blur-md">
         {SECTIONS.map((s) => (
           <a
             key={s.id}
             href={`#${s.id}`}
-            className="rounded-lg px-3 py-1.5 text-sm text-mist-500 transition-colors hover:text-mist-100"
+            className="font-mono text-xs uppercase tracking-[0.14em] text-muted transition-colors hover:text-accent-ink"
           >
             {s.label}
           </a>
@@ -113,8 +114,8 @@ export default function Examples() {
       </nav>
 
       {/* Chart types */}
-      <SectionHeading id="types" kicker="Nine types" title="Every chart type" blurb="Line, bar, area, scatter, pie & donut, radial gauge, and combo — one API, one theme system, and every wrapper supports all of them." />
-      <div className="grid grid-cols-1 gap-8">
+      <SectionHeading id="types" kicker="Eight types" title="Every chart type" blurb="Line, bar, area, scatter, pie & donut, radial gauge, and combo share one API and one theme system, and every wrapper supports all of them." />
+      <div className="grid grid-cols-1 gap-16">
         <ExampleCard
           title="Line & area"
           description="Smooth or linear curves, optional points, gradient area fills."
@@ -173,8 +174,8 @@ export default function Examples() {
 
       {/* Data formats */}
       <div className="mt-20">
-        <SectionHeading id="data" kicker="Flexible input" title="Four data formats" blurb="Pass whatever shape your data is already in — Chartlite normalizes all four, in every framework." />
-        <div className="grid grid-cols-1 gap-8">
+        <SectionHeading id="data" kicker="Flexible input" title="Four data formats" blurb="Pass your data in whatever shape it already has. Chartlite normalizes all four formats in every framework." />
+        <div className="grid grid-cols-1 gap-16">
           <ExampleCard
             title="DataPoint[] & number[]"
             description="The classic [{ x, y }] array, or a bare number[] for quick charts."
@@ -206,7 +207,7 @@ export default function Examples() {
       {/* Multi-series */}
       <div className="mt-20">
         <SectionHeading id="multi" kicker="Multiple datasets" title="Multi-series & legends" blurb="Grouped bars, multi-line, and stacked areas with auto colors and a configurable legend." />
-        <div className="grid grid-cols-1 gap-8">
+        <div className="grid grid-cols-1 gap-16">
           <ExampleCard
             title="Grouped bars with legend"
             description="Series-first data renders grouped bars with an automatic legend."
@@ -224,8 +225,8 @@ export default function Examples() {
 
       {/* Interactivity */}
       <div className="mt-20">
-        <SectionHeading id="interactivity" kicker="Overlays" title="Reference lines & annotations" blurb="Draw thresholds, highlight regions, and annotate points — all declaratively, in any framework." />
-        <div className="grid grid-cols-1 gap-8">
+        <SectionHeading id="interactivity" kicker="Overlays" title="Reference lines & annotations" blurb="Draw thresholds, highlight regions, and annotate points declaratively, in any framework." />
+        <div className="grid grid-cols-1 gap-16">
           <ExampleCard
             title="Reference line"
             description="Mark a goal or threshold with a labelled reference line."
@@ -244,10 +245,10 @@ export default function Examples() {
       {/* Performance */}
       <div className="mt-20">
         <SectionHeading id="performance" kicker="Fast by default" title="Live updates & SVG reuse" blurb="Chartlite keeps the SVG root stable across updates while rebuilding current chart content. This chart updates every ~1s." />
-        <div className="grid grid-cols-1 gap-8">
+        <div className="grid grid-cols-1 gap-16">
           <ExampleCard
             title="Streaming line (SVG reuse)"
-            description="A rolling window updated on an interval — no flicker, no churn."
+            description="A rolling window updated on an interval, with no flicker and no churn."
             code={{
               vanilla: `const chart = new LineChart('#chart', { data, curve: 'smooth' });\nchart.render();\n\nsetInterval(() => chart.update(nextWindow()), 1000);`,
               react: `const [data, setData] = useState(seed);\nuseEffect(() => {\n  const id = setInterval(() => setData(roll), 1000);\n  return () => clearInterval(id);\n}, []);\n\n<LineChart data={data} curve="smooth" animate={false} />`,

@@ -30,7 +30,32 @@ Attach the `chart` action to any element and pass a spec — the Svelte mirror o
 <div use:chart={{ type: 'line', data, curve: 'smooth', theme: 'tailwind' }} style="height: 360px" />
 ```
 
-The action **recreates** the chart whenever the parameters change (Svelte calls `update`), and **destroys** it when the element unmounts. All eight chart types work: `line`, `bar`, `area`, `scatter`, `pie`/donut, `radial`/gauge, `combo` (bars + trend line), and `sparkline`.
+All eight chart types work: `line`, `bar`, `area`, `scatter`, `pie`/donut, `radial`/gauge, `combo` (bars + trend line), and `sparkline`. The parameters are typed as a discriminated union on `type` (`ChartParams`), so each `type` only accepts its own chart's options — `{ type: 'line', curv: 'smooth' }` is a type error.
+
+### Updates
+
+When the parameters change (Svelte calls the action's `update`), the action diffs them:
+
+- **Only `data` changed** → the chart updates in place with `chart.update(data)`. Data is compared by value, so an equal-but-new array is a no-op.
+- **Callbacks changed** (`onPointClick`, `onHover`, `onLegendToggle`, `onError`, `valueFormatter`, `tooltip.formatter`) → nothing re-renders; the chart calls them through stable proxies that always invoke the latest function, so inline arrow functions are fine. (A `valueFormatter` whose source changes re-renders so axis labels update.)
+- **Any other option changed** → the chart is recreated.
+
+The chart is **destroyed** when the element unmounts. If you call the action yourself, its return value also exposes the live core instance as `chart` (or `null` after an error).
+
+### Tooltips and interactivity
+
+`tooltip: true` (or a [`TooltipOptions`](https://github.com/chartlite/chartlite/blob/main/packages/core/src/interactive/tooltip.ts) object) adds a hover tooltip. Event callbacks install the plugins they need automatically (unless a plugin with that name is already in `plugins`): `onPointClick` / `onHover` add `callbacks()`, `onLegendToggle` adds `legendToggle()`.
+
+```svelte
+<div use:chart={{
+  type: 'line',
+  data,
+  tooltip: true,
+  onPointClick: (p) => goto(`/months/${p.x}`),
+}} />
+```
+
+Other plugins (e.g. `crosshair()`) go in `plugins`; they're compared by `name`, so an inline `plugins: [crosshair()]` doesn't recreate the chart on every update.
 
 ### Combo chart
 
@@ -52,7 +77,7 @@ The action **recreates** the chart whenever the parameters change (Svelte calls 
 
 ### Errors
 
-Pass `onError` to catch render errors; otherwise a fallback box is shown in the host element:
+Pass `onError` to catch render errors. A fallback box is shown in the host element either way, and the chart recovers as soon as valid parameters arrive:
 
 ```svelte
 <div use:chart={{ type: 'line', data, onError: (e) => console.warn(e) }} />

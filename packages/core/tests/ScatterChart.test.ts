@@ -28,22 +28,22 @@ describe('ScatterChart', () => {
     it('should render data points as circles by default', () => {
       const chart = new ScatterChart(container, { data });
       chart.render();
-      const circles = container.querySelectorAll('circle');
+      const circles = container.querySelectorAll('circle.data-point');
       expect(circles.length).toBe(data.length);
     });
 
     it('should render points with custom size', () => {
       const chart = new ScatterChart(container, { data, pointSize: 10 });
       chart.render();
-      const circles = container.querySelectorAll('circle');
+      const circles = container.querySelectorAll('circle.data-point');
       expect(circles[0].getAttribute('r')).toBe('10');
     });
 
     it('should render default point size', () => {
       const chart = new ScatterChart(container, { data });
       chart.render();
-      const circles = container.querySelectorAll('circle');
-      expect(circles[0].getAttribute('r')).toBe('6');
+      const circles = container.querySelectorAll('circle.data-point');
+      expect(circles[0].getAttribute('r')).toBe('4');
     });
   });
 
@@ -51,7 +51,7 @@ describe('ScatterChart', () => {
     it('should render circle points', () => {
       const chart = new ScatterChart(container, { data, pointShape: 'circle' });
       chart.render();
-      const circles = container.querySelectorAll('circle');
+      const circles = container.querySelectorAll('circle.data-point');
       expect(circles.length).toBe(data.length);
     });
 
@@ -143,7 +143,7 @@ describe('ScatterChart', () => {
       const customColor = '#ff0000';
       const chart = new ScatterChart(container, { data, colors: [customColor] });
       chart.render();
-      const circles = container.querySelectorAll('circle');
+      const circles = container.querySelectorAll('circle.data-point');
       expect(circles[0].getAttribute('fill')).toBe(customColor);
     });
   });
@@ -166,7 +166,7 @@ describe('ScatterChart', () => {
         const chart = new ScatterChart(container, { data: multiSeriesData });
         chart.render();
 
-        const circles = container.querySelectorAll('circle');
+        const circles = container.querySelectorAll('circle.data-point');
         // Should have 6 points (2 series × 3 data points)
         expect(circles.length).toBe(6);
       });
@@ -208,7 +208,7 @@ describe('ScatterChart', () => {
         const chart = new ScatterChart(container, { data: multiSeriesData });
         chart.render();
 
-        const circles = container.querySelectorAll('circle');
+        const circles = container.querySelectorAll('circle.data-point');
         // First two circles should be from series 1, next two from series 2
         const color1 = circles[0].getAttribute('fill');
         const color2 = circles[2].getAttribute('fill');
@@ -232,7 +232,7 @@ describe('ScatterChart', () => {
         const chart = new ScatterChart(container, { data: multiSeriesData });
         chart.render();
 
-        const circles = container.querySelectorAll('circle');
+        const circles = container.querySelectorAll('circle.data-point');
         expect(circles[0].getAttribute('fill')).toBe('#ff0000');
         expect(circles[1].getAttribute('fill')).toBe('#00ff00');
       });
@@ -251,7 +251,7 @@ describe('ScatterChart', () => {
         const chart = new ScatterChart(container, { data: columnData });
         chart.render();
 
-        const circles = container.querySelectorAll('circle');
+        const circles = container.querySelectorAll('circle.data-point');
         expect(circles.length).toBe(8); // 2 series × 4 points
       });
 
@@ -264,7 +264,7 @@ describe('ScatterChart', () => {
         const chart = new ScatterChart(container, { data: columnData });
         chart.render();
 
-        const circles = container.querySelectorAll('circle');
+        const circles = container.querySelectorAll('circle.data-point');
         expect(circles.length).toBe(3);
       });
     });

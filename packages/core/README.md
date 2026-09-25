@@ -59,8 +59,8 @@ new LineChart('#chart', {
     { x: 'Mar', y: 38 }
   ],
   curve: 'smooth', // 'linear' or 'smooth'
-  showPoints: true,
-  theme: 'default' // 'default', 'midnight', or 'minimal'
+  showPoints: true, // default: markers only when each series has 24 points or fewer
+  theme: 'default'  // see Themes below
 }).render();
 ```
 
@@ -95,9 +95,22 @@ new AreaChart('#chart', {
 }).render();
 ```
 
+### More Chart Types
+
+`ScatterChart`, `PieChart` (donut via `innerRadius`), `RadialChart` (progress rings and
+gauges), `ComboChart` (bars plus line/area series on shared axes), and `Sparkline` (tiny,
+axis-less; `variant: 'line' | 'area'`) use the same constructor and methods:
+
+```typescript
+import { Sparkline } from '@chartlite/core';
+
+new Sparkline('#spark', { data: [4, 6, 5, 8, 7, 9], variant: 'area' }).render();
+```
+
 ## Multi-Series Charts
 
-Display multiple datasets on a single chart with automatic color assignment and legends:
+Display multiple datasets on a single chart with automatic color assignment. The legend
+appears automatically when there are two or more series; `legend: false` hides it:
 
 ```typescript
 new LineChart('#chart', {
@@ -113,7 +126,6 @@ new LineChart('#chart', {
       { month: 'Mar', revenue: 5200, costs: 3400, profit: 1800 }
     ]
   },
-  legend: { show: true },
   curve: 'smooth'
 }).render();
 ```
@@ -132,8 +144,7 @@ new BarChart('#chart', {
       { quarter: 'Q1', productA: 450, productB: 380, productC: 290 },
       { quarter: 'Q2', productA: 520, productB: 420, productC: 310 }
     ]
-  },
-  legend: { show: true }
+  }
 }).render();
 ```
 
@@ -152,7 +163,6 @@ new AreaChart('#chart', {
       { month: 'Feb', desktop: 3400, mobile: 2300, tablet: 850 }
     ]
   },
-  legend: { show: true },
   curve: 'smooth'
 }).render();
 ```
@@ -200,14 +210,29 @@ data: {
 }
 ```
 
-## Themes
-
-Chartlite comes with three built-in themes:
+### 5. Row Objects
 
 ```typescript
-theme: 'default'   // Clean, professional (inspired by Tailwind)
-theme: 'midnight'  // Dark mode
-theme: 'minimal'   // Black & white, print-ready
+data: [
+  { month: 'Jan', revenue: 4200, costs: 2800 },
+  { month: 'Feb', revenue: 4800, costs: 3200 }
+]
+// The first non-numeric key (month) is x; each numeric key becomes a series
+```
+
+Invalid input throws an error that lists the accepted formats.
+
+## Themes
+
+Chartlite comes with six built-in themes:
+
+```typescript
+theme: 'default'        // Clean, professional (inspired by Tailwind)
+theme: 'midnight'       // Dark mode
+theme: 'minimal'        // Black & white, print-ready
+theme: 'tailwind'       // Tailwind CSS colors
+theme: 'nord'           // Nord color palette
+theme: 'high-contrast'  // Maximum contrast (accessibility)
 ```
 
 ### Custom Colors
@@ -227,19 +252,26 @@ new LineChart('#chart', {
 {
   data: DataPoint[] | FlexibleDataInput,
   width?: number,              // Default: container width
-  height?: number,             // Default: 400
+  height?: number,             // Default: container height, or 400 (includes title + legend)
   theme?: 'default' | 'midnight' | 'minimal' | 'tailwind' | 'nord' | 'high-contrast',
   colors?: string[],           // Custom color palette
   animate?: boolean,           // Default: false (off for performance)
-  responsive?: boolean,        // Default: true
+  responsive?: boolean,        // Default: true (re-renders on container resize)
   cssVars?: boolean,           // Emit var(--cl-*) colors for CSS re-theming
+  maxPoints?: number,          // Downsampling budget across all series. Default: 500; 0 disables
+  valueFormatter?: (value: number) => string,           // Numeric axis labels
+  xFormatter?: (value: string | number) => string,      // X-axis labels (and tooltip header)
   title?: string,
-  legend?: {
-    show?: boolean,            // Default: false
+  legend?: boolean | {         // Default: shown for 2+ series, slices, or rings
+    show?: boolean,
     position?: 'top' | 'bottom',
     align?: 'left' | 'center' | 'right',
     layout?: 'horizontal' | 'vertical'
-  }
+  },
+  referenceLines?: ReferenceLine[],
+  annotations?: Annotation[],
+  regions?: Region[],
+  plugins?: ChartPlugin[]
 }
 ```
 
@@ -247,9 +279,8 @@ new LineChart('#chart', {
 
 ```typescript
 {
-  curve?: 'linear' | 'smooth', // Default: 'linear'
-  showPoints?: boolean,        // Default: false
-  strokeWidth?: number         // Default: 2
+  curve?: 'linear' | 'smooth', // Default: 'linear' ('smooth' is monotone, no overshoot)
+  showPoints?: boolean         // Default: only when each series has 24 points or fewer
 }
 ```
 
@@ -257,7 +288,8 @@ new LineChart('#chart', {
 
 ```typescript
 {
-  orientation?: 'vertical' | 'horizontal'  // Default: 'vertical'
+  orientation?: 'vertical' | 'horizontal', // Default: 'vertical'
+  stacked?: boolean                        // Default: false (multi-series bars are grouped)
 }
 ```
 
@@ -266,9 +298,13 @@ new LineChart('#chart', {
 ```typescript
 {
   curve?: 'linear' | 'smooth', // Default: 'linear'
-  fillOpacity?: number         // Default: 0.2 (0-1)
+  fillOpacity?: number,        // Default: 0.3 (0-1)
+  gradient?: boolean           // Default: true (single series; stacked series use flat fills)
 }
 ```
+
+Axes use "nice" tick values. Line and scatter charts fit the y range to the data;
+bar and area charts start at zero.
 
 ## Methods
 
@@ -281,12 +317,13 @@ const chart = new LineChart('#chart', { data });
 chart.render();
 ```
 
-### update(data)
+### update(data, options?)
 
-Update the chart with new data:
+Update the chart with new data, and optionally other options, reusing the SVG root:
 
 ```typescript
 chart.update(newData);
+chart.update(newData, { title: 'Updated', height: 250 });
 ```
 
 ### destroy()
@@ -304,6 +341,25 @@ Export the chart as an SVG string:
 ```typescript
 const svgString = chart.toSVG();
 ```
+
+## Interactivity
+
+Opt-in and tree-shakeable from `@chartlite/core/interactive`, so static charts pay nothing:
+
+```typescript
+import { tooltip, crosshair, legendToggle, callbacks } from '@chartlite/core/interactive';
+
+new LineChart('#chart', {
+  data,
+  plugins: [tooltip(), crosshair(), legendToggle(), callbacks()],
+  onPointClick: (p) => console.log(p.x, p.y) // fired by callbacks()
+}).render();
+```
+
+On line, area, and combo charts the tooltip snaps to the nearest x and lists every
+series there; it also follows keyboard focus. `legendToggle()` works on every chart
+with a legend, including pie and radial. `interactive({ crosshair: true, legend: true })`
+returns tooltip, crosshair, legend toggle, and callbacks plugins in one call.
 
 ## TypeScript Support
 
@@ -330,8 +386,8 @@ Chartlite is optimized for:
 - **Acceptable**: 100-500 points (instant)
 - **Max recommended**: 2,000-5,000 points
 
-For larger datasets, consider:
-- Data sampling
+Larger inputs are downsampled automatically to `maxPoints` (default 500; LTTB for a
+single series). For larger datasets, also consider:
 - Disabling animations: `animate: false`
 - Using ECharts or similar for massive datasets
 
@@ -345,9 +401,9 @@ Chartlite supports all modern browsers that support:
 ## Framework Wrappers
 
 - **React**: [@chartlite/react](https://www.npmjs.com/package/@chartlite/react)
-- **Vue**: Coming soon
-- **Svelte**: Coming soon
-- **Angular**: Coming soon
+- **Vue**: [@chartlite/vue](https://www.npmjs.com/package/@chartlite/vue)
+- **Svelte**: [@chartlite/svelte](https://www.npmjs.com/package/@chartlite/svelte)
+- **Web component / Angular**: [@chartlite/element](https://www.npmjs.com/package/@chartlite/element) (`<chart-lite>`)
 
 ## Examples
 

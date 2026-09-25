@@ -2,10 +2,19 @@
  * @chartlite/svelte — a Svelte action for Chartlite.
  *
  * `use:chart={{ type, ...config }}` renders any of the 8 chart types into the
- * host element, recreating on param change and destroying on unmount.
+ * host element. Data-only param changes call `chart.update(data)`, other option
+ * changes recreate the chart, and it is destroyed on unmount.
  */
 
-export { chart, type ChartType, type ChartParams, type ActionReturn } from './action';
+export {
+  chart,
+  type ChartType,
+  type ChartParams,
+  type ChartSpecParams,
+  type ActionReturn,
+} from './action';
+export type { ChartInstance, WrapperOptions } from './bridge';
+export type { TooltipOptions } from '@chartlite/core/interactive';
 
 // Re-export config + data types from core so consumers get full typing.
 export type {
@@ -33,4 +42,5 @@ export type {
   Region,
   ChartPointEvent,
   LegendToggleEvent,
+  ChartPlugin,
 } from '@chartlite/core';

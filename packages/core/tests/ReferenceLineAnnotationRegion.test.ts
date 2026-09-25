@@ -81,7 +81,7 @@ describe('Phase 2 Features: Reference Lines, Annotations, and Regions', () => {
         chart.render();
 
         const line = container.querySelector('.chart-reference-lines line');
-        expect(line?.getAttribute('stroke-dasharray')).toBe('8 4');
+        expect(line?.getAttribute('stroke-dasharray')).toBe('4 3');
       });
 
       it('should render horizontal reference line with dotted style', () => {

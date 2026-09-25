@@ -1,82 +1,107 @@
-import { defineComponent, h, type PropType, type StyleValue } from 'vue';
-import {
-  useChart,
-  type ChartConfig,
-  type ChartConstructor,
-  type ChartType,
-} from './useChart';
+import { camelize, h, type ExtractPropTypes, type RenderFunction, type SetupContext } from 'vue';
+import type { ChartConstructor, ChartInstance, CoreConfig } from './bridge';
+import type { genericProps } from './props';
+import { useChart } from './useChart';
 
-type ChartAttrs<C extends ChartConfig> = C & {
-  type?: ChartType;
-  class?: string;
-  style?: StyleValue;
-};
+/** The union of every chart component's props (`type` is a plain string here). */
+export type AnyChartProps = Readonly<
+  Partial<Omit<ExtractPropTypes<ReturnType<typeof genericProps>>, 'type'>> & { type?: string }
+>;
 
 /**
- * Internal factory: builds a Vue component bound to a core chart class. All
- * config is passed as fall-through attributes (`inheritAttrs: false`), so usage
- * mirrors the React wrapper — `<LineChart :data="data" theme="midnight" />` — with
- * `class`/`style` applied to the container and `onError` handled specially.
+ * What a Chartlite component exposes to a template ref:
  *
- * `resolveCtor` receives the current attrs so the generic `<Chart>` can pick a
- * constructor from its `type` attr; named components ignore the argument.
+ * ```vue
+ * <script setup lang="ts">
+ * const chartRef = ref<ChartExposed | null>(null);
+ * const svg = () => chartRef.value?.toSVG();
+ * </script>
+ * <LineChart ref="chartRef" :data="data" />
+ * ```
+ */
+export interface ChartExposed {
+  /** The live core chart instance, or `null` before mount / after an error. */
+  readonly chart: ChartInstance | null;
+  /** The current render/update error, or `null`. */
+  readonly error: Error | null;
+  /** The container `<div>` the chart renders into. */
+  readonly container: HTMLElement | null;
+  /** Serialize the current chart to an SVG string. Throws if nothing is rendered. */
+  toSVG(): string;
+}
+
+/** Attribute names that belong on the container `<div>`, not in the chart config. */
+function isContainerAttribute(key: string): boolean {
+  return (
+    key === 'class' ||
+    key === 'style' ||
+    key === 'id' ||
+    key.startsWith('aria-') ||
+    key.startsWith('data-')
+  );
+}
+
+/** Undeclared `on*` listeners (e.g. `@click`) are bound on the container. */
+function isListenerKey(key: string): boolean {
+  return /^on[A-Z]/.test(key);
+}
+
+/**
+ * Setup shared by every Chartlite Vue component.
+ *
+ * Chart options are declared as typed props (see `props.ts`), so templates get
+ * autocomplete and Vue normalizes `kebab-case` names and boolean shorthand. Any
+ * other attribute is still forwarded: `class`, `style`, `id`, `aria-*`, `data-*`
+ * and undeclared listeners go to the container `<div>`; everything else is
+ * camelized (`start-angle` → `startAngle`, a bare boolean attribute `''` →
+ * `true`) and passed to the chart as config.
+ *
+ * With `typeSelectsChart` (the generic `<Chart>`), the `type` prop picks the
+ * constructor; otherwise `type` is chart config (Sparkline's `line` / `area`).
+ *
+ * The component exposes `{ chart, error, container, toSVG() }` to template refs.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export function defineChartComponent<C extends ChartConfig>(
-  name: string,
-  resolveCtor: (attrs: ChartAttrs<C>) => ChartConstructor<C> | undefined
+export function chartSetup(
+  resolveCtor: (type: string | undefined) => ChartConstructor<CoreConfig> | undefined,
+  typeSelectsChart = false
 ) {
-  return defineComponent({
-    name,
-    inheritAttrs: false,
-    props: {
-      onError: {
-        // SAFETY: Vue's runtime validator is the Function constructor; PropType
-        // supplies the callback signature that the wrapper invokes.
-        type: Function as PropType<(error: Error) => void>,
-        default: undefined,
-      },
-    },
-    setup(props, { attrs }) {
-      // SAFETY: Vue fall-through attrs are the public chart config at this boundary;
-      // core constructors validate the required data and option values before render.
-      const chartAttrs = attrs as ChartAttrs<C>;
-      const getConfig = (): C => {
-        const config = { ...chartAttrs };
-        delete config.class;
-        delete config.style;
-        delete config.type;
-        return config;
-      };
-
-      const { container, error } = useChart(
-        () => resolveCtor(chartAttrs),
-        getConfig,
-        () => props.onError
+  return function setup(props: AnyChartProps, { attrs, expose }: SetupContext): RenderFunction {
+    const { container, chart, error, controller } = useChart(() => {
+      const { tooltip, onError, type, ...options } = props;
+      const extra = Object.fromEntries(
+        Object.entries(attrs)
+          .filter(([key, value]) => !isContainerAttribute(key) && !(isListenerKey(key) && value instanceof Function))
+          // A bare boolean attribute (`<LineChart some-flag>`) arrives as ''.
+          .map(([key, value]) => [camelize(key), value === '' ? true : value])
       );
-
-      return () => {
-        if (error.value) {
-          return h(
-            'div',
-            {
-              class: chartAttrs.class,
-              style: [
-                chartAttrs.style,
-                {
-                  padding: '20px',
-                  color: '#dc2626',
-                  border: '1px solid #fecaca',
-                  borderRadius: '4px',
-                  backgroundColor: '#fee2e2',
-                },
-              ],
-            },
-            [h('strong', 'Chart Error: '), error.value.message]
-          );
-        }
-        return h('div', { ref: container, class: chartAttrs.class, style: chartAttrs.style });
+      return {
+        Ctor: resolveCtor(typeSelectsChart ? type : undefined),
+        // SAFETY: declared props are typed chart options; the remaining
+        // fall-through attrs are forwarded as-is and validated by the core chart
+        // (a missing `data` is reported by the controller).
+        config: { ...options, type: typeSelectsChart ? undefined : type, ...extra } as CoreConfig,
+        options: { tooltip, onError, type },
       };
-    },
-  });
+    });
+
+    expose({
+      chart,
+      error,
+      container,
+      toSVG: (): string => controller.toSVG(),
+    });
+
+    // The container never has vnode children: the chart (or the error box) is
+    // rendered into it imperatively by the controller.
+    return () =>
+      h('div', {
+        ...Object.fromEntries(
+          Object.entries(attrs).filter(
+            ([key, value]) => isContainerAttribute(key) || (isListenerKey(key) && value instanceof Function)
+          )
+        ),
+        ref: container,
+      });
+  };
 }

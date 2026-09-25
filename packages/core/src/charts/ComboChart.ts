@@ -9,35 +9,22 @@
  * one linear y-axis and one categorical x-axis.
  */
 
-import { BaseChart } from './BaseChart';
+import { BaseChart, type Plot } from './BaseChart';
 import type { ComboChartConfig, SeriesData } from '../types';
-import {
-  createLinearScale,
-  createBandScale,
-  generateLinePath,
-  getThemeColors,
-  getAllXValues,
-  getCombinedYRange,
-} from '../utils';
-import { setDataPointAttrs, setSeriesAttrs } from '../render/dataAttrs';
-import { createSVGElement } from '../render/constants';
+import { getThemeColors, getAllXValues, getCombinedYRange } from '../utils';
+import { setSeriesAttrs } from '../render/dataAttrs';
+import { barSlots, drawBar } from '../render/bar';
+import { svgEl } from '../render/constants';
+import { AUTO_POINTS_LIMIT, drawLineSeries } from '../render/line';
 
 type ThemeColors = ReturnType<typeof getThemeColors>;
 type SeriesType = 'line' | 'bar' | 'area';
 
 export class ComboChart extends BaseChart {
-  protected config: ComboChartConfig;
+  declare protected config: ComboChartConfig;
 
   constructor(container: HTMLElement | string, config: ComboChartConfig) {
-    super(container, config, config.data, 'Combo');
-
-    this.config = {
-      defaultType: 'bar',
-      curve: 'linear',
-      showPoints: true,
-      fillOpacity: 0.25,
-      ...config,
-    };
+    super(container, { defaultType: 'bar', curve: 'linear', fillOpacity: 0.25, ...config }, config.data, 'Combo');
   }
 
   /** The render type for a series: its own `type`, or the chart's `defaultType`. */
@@ -49,164 +36,77 @@ export class ComboChart extends BaseChart {
     if (!this.svg) return;
 
     const colors = this.themeColors();
-    const { margin } = this.dimensions;
-    const chartWidth = this.dimensions.width - margin.left - margin.right;
-    const chartHeight = this.dimensions.height - margin.top - margin.bottom;
-
-    const mainGroup = this.createGroup(margin.left, margin.top);
-    mainGroup.classList.add('chart-main');
-    this.svg.appendChild(mainGroup);
-
     const xValues = getAllXValues(this.seriesData).map(String);
-    const { min: yMin, max: yMax } = getCombinedYRange(this.seriesData);
-
-    this.chartBounds = { xMin: 0, xMax: xValues.length - 1, yMin, yMax, xValues };
-
+    const { min, max } = getCombinedYRange(this.seriesData);
+    // Bars and areas need a zero baseline; a line-only combo doesn't.
+    const zero = this.seriesData.some((series) => this.seriesType(series) !== 'line');
     // Bars sit inside a padded band; lines/areas plot at the band centre so they
     // align with the middle of each category's bar group.
-    const xScale = createBandScale(xValues, [0, chartWidth], 0.2);
-    const yScale = createLinearScale([yMin, yMax], [chartHeight, 0]);
-    // getCombinedYRange always includes 0, so the baseline is on-canvas.
-    const baseline = yScale(0);
-
-    this.renderCategoricalXLinearYAxes(
-      mainGroup,
-      xValues,
-      yMin,
-      yMax,
-      chartWidth,
-      chartHeight,
-      colors
-    );
+    const plot = this.plot(xValues, [min, max], zero, 0.2);
+    const baseline = plot.y(Math.max(this.chartBounds!.yMin, Math.min(0, this.chartBounds!.yMax)));
 
     // Draw order: bars (back) → areas → lines + points (front).
-    this.renderBarSeries(mainGroup, xScale, yScale, baseline, colors);
-    this.seriesData.forEach((series, seriesIndex) => {
-      const type = this.seriesType(series);
-      if (type === 'area') {
-        this.renderLineSeries(mainGroup, series, seriesIndex, xScale, yScale, baseline, colors, true);
-      }
-    });
-    this.seriesData.forEach((series, seriesIndex) => {
-      const type = this.seriesType(series);
-      if (type === 'line') {
-        this.renderLineSeries(mainGroup, series, seriesIndex, xScale, yScale, baseline, colors, false);
-      }
-    });
+    this.renderBarSeries(plot, baseline, colors);
+    for (const type of ['area', 'line']) {
+      this.seriesData.forEach((series, seriesIndex) => {
+        if (this.seriesType(series) === type) {
+          this.renderLineSeries(plot, series, seriesIndex, baseline, colors, type === 'area');
+        }
+      });
+    }
   }
 
   /** Render every bar-type series as side-by-side grouped bars. */
-  private renderBarSeries(
-    group: SVGGElement,
-    xScale: { scale: (v: string) => number; bandwidth: number },
-    yScale: (v: number) => number,
-    baseline: number,
-    colors: ThemeColors
-  ): void {
+  private renderBarSeries(plot: Plot, baseline: number, colors: ThemeColors): void {
     const barSeries = this.seriesData
       .map((series, seriesIndex) => ({ series, seriesIndex }))
       .filter(({ series }) => this.seriesType(series) === 'bar');
+    if (barSeries.length === 0) return;
 
-    const barCount = barSeries.length;
-    if (barCount === 0) return;
-
-    const groupPadding = 0.1;
-    const slot = xScale.bandwidth / barCount;
-    const drawnWidth = slot * (1 - groupPadding);
-
-    barSeries.forEach(({ series, seriesIndex }, barPos) => {
+    const { thickness, offset } = barSlots(plot.bw, barSeries.length);
+    const multi = this.seriesData.length > 1;
+    barSeries.forEach(({ series, seriesIndex }, slot) => {
       series.data.forEach((d, index) => {
-        const groupX = xScale.scale(String(d.x));
-        const barX = groupX + barPos * slot;
-        const yVal = yScale(d.y);
-        const top = Math.min(yVal, baseline);
-        const height = Math.abs(baseline - yVal);
-
-        const rect = createSVGElement('rect');
-        rect.setAttribute('x', String(barX));
-        rect.setAttribute('y', String(top));
-        rect.setAttribute('width', String(drawnWidth));
-        rect.setAttribute('height', String(height));
-        rect.setAttribute('fill', series.color || colors.primary);
-        rect.setAttribute('rx', '4');
-        rect.classList.add('bar');
-        rect.classList.add('data-point');
-        rect.setAttribute('role', 'img');
-        const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
-        rect.setAttribute('aria-label', `${seriesLabel}Bar: ${d.x}, value ${d.y}`);
-        rect.setAttribute('tabindex', '-1');
-        setDataPointAttrs(rect, d.x, d.y, series.name, seriesIndex, index, barX + drawnWidth / 2, top);
-
-        group.appendChild(rect);
+        const y = plot.y(d.y);
+        drawBar(plot.g, {
+          x: plot.x(d.x) + offset(slot),
+          y: Math.min(y, baseline),
+          width: thickness,
+          height: Math.abs(baseline - y),
+        }, Math.min(3, thickness / 2), series.color || colors.primary, series, seriesIndex, index, d, multi);
       });
     });
   }
 
   /** Render a single line or area series (line stroke, optional fill + points). */
   private renderLineSeries(
-    group: SVGGElement,
+    plot: Plot,
     series: SeriesData,
     seriesIndex: number,
-    xScale: { scale: (v: string) => number; bandwidth: number },
-    yScale: (v: number) => number,
     baseline: number,
     colors: ThemeColors,
     isArea: boolean
   ): void {
+    if (series.data.length === 0) return;
     const color = series.color || colors.primary;
-    const points = series.data.map((d) => ({
-      x: xScale.scale(String(d.x)) + xScale.bandwidth / 2,
-      y: yScale(d.y),
-    }));
-    if (points.length === 0) return;
-
-    const linePath = generateLinePath(points, this.config.curve);
-
-    if (isArea) {
-      const first = points[0];
-      const last = points[points.length - 1];
-      const areaPath = `${linePath} L ${last.x},${baseline} L ${first.x},${baseline} Z`;
-      const area = createSVGElement('path');
-      area.setAttribute('d', areaPath);
-      area.setAttribute('fill', color);
-      area.setAttribute('opacity', String(this.config.fillOpacity));
+    const path = drawLineSeries(plot, series, seriesIndex, {
+      color,
+      background: colors.background,
+      curve: this.config.curve,
+      showPoints: this.config.showPoints ?? series.data.length <= AUTO_POINTS_LIMIT,
+      multi: this.seriesData.length > 1,
+    }, isArea ? (d, points) => {
+      const area = svgEl('path', {
+        d: `${d}L${points[points.length - 1].x},${Math.round(baseline)}L${points[0].x},${Math.round(baseline)}Z`,
+        fill: color,
+        opacity: this.config.fillOpacity,
+        role: 'presentation',
+        'aria-hidden': 'true',
+      }, plot.g);
       area.classList.add('area-fill');
       area.classList.add('data-series');
-      area.setAttribute('role', 'presentation');
-      area.setAttribute('aria-hidden', 'true');
       setSeriesAttrs(area, seriesIndex, series.name);
-      group.appendChild(area);
-    }
-
-    const path = createSVGElement('path');
-    path.setAttribute('d', linePath);
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', color);
-    path.setAttribute('stroke-width', '2');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
+    } : undefined);
     path.classList.add('combo-line');
-    setSeriesAttrs(path, seriesIndex, series.name);
-    group.appendChild(path);
-
-    if (this.config.showPoints) {
-      points.forEach((point, index) => {
-        const d = series.data[index];
-        const circle = createSVGElement('circle');
-        circle.setAttribute('cx', String(point.x));
-        circle.setAttribute('cy', String(point.y));
-        circle.setAttribute('r', '4');
-        circle.setAttribute('fill', color);
-        circle.setAttribute('stroke', colors.background);
-        circle.setAttribute('stroke-width', '2');
-        circle.setAttribute('role', 'img');
-        const seriesLabel = this.seriesData.length > 1 ? `${series.name}, ` : '';
-        circle.setAttribute('aria-label', `${seriesLabel}Data point: ${d.x}, value ${d.y}`);
-        circle.setAttribute('tabindex', '-1');
-        circle.classList.add('data-point');
-        setDataPointAttrs(circle, d.x, d.y, series.name, seriesIndex, index, point.x, point.y);
-        group.appendChild(circle);
-      });
-    }
   }
 }

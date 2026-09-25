@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ComboChart } from '@chartlite/react';
 import Reveal from './Reveal';
+import SectionHeader from './SectionHeader';
 
 const comboData = {
   series: [
@@ -74,51 +75,46 @@ export default function Frameworks() {
   const tab = TABS.find((t) => t.id === active)!;
 
   return (
-    <section id="frameworks" className="relative mx-auto max-w-6xl px-6 py-24 scroll-mt-24">
-      <Reveal className="mb-14 max-w-2xl">
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.2em] text-glow-violet">
-          Use it anywhere
-        </p>
-        <h2 className="font-display text-4xl font-bold tracking-tight text-mist-100 sm:text-5xl">
-          One core. Every framework.
-        </h2>
-        <p className="mt-4 text-lg text-mist-500">
-          A zero-dependency core with first-party wrappers for React, Vue, and
-          Svelte — plus a <span className="text-mist-300">&lt;chart-lite&gt;</span>{' '}
-          web component that drops into Angular, Astro, or plain HTML.
-        </p>
-      </Reveal>
+    <section id="frameworks" className="relative mx-auto max-w-6xl scroll-mt-24 px-6 py-16 md:py-20">
+      <SectionHeader number="§2" kicker="Use it anywhere" title="One core. Every framework.">
+        A zero-dependency core with first-party wrappers for React, Vue, and
+        Svelte, plus a <span className="font-mono text-[0.9em] text-ink">&lt;chart-lite&gt;</span>{' '}
+        web component that drops into Angular, Astro, or plain HTML.
+      </SectionHeader>
 
       <Reveal className="grid items-stretch gap-6 lg:grid-cols-2">
-        {/* Live chart */}
-        <div className="border-glow relative flex flex-col justify-center rounded-2xl glass p-6">
-          <ComboChart data={comboData} cssVars height={300} />
-          <p className="mt-2 text-center text-xs text-mist-600">
-            The exact chart every snippet renders — live, right here.
-          </p>
-        </div>
+        <figure className="flex flex-col">
+          <div className="plate flex flex-1 flex-col justify-center rounded-sm p-6">
+            <ComboChart data={comboData} cssVars height={300} />
+          </div>
+          <figcaption className="mt-3 flex gap-3 text-sm text-muted">
+            <span className="shrink-0 whitespace-nowrap pt-0.5 font-mono text-[11px] uppercase tracking-[0.16em] text-accent-ink">Fig. 2</span>
+            <span className="font-serif text-[15px] italic">The exact chart every snippet on the right renders, live.</span>
+          </figcaption>
+        </figure>
 
-        {/* Tabs + code */}
-        <div className="border-glow flex flex-col rounded-2xl glass p-2">
-          <div className="flex flex-wrap gap-1 p-2">
+        <div className="code-plate flex flex-col overflow-hidden rounded-sm">
+          <div role="tablist" aria-label="Framework" className="flex flex-wrap gap-x-5 border-b border-slate-line px-5">
             {TABS.map((t) => (
               <button
                 key={t.id}
+                role="tab"
+                aria-selected={active === t.id}
                 onClick={() => setActive(t.id)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`-mb-px border-b-2 py-3.5 text-sm transition-colors ${
                   active === t.id
-                    ? 'bg-mist-100 text-ink-950'
-                    : 'text-mist-500 hover:text-mist-100'
+                    ? 'border-accent text-slate-text'
+                    : 'border-transparent text-slate-muted hover:text-slate-text'
                 }`}
               >
                 {t.label}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2 px-4 pt-2 font-mono text-xs text-mist-600">
-            <span className="text-glow-cyan">$</span> npm i {tab.pkg}
+          <div className="flex items-center gap-2 px-5 pt-5 font-mono text-xs text-slate-muted">
+            <span className="text-accent">$</span> npm i {tab.pkg}
           </div>
-          <pre className="flex-1 overflow-x-auto rounded-xl p-4 font-mono text-[13px] leading-relaxed text-mist-200">
+          <pre className="flex-1 overflow-x-auto p-5 font-mono text-[13px] leading-relaxed">
             <code>{tab.code}</code>
           </pre>
         </div>

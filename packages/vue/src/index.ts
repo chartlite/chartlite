@@ -3,6 +3,8 @@
  *
  * - `<Chart type=… />` — generic, spec-driven (renders any of the 8 chart types).
  * - `<LineChart>`, `<BarChart>`, … — named, per-type, tree-shakeable.
+ *
+ * Template refs expose `{ chart, error, container, toSVG() }`.
  */
 
 export { Chart, type ChartType } from './Chart';
@@ -16,6 +18,9 @@ export {
   ComboChart,
   Sparkline,
 } from './charts';
+export type { ChartInstance, WrapperOptions } from './bridge';
+export type { ChartExposed } from './ChartFrame';
+export type { TooltipOptions } from '@chartlite/core/interactive';
 
 // Re-export config + data types from core so consumers get full typing.
 export type {
@@ -43,4 +48,5 @@ export type {
   Region,
   ChartPointEvent,
   LegendToggleEvent,
+  ChartPlugin,
 } from '@chartlite/core';

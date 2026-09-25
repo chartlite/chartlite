@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { tooltip } from '@chartlite/core/interactive';
 import { chart } from '../src';
 
 const data = [
@@ -7,6 +8,16 @@ const data = [
   { x: 'Mar', y: 15 },
 ];
 
+function fixedTooltips(): HTMLElement[] {
+  return [...document.body.querySelectorAll('div')].filter((el) => el.style.position === 'fixed');
+}
+
+function point(node: HTMLElement): Element {
+  const el = node.querySelector('.data-point');
+  if (!el) throw new Error('expected a data point');
+  return el;
+}
+
 describe('@chartlite/svelte use:chart', () => {
   let node: HTMLDivElement;
   beforeEach(() => {
@@ -14,12 +25,13 @@ describe('@chartlite/svelte use:chart', () => {
     document.body.appendChild(node);
   });
   afterEach(() => {
-    document.body.removeChild(node);
+    document.body.innerHTML = '';
   });
 
   it('renders an SVG into the host element', () => {
     const action = chart(node, { type: 'line', data });
     expect(node.querySelector('svg')).toBeTruthy();
+    expect(action.chart).toBeTruthy();
     action.destroy();
   });
 
@@ -65,14 +77,70 @@ describe('@chartlite/svelte use:chart', () => {
     action.destroy();
   });
 
-  it('recreates the chart when update() is called with new params', () => {
+  it('recreates the chart when update() changes the type', () => {
     const action = chart(node, { type: 'bar', data });
-    const firstSvg = node.querySelector('svg');
-    expect(firstSvg).toBeTruthy();
+    expect(node.querySelector('rect.bar')).toBeTruthy();
     action.update({ type: 'line', data: [{ x: 'A', y: 1 }, { x: 'B', y: 2 }] });
     expect(node.querySelector('svg')).toBeTruthy();
-    // line chart draws a path stroke; bar does not produce rect.bar anymore
     expect(node.querySelector('rect.bar')).toBeFalsy();
+    action.destroy();
+  });
+
+  it('calls chart.update() when only data changes', () => {
+    const action = chart(node, { type: 'line', data });
+    const instance = action.chart;
+    const update = vi.spyOn(instance!, 'update');
+    const svg = node.querySelector('svg');
+
+    action.update({ type: 'line', data: [...data, { x: 'Apr', y: 40 }] });
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(action.chart).toBe(instance);
+    expect(node.querySelector('svg')).toBe(svg);
+    expect(node.querySelectorAll('.data-point')).toHaveLength(4);
+
+    // Equal-but-new data is a no-op.
+    action.update({ type: 'line', data: [...data, { x: 'Apr', y: 40 }] });
+    expect(update).toHaveBeenCalledTimes(1);
+    action.destroy();
+  });
+
+  it('recreates the chart when a non-data option changes', () => {
+    const action = chart(node, { type: 'line', data, theme: 'default' });
+    const instance = action.chart;
+    action.update({ type: 'line', data, theme: 'midnight' });
+    expect(action.chart).toBeTruthy();
+    expect(action.chart).not.toBe(instance);
+    action.destroy();
+  });
+
+  it('picks up new callback / plugin identities without recreating', () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const action = chart(node, { type: 'line', data, onPointClick: first, plugins: [tooltip()] });
+    const instance = action.chart;
+    action.update({ type: 'line', data, onPointClick: second, plugins: [tooltip()] });
+    expect(action.chart).toBe(instance);
+    point(node).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith(expect.objectContaining({ x: 'Jan', y: 10 }));
+    action.destroy();
+  });
+
+  it('`tooltip: true` adds the tooltip plugin', () => {
+    const action = chart(node, { type: 'line', data, tooltip: true });
+    point(node).dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+    expect(fixedTooltips()).toHaveLength(1);
+    expect(fixedTooltips()[0].textContent).toMatch(/Jan.*10/);
+    action.destroy();
+    // The tooltip element is cleaned up with the chart.
+    expect(fixedTooltips()).toHaveLength(0);
+  });
+
+  it('adds callbacks() automatically for onHover', () => {
+    const onHover = vi.fn();
+    const action = chart(node, { type: 'line', data, onHover });
+    point(node).dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+    expect(onHover).toHaveBeenCalledWith(expect.objectContaining({ x: 'Jan' }));
     action.destroy();
   });
 
@@ -81,6 +149,7 @@ describe('@chartlite/svelte use:chart', () => {
     expect(node.querySelector('svg')).toBeTruthy();
     action.destroy();
     expect(node.querySelector('svg')).toBeFalsy();
+    expect(action.chart).toBeNull();
   });
 
   it('shows a fallback and calls onError when the chart throws', () => {
@@ -90,10 +159,20 @@ describe('@chartlite/svelte use:chart', () => {
     expect(node.textContent).toContain('Chart Error');
   });
 
+  it('recovers after an error when valid data arrives', () => {
+    const onError = vi.fn();
+    const action = chart(node, { type: 'line', data: [], onError });
+    expect(onError).toHaveBeenCalledTimes(1);
+    action.update({ type: 'line', data, onError });
+    expect(node.querySelector('svg')).toBeTruthy();
+    expect(node.textContent).not.toContain('Chart Error');
+    action.destroy();
+  });
+
   it('errors on an unknown chart type', () => {
-    let captured: Error | null = null;
+    const onError = vi.fn();
     // @ts-expect-error intentionally invalid type
-    chart(node, { type: 'donut', data, onError: (e) => (captured = e) });
-    expect(captured?.message).toMatch(/unknown chart type/i);
+    chart(node, { type: 'donut', data, onError });
+    expect(onError.mock.calls[0][0].message).toMatch(/unknown chart type/i);
   });
 });

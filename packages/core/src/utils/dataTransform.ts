@@ -13,6 +13,9 @@ import type {
   SeriesFirstRecord,
 } from '../types';
 
+const INVALID_DATA =
+  'Invalid data format: expected numbers, {x, y} points, row objects, {x: [], y: []} columns, or {series, data}';
+
 const isFiniteNumber = (value: any): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 const isXValue = (value: any): value is string | number =>
@@ -120,6 +123,27 @@ function readSeriesY(record: SeriesFirstRecord, key: string): number {
 }
 
 /**
+ * Check if data is an array of plain row objects, e.g.
+ * `[{ month: 'Jan', revenue: 10, costs: 4 }]` (the shape most APIs return).
+ */
+function isRowArray(data: any): data is SeriesFirstRecord[] {
+  return Array.isArray(data) && data.length > 0 && data.every(isSeriesRecord);
+}
+
+/**
+ * Convert row objects to series-first data: the first non-numeric key is the
+ * x axis, and every numeric key becomes a series named after the key.
+ */
+function rowsToSeriesFirst(rows: SeriesFirstRecord[]): SeriesFirstData | undefined {
+  const keys = Object.keys(rows[0]);
+  const xKey = keys.find((key) => !isFiniteNumber(rows[0][key])) ?? keys[0];
+  const series = keys
+    .filter((key) => key !== xKey && isFiniteNumber(rows[0][key]))
+    .map((key) => ({ name: key, dataKey: key }));
+  return series.length ? { series, data: rows, xKey } : undefined;
+}
+
+/**
  * Convert column-oriented data to DataPoint[]
  */
 function convertColumnOrientedData(data: ColumnOrientedData): DataPoint[] {
@@ -207,8 +231,13 @@ export function normalizeData(data: FlexibleDataInput): DataPoint[] {
     return convertSeriesFirstData(data);
   }
 
-  // Invalid data format
-  throw new Error('Invalid data format');
+  // Row objects: [{ month: 'Jan', revenue: 10 }]
+  const rows = isRowArray(data) ? rowsToSeriesFirst(data) : undefined;
+  if (rows && isSeriesFirstData(rows)) {
+    return convertSeriesFirstData(rows);
+  }
+
+  throw new Error(INVALID_DATA);
 }
 
 /**
@@ -312,6 +341,12 @@ export function normalizeToSeriesData(
     });
   }
 
+  // Row objects (but not {x, y} points): one series per numeric key.
+  if (!isDataPointArray(data) && isRowArray(data)) {
+    const rows = rowsToSeriesFirst(data);
+    if (rows) return normalizeToSeriesData(rows);
+  }
+
   // Single-series data: wrap in SeriesData array
   const normalized = normalizeData(data);
   return [{
@@ -340,7 +375,7 @@ export function getAllXValues(seriesData: SeriesData[]): (string | number)[] {
 }
 
 /**
- * Get combined y-axis range from multi-series data
+ * Get the combined data extent (min/max y) across all series.
  */
 export interface NumericRange {
   min: number;
@@ -358,12 +393,7 @@ export function getCombinedYRange(seriesData: SeriesData[]): NumericRange {
     });
   });
 
-  // Include 0 in the range
-  min = Math.min(min, 0);
-  max = Math.max(max, 0);
-
-  // All-zero data otherwise produces a zero-width scale and NaN coordinates.
-  if (min === max) max = min + 1;
-
+  // Charts decide whether zero belongs in the domain (bars and areas need a
+  // baseline, lines don't); the axis layer widens a flat range.
   return { min, max };
 }

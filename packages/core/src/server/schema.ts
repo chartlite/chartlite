@@ -10,12 +10,13 @@
 
 import { CHART_TYPES } from './renderToString';
 
-/** One of the four accepted runtime data shapes. */
+/** One of the accepted runtime data shapes. */
 const dataSchema = {
   description:
-    'Chart data. Accepts DataPoint[] ([{x,y}]), a plain number[] , column-oriented ' +
-    '({x:[...], y:[...]}), or series-first ({series:[...], data:[...]}).',
-  oneOf: [
+    'Chart data. Accepts DataPoint[] ([{x,y}]), a plain number[], row objects ' +
+    '([{month, revenue, costs}]: the first text field is x, each numeric field a series), ' +
+    'column-oriented ({x:[...], y:[...]}), or series-first ({series:[...], data:[...]}).',
+  anyOf: [
     {
       type: 'array',
       minItems: 1,
@@ -31,6 +32,12 @@ const dataSchema = {
       },
     },
     { type: 'array', minItems: 1, items: { type: 'number' } },
+    {
+      description: 'Row objects: one object per x value, one numeric field per series.',
+      type: 'array',
+      minItems: 1,
+      items: { type: 'object', additionalProperties: { type: ['string', 'number'] } },
+    },
     {
       type: 'object',
       properties: {
@@ -107,19 +114,35 @@ export const chartSpecSchema = {
     animate: { type: 'boolean' },
     responsive: { type: 'boolean' },
     legend: {
-      type: 'object',
-      properties: {
-        show: { type: 'boolean' },
-        position: { type: 'string', enum: ['top', 'bottom'] },
-        align: { type: 'string', enum: ['left', 'center', 'right'] },
-        layout: { type: 'string', enum: ['horizontal', 'vertical'] },
-      },
-      additionalProperties: false,
+      description:
+        'Shown automatically when there is more than one series (or pie slice / radial ring). ' +
+        'false hides it; an object positions it.',
+      anyOf: [
+        { type: 'boolean' },
+        {
+          type: 'object',
+          properties: {
+            show: { type: 'boolean' },
+            position: { type: 'string', enum: ['top', 'bottom'] },
+            align: { type: 'string', enum: ['left', 'center', 'right'] },
+            layout: { type: 'string', enum: ['horizontal', 'vertical'] },
+          },
+          additionalProperties: false,
+        },
+      ],
+    },
+    maxPoints: {
+      type: 'number',
+      minimum: 0,
+      description: 'Chart-wide point budget before downsampling (default 500; 0 disables sampling).',
     },
     // Type-specific options (validated loosely; the constructors apply defaults).
     curve: { type: 'string', enum: ['linear', 'smooth'] },
     orientation: { type: 'string', enum: ['vertical', 'horizontal'] },
-    showPoints: { type: 'boolean' },
+    showPoints: {
+      type: 'boolean',
+      description: 'Point markers. Default: shown when every series has 24 points or fewer.',
+    },
     fillOpacity: { type: 'number', minimum: 0, maximum: 1 },
     gradient: { type: 'boolean' },
     // combo: default render type for series that don't set one via series-first data
@@ -135,6 +158,11 @@ export const chartSpecSchema = {
     labelPosition: { type: 'string', enum: ['top', 'bottom', 'left', 'right', 'auto'] },
     // sparkline
     showEndDot: { type: 'boolean' },
+    variant: {
+      type: 'string',
+      enum: ['line', 'area'],
+      description: 'Sparkline shape (`type` is taken by the chart-type discriminator).',
+    },
     // radial / gauge
     max: { type: 'number', exclusiveMinimum: 0 },
     startAngle: { type: 'number' },

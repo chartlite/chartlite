@@ -95,6 +95,90 @@ import { ComboChart } from '@chartlite/react';
 />
 ```
 
+## Tooltips and interactivity
+
+Pass `tooltip` for a hover tooltip — `true` for the defaults, or a
+[`TooltipOptions`](https://github.com/chartlite/chartlite/blob/main/packages/core/src/interactive/tooltip.ts)
+object. Event props are wired up for you: `onPointClick` / `onHover` install the
+`callbacks()` plugin and `onLegendToggle` installs `legendToggle()` (unless a
+plugin with that name is already in `plugins`). You don't need to import
+anything from `@chartlite/core/interactive` for these.
+
+```tsx
+<LineChart
+  data={data}
+  tooltip={{ formatter: (p) => `${p.x}: $${p.y.toLocaleString()}` }}
+  onPointClick={(p) => router.push(`/months/${p.x}`)}
+/>
+
+<BarChart
+  data={multiSeries}
+  legend={{ show: true }}
+  onLegendToggle={({ seriesName, hidden }) => track(seriesName, hidden)}
+/>
+```
+
+Other plugins (e.g. `crosshair()`) still go in `plugins`. Plugins are compared by
+their `name`, so `plugins={[crosshair()]}` written inline doesn't recreate the
+chart on every render — but it also means changing a plugin's options without
+changing its name has no effect until the chart is recreated for another reason.
+Memoize the plugin (or change the component's `key`) if you need to swap options.
+
+## How updates work
+
+Chart components diff their props after every render:
+
+- **Only `data` changed** → the chart updates in place with `chart.update(data)`
+  (the SVG root is reused; no flicker, legend-toggle state is kept). Data is
+  compared by value, so an equal-but-new array is a no-op.
+- **Callbacks changed** (`onPointClick`, `onHover`, `onLegendToggle`, `onError`,
+  `valueFormatter`, `tooltip.formatter`) → nothing is re-rendered. The chart calls
+  them through stable proxies that always invoke the latest function, so inline
+  arrow functions are fine. (A `valueFormatter` whose *source* changes, e.g.
+  switching between two different formatters, re-renders the chart so the axis
+  labels update.)
+- **Any other option changed** (`theme`, `curve`, `colors`, …) → the chart is
+  destroyed and recreated.
+
+If a render throws (e.g. empty `data`), a fallback box is shown inside the
+container and `onError` is called; the chart recovers as soon as valid props
+arrive.
+
+## Ref access
+
+Every component forwards a `ref` to a `ChartHandle`:
+
+```tsx
+import { useRef } from 'react';
+import { LineChart, type ChartHandle } from '@chartlite/react';
+
+function ExportableChart({ data }) {
+  const ref = useRef<ChartHandle>(null);
+  const download = () => {
+    const svg = ref.current?.toSVG(); // throws if nothing is rendered
+    // …
+  };
+  return (
+    <>
+      <LineChart ref={ref} data={data} />
+      <button onClick={download}>Download SVG</button>
+    </>
+  );
+}
+```
+
+`ChartHandle` has `chart` (the live core instance, or `null`), `container` (the
+`<div>`), `error`, and `toSVG()`.
+
+## Container attributes
+
+`id`, `className`, `style`, and any `aria-*` / `data-*` attributes are applied
+to the container `<div>`:
+
+```tsx
+<LineChart data={data} id="revenue" className="card" aria-describedby="revenue-caption" data-testid="revenue" />
+```
+
 ## Chart Components
 
 ### LineChart
@@ -239,6 +323,8 @@ function ProductSalesChart() {
 
 ### Stacked Area Chart
 
+Area charts with more than one series stack automatically:
+
 ```tsx
 import { AreaChart } from '@chartlite/react';
 
@@ -270,7 +356,8 @@ function DeviceTrafficChart() {
 
 ## Reactive Updates
 
-Charts automatically update when data changes:
+Charts update automatically when props change. A data-only change is applied in
+place with `chart.update(data)`; see [How updates work](#how-updates-work):
 
 ```tsx
 import { useState } from 'react';
@@ -344,6 +431,19 @@ Chartlite React supports multiple data formats:
 />
 ```
 
+### 5. Row Objects
+
+The first non-numeric key is x; each numeric key becomes a series:
+
+```tsx
+<LineChart
+  data={[
+    { month: 'Jan', revenue: 4200, costs: 2800 },
+    { month: 'Feb', revenue: 4800, costs: 3200 }
+  ]}
+/>
+```
+
 ## Themes
 
 Choose from six built-in themes:
@@ -397,12 +497,28 @@ interface CommonProps {
   responsive?: boolean;
   cssVars?: boolean;
   title?: string;
-  legend?: {
+  legend?: boolean | {             // shown automatically for 2+ series, slices, or rings
     show?: boolean;
     position?: 'top' | 'bottom';
     align?: 'left' | 'center' | 'right';
     layout?: 'horizontal' | 'vertical';
   };
+  maxPoints?: number;              // downsampling budget (default 500; 0 disables)
+  referenceLines?: ReferenceLine[];
+  annotations?: Annotation[];
+  regions?: Region[];
+  plugins?: ChartPlugin[];
+  valueFormatter?: (value: number) => string;
+  xFormatter?: (value: string | number) => string;
+  // Wrapper props
+  tooltip?: boolean | TooltipOptions;
+  onPointClick?: (event: ChartPointEvent) => void;
+  onHover?: (event: ChartPointEvent | null) => void;
+  onLegendToggle?: (event: LegendToggleEvent) => void;
+  onError?: (error: Error) => void;
+  id?: string;
+  ref?: React.Ref<ChartHandle>;
+  // …plus any aria-* / data-* attribute
 }
 ```
 
@@ -411,8 +527,7 @@ interface CommonProps {
 ```tsx
 interface LineChartProps extends CommonProps {
   curve?: 'linear' | 'smooth';
-  showPoints?: boolean;
-  strokeWidth?: number;
+  showPoints?: boolean;            // default: only when each series has ≤24 points
 }
 ```
 
@@ -421,6 +536,7 @@ interface LineChartProps extends CommonProps {
 ```tsx
 interface BarChartProps extends CommonProps {
   orientation?: 'vertical' | 'horizontal';
+  stacked?: boolean;
 }
 ```
 
@@ -430,8 +546,13 @@ interface BarChartProps extends CommonProps {
 interface AreaChartProps extends CommonProps {
   curve?: 'linear' | 'smooth';
   fillOpacity?: number;
+  gradient?: boolean;
 }
 ```
+
+The generic `<Chart>` takes a discriminated union keyed on `type` (`ChartProps`),
+so each `type` only accepts its own chart's options — `<Chart type="line" curv="smooth" />`
+is a type error. See the exported `*ChartProps` types for the other charts.
 
 ## Styling
 
@@ -508,24 +629,27 @@ const sampledData = useMemo(
 
 ## Server-Side Rendering (SSR)
 
-Chartlite React works with SSR frameworks like Next.js:
+The package ships with a `'use client'` directive, so in the Next.js App Router
+you can render its components straight from a Server Component — they hydrate
+and draw on the client:
 
 ```tsx
-'use client'; // For Next.js App Router
-
+// app/page.tsx (a Server Component)
 import { LineChart } from '@chartlite/react';
 
-export default function Chart() {
-  return <LineChart data={data} />;
+export default function Page() {
+  return <LineChart data={[{ x: 'Jan', y: 30 }, { x: 'Feb', y: 45 }]} />;
 }
 ```
 
+Props must be serializable when passed from a Server Component, so callbacks
+(`onPointClick`, `valueFormatter`, …) belong in a Client Component. For zero-JS,
+server-only SVG, use `renderToString` from `@chartlite/core/server`.
+
 ## Examples
 
-Check out our [live examples](https://chartlite.github.io/chartlite/):
-- [Basic Examples](https://chartlite.github.io/chartlite/basic-examples.html)
-- [Multi-Series Charts](https://chartlite.github.io/chartlite/multi-series.html)
-- [Flexible Data Formats](https://chartlite.github.io/chartlite/flexible-data.html)
+See the [examples app](https://github.com/chartlite/chartlite/tree/main/examples)
+in the repository.
 
 ## Contributing
 

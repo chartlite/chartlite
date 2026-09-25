@@ -26,10 +26,10 @@ export function getDefaultDimensions(
     width,
     height,
     margin: {
-      top: 40,
-      right: 40,
-      bottom: 60,
-      left: 60,
+      top: 16,
+      right: 16,
+      bottom: 28,
+      left: 48,
     },
   };
 }
@@ -89,52 +89,51 @@ export interface BandScale {
   bandwidth: number;
 }
 
+const r2 = (value: number): number => Math.round(value * 100) / 100;
+
 /**
- * Generate SVG path for line chart
+ * Generate SVG path for line chart. `smooth` uses monotone-x cubic
+ * interpolation (like d3's `curveMonotoneX`): it passes through every point and
+ * never overshoots the data, so smoothed peaks and dips stay truthful.
  */
 export function generateLinePath(
   points: Array<{ x: number; y: number }>,
   curve: 'linear' | 'smooth' = 'linear'
 ): string {
-  if (points.length === 0) return '';
+  const n = points.length;
+  if (n === 0) return '';
+  let path = `M${r2(points[0].x)},${r2(points[0].y)}`;
 
-  if (curve === 'linear') {
-    return points
-      .map((point, i) => `${i === 0 ? 'M' : 'L'} ${point.x},${point.y}`)
-      .join(' ');
+  if (curve !== 'smooth' || n < 3) {
+    for (let i = 1; i < n; i++) path += `L${r2(points[i].x)},${r2(points[i].y)}`;
+    return path;
   }
 
-  // Smooth curve using Catmull-Rom spline
-  if (points.length < 2) {
-    return `M ${points[0].x},${points[0].y}`;
+  // Secant slopes, then Fritsch–Carlson tangents (weighted harmonic mean,
+  // zero at local extrema) so each segment stays monotone.
+  const secant: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    const dx = points[i + 1].x - points[i].x;
+    secant.push(dx ? (points[i + 1].y - points[i].y) / dx : 0);
   }
-
-  let path = `M ${points[0].x},${points[0].y}`;
-
-  // Catmull-Rom to Cubic Bezier conversion
-  // tension=0.5 gives standard Catmull-Rom, 0.3 is smoother
-  const tension = 0.3;
-
-  for (let i = 0; i < points.length - 1; i++) {
-    // Get the 4 points needed for Catmull-Rom: p0, p1, p2, p3
-    // For the curve segment from p1 to p2
-    const p0 = i > 0 ? points[i - 1] : points[i]; // Use current point if at start
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = i < points.length - 2 ? points[i + 2] : points[i + 1]; // Use next point if at end
-
-    // Convert Catmull-Rom to Cubic Bezier control points
-    // Control point 1
-    const cp1x = p1.x + (p2.x - p0.x) * tension;
-    const cp1y = p1.y + (p2.y - p0.y) * tension;
-
-    // Control point 2
-    const cp2x = p2.x - (p3.x - p1.x) * tension;
-    const cp2y = p2.y - (p3.y - p1.y) * tension;
-
-    path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  const tangent = [secant[0]];
+  for (let i = 1; i < n - 1; i++) {
+    const s0 = secant[i - 1];
+    const s1 = secant[i];
+    const h0 = points[i].x - points[i - 1].x;
+    const h1 = points[i + 1].x - points[i].x;
+    tangent.push(s0 * s1 <= 0 ? 0 : (3 * (h0 + h1)) / ((2 * h1 + h0) / s0 + (h1 + 2 * h0) / s1));
   }
+  tangent.push(secant[n - 2]);
 
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = points[i];
+    const p1 = points[i + 1];
+    const third = (p1.x - p0.x) / 3;
+    path += `C${r2(p0.x + third)},${r2(p0.y + tangent[i] * third)} ${r2(p1.x - third)},${r2(
+      p1.y - tangent[i + 1] * third
+    )} ${r2(p1.x)},${r2(p1.y)}`;
+  }
   return path;
 }
 
@@ -154,7 +153,7 @@ const THEMES = {
         '#8b5cf6', // violet-500 (4.23:1) ✅
         '#ec4899', // pink-500 (3.53:1) ✅
         '#0891b2', // cyan-600 (3.58:1) ✅
-        '#ea580c', // orange-600 (3.39:1) ✅
+        '#64748b', // slate-500 (4.76:1) ✅ (distinct from the amber/red pair)
       ],
     },
     midnight: {
@@ -181,14 +180,15 @@ const THEMES = {
       grid: '#e5e5e5', // Intentionally subtle (decorative, not interactive)
       text: '#171717',
       seriesColors: [
+        // Ordered so neighbouring series alternate dark/light for separation.
         '#000000', // black (21.00:1) ✅
-        '#525252', // gray-600 (7.81:1) ✅
-        '#737373', // gray-500 (4.74:1) ✅
-        '#595959', // gray-550 (6.39:1) ✅
-        '#171717', // gray-900 (17.93:1) ✅
-        '#404040', // gray-700 (10.37:1) ✅
-        '#262626', // gray-800 (15.13:1) ✅
         '#8a8a8a', // gray-450 (3.62:1) ✅
+        '#404040', // gray-700 (10.37:1) ✅
+        '#737373', // gray-500 (4.74:1) ✅
+        '#171717', // gray-900 (17.93:1) ✅
+        '#595959', // gray-550 (6.39:1) ✅
+        '#262626', // gray-800 (15.13:1) ✅
+        '#525252', // gray-600 (7.81:1) ✅
       ],
     },
     tailwind: {
@@ -277,7 +277,10 @@ export function generateSeriesColors(
 }
 
 /**
- * Calculate nice tick values for axis
+ * Calculate "nice" tick values (multiples of 1, 2 or 5 × 10ⁿ) that cover
+ * `[min, max]`, aiming for roughly `count` intervals. The first and last ticks
+ * extend to the nearest nice value outside the data, so they can be used
+ * directly as the axis domain.
  */
 export function calculateNiceTicks(
   min: number,
@@ -291,19 +294,36 @@ export function calculateNiceTicks(
     return calculateNiceTicks(min - spread, max + spread, count);
   }
 
-  const roughStep = (max - min) / (count - 1);
-  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
-  const normalized = roughStep / magnitude;
-  const step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude;
+  const rough = (max - min) / count;
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const error = rough / magnitude;
+  const step = (error >= 7.07 ? 10 : error >= 3.16 ? 5 : error >= 1.41 ? 2 : 1) * magnitude;
   if (!Number.isFinite(step) || step <= 0) return [min, max];
 
-  const start = Math.floor(min / step) * step;
-  const end = Math.ceil(max / step) * step;
+  // Index-based (not accumulated) values avoid floating-point drift such as
+  // 0.30000000000000004; the epsilon keeps exact multiples from over-extending.
   const ticks: number[] = [];
-  for (let value = start; value <= end && ticks.length < count * 3; value += step) {
-    ticks.push(value);
+  const last = Math.ceil(max / step - 1e-9);
+  for (let i = Math.floor(min / step + 1e-9); i <= last; i++) {
+    ticks.push(parseFloat((i * step).toPrecision(12)));
   }
   return ticks.length > 1 ? ticks : [min, max];
+}
+
+/**
+ * Default axis tick formatter for a set of nice ticks: grouped digits below
+ * 10,000 ("2,500"), compact notation above ("12K", "1.5M"), with just enough
+ * decimals to tell adjacent ticks apart.
+ */
+export function tickFormatter(ticks: number[]): (value: number) => string {
+  const step = Math.abs(ticks[1] - ticks[0]) || 1;
+  const largest = Math.max(Math.abs(ticks[0]), Math.abs(ticks[ticks.length - 1]));
+  const unit = largest >= 1e4 ? Math.floor(Math.log10(largest) / 3) * 3 : 0;
+  const format = new Intl.NumberFormat(undefined, {
+    notation: unit ? 'compact' : 'standard',
+    maximumFractionDigits: Math.min(20, Math.max(0, Math.ceil(unit - Math.log10(step) - 1e-9))),
+  });
+  return (value) => format.format(value);
 }
 
 // Export data sampling utilities

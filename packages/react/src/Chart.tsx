@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { forwardRef } from 'react';
 import {
   LineChart as CoreLine,
   BarChart as CoreBar,
@@ -8,15 +8,44 @@ import {
   RadialChart as CoreRadial,
   ComboChart as CoreCombo,
   Sparkline as CoreSparkline,
+  type AreaChartConfig,
+  type BarChartConfig,
+  type ComboChartConfig,
+  type LineChartConfig,
+  type PieChartConfig,
+  type RadialChartConfig,
+  type ScatterChartConfig,
+  type SparklineConfig,
 } from '@chartlite/core';
-import { ChartFrame, type ChartFrameOwnProps } from './ChartFrame';
-import type {
-  ChartConfigByType,
-  ChartConstructor,
-  ChartType,
-} from './useChart';
+import type { ChartConstructor, CoreConfig } from './bridge';
+import {
+  ChartFrame,
+  type ChartContainerAttributes,
+  type ChartFrameOwnProps,
+  type ChartHandle,
+} from './ChartFrame';
+import type { ChartConfigByType, ChartType } from './useChart';
 
 export type { ChartType } from './useChart';
+
+/**
+ * A chart spec keyed on `type`: the same discriminated union as core's
+ * `ChartSpec`, so each `type` only accepts its own chart's options (a typo such
+ * as `curv="smooth"` is a type error). Sparkline's own line/area style `type`
+ * is not available here because `type` selects the chart.
+ */
+export type ChartSpecProps =
+  | ({ type: 'line' } & LineChartConfig)
+  | ({ type: 'bar' } & BarChartConfig)
+  | ({ type: 'area' } & AreaChartConfig)
+  | ({ type: 'scatter' } & ScatterChartConfig)
+  | ({ type: 'pie' } & PieChartConfig)
+  | ({ type: 'radial' } & RadialChartConfig)
+  | ({ type: 'combo' } & ComboChartConfig)
+  | ({ type: 'sparkline' } & Omit<SparklineConfig, 'type'>);
+
+/** Props for the generic `<Chart>`. */
+export type ChartProps = ChartSpecProps & ChartFrameOwnProps & ChartContainerAttributes;
 
 /**
  * Maps a `type` string to its core chart class. Referenced statically, so using
@@ -38,6 +67,13 @@ const REGISTRY: ChartRegistry = {
   sparkline: CoreSparkline,
 };
 
+function lookup(type: string): ChartConstructor<CoreConfig> | undefined {
+  if (!Object.prototype.hasOwnProperty.call(REGISTRY, type)) return undefined;
+  // SAFETY: `type` is an own key of REGISTRY (checked above), and the props for a
+  // given `type` are that chart's config by the ChartSpecProps discriminated union.
+  return REGISTRY[type as ChartType] as ChartConstructor<CoreConfig>;
+}
+
 /**
  * Generic, spec-driven chart. Pass a `type` plus any Chartlite config as props —
  * the same shape as a `ChartSpec`. This is the React mirror of
@@ -47,22 +83,9 @@ const REGISTRY: ChartRegistry = {
  * <Chart type="combo" data={{ series: […], data: […] }} theme="tailwind" />
  * ```
  */
-export function Chart<K extends ChartType>({
-  type,
-  className,
-  style,
-  onError,
-  ...config
-}: { type: K } & ChartFrameOwnProps & ChartConfigByType[K]): ReactElement {
-  // SAFETY: `config` is the chart-specific props after removing only React wrapper props.
-  const chartConfig = config as ChartConfigByType[K];
-  return (
-    <ChartFrame<ChartConfigByType[K]>
-      ctor={REGISTRY[type]}
-      config={chartConfig}
-      className={className}
-      style={style}
-      onError={onError}
-    />
-  );
-}
+export const Chart = /* @__PURE__ */ forwardRef<ChartHandle, ChartProps>(function Chart(
+  { type, ...props },
+  ref
+) {
+  return <ChartFrame ctor={lookup(type)} props={props} type={type} forwardedRef={ref} />;
+});

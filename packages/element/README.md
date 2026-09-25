@@ -56,6 +56,31 @@ el.spec = {
 
 All eight chart types are supported: `line`, `bar`, `area`, `scatter`, `pie`/donut, `radial`/gauge, `combo`, `sparkline`.
 
+## Tooltips and interactivity
+
+Add the `tooltip` boolean attribute (or `tooltip: true` / a
+[`TooltipOptions`](https://github.com/chartlite/chartlite/blob/main/packages/core/src/interactive/tooltip.ts)
+object in `spec`) for a hover tooltip:
+
+```html
+<chart-lite type="line" data="[4200, 4800, 5200]" tooltip></chart-lite>
+```
+
+Callbacks in a JS `spec` install the plugins they need automatically:
+`onPointClick` / `onHover` add `callbacks()`, `onLegendToggle` adds
+`legendToggle()` (unless a plugin with that name is already in `spec.plugins`).
+
+```js
+el.spec = { type: 'bar', data, onPointClick: (p) => console.log(p.x, p.y) };
+```
+
+## Updates
+
+Setting a new `spec` (or changing an attribute) is diffed against the current
+chart: a change to `data` alone updates the chart in place (`chart.update`),
+new callback functions are picked up without re-rendering, and any other change
+recreates the chart. Changes made in the same tick are coalesced into one update.
+
 ## Angular
 
 Register the schema, then bind the `spec` property:
@@ -76,7 +101,11 @@ export class DashboardComponent {
 ## Events
 
 - `chartlite:render` — fired after a successful render (`detail.type`).
-- `chartlite:error` — fired if the chart throws (`detail` is the `Error`); a fallback box is shown in the element.
+- `chartlite:error` — fired if the chart throws (`detail` is the `Error`); a fallback box is shown in the element, and the chart recovers once valid input arrives.
+
+A malformed JSON `spec` or `data` attribute is reported the same way, with a
+message naming the attribute (e.g. `<chart-lite>: the "data" attribute is not
+valid JSON (…)`), and is also logged with `console.error`.
 
 ## Custom tag name
 

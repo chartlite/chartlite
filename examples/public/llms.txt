@@ -15,7 +15,9 @@ prefer it over guessing.
 - `@chartlite/core/interactive` — opt-in, tree-shakeable interactivity plugins.
 - `@chartlite/core/server` — headless SSR: `renderToString(spec)`, no browser needed.
 - `@chartlite/core/schema.json` — JSON Schema for a chart spec.
-- `@chartlite/react` — React components (`<LineChart>`, etc.).
+- `@chartlite/react` — React components (`<LineChart>`, etc.). Also `@chartlite/vue`,
+  `@chartlite/svelte` (a `use:chart` action), and `@chartlite/element` (`<chart-lite>`).
+  Wrappers take a `tooltip` prop/attribute and apply data-only changes via `chart.update`.
 - `@chartlite/mcp` — Model Context Protocol server (`render_chart`, `list_chart_types`).
 
 ## Chart types
@@ -36,22 +38,33 @@ numeric axes.
 { x: ['Q1','Q2'], y: [45000, 52000] }                // column-oriented
 { series: [{ name: 'Revenue', dataKey: 'rev' }],     // series-first (multi-series)
   data: [{ x: 'Jan', rev: 4200 }, { x: 'Feb', rev: 4800 }] }
+[{ month: 'Jan', revenue: 10, costs: 4 }]           // row objects: first non-numeric key
+                                                     // is x, each numeric key a series
 ```
 
 ## Common options (on every chart)
 
 `title?`, `theme?` (`default` | `midnight` | `minimal` | `tailwind` | `nord` |
-`high-contrast`), `colors?: string[]`, `width?`, `height?`, `legend?: { show, position:
-'top'|'bottom', align: 'left'|'center'|'right' }`, `referenceLines?`, `annotations?`,
-`regions?`, `valueFormatter?: (n) => string`. Per-type: `curve` (line/area:
-`linear`|`smooth`), `orientation` (bar), `fillOpacity` (area), `innerRadius`/`showLabels`
-(pie), `pointSize`/`pointShape` (scatter).
+`high-contrast`), `colors?: string[]`, `width?`, `height?` (includes title + legend),
+`legend?: boolean | { show, position: 'top'|'bottom', align: 'left'|'center'|'right',
+layout }` (shown automatically for 2+ series, pie slices, or radial rings; `false` hides
+it), `responsive?` (default `true`), `maxPoints?` (downsampling budget, default 500; `0`
+disables), `referenceLines?`, `annotations?`, `regions?`, `valueFormatter?: (n) => string`,
+`xFormatter?: (x) => string` (x-axis labels and tooltip header). Per-type: `curve`
+(line/area/combo: `linear`|`smooth`), `showPoints` (line/combo; default: markers only when
+each series has ≤24 points), `orientation`/`stacked` (bar), `fillOpacity`/`gradient` (area),
+`innerRadius`/`showLabels` (pie), `pointSize`/`pointShape` (scatter), `variant: 'line'|'area'`
+(sparkline), `max`/`startAngle`/`endAngle` (radial), `defaultType` (combo).
+
+Axes use "nice" ticks; line and scatter fit the y range to the data, bar and area start at 0.
 
 ## Browser usage
 
 ```ts
 import { LineChart } from '@chartlite/core';
-new LineChart('#chart', { data: [{ x: 'Jan', y: 4200 }, { x: 'Feb', y: 4800 }], curve: 'smooth' }).render();
+const chart = new LineChart('#chart', { data: [{ x: 'Jan', y: 4200 }, { x: 'Feb', y: 4800 }], curve: 'smooth' });
+chart.render();
+chart.update(newData, { title: 'Updated' }); // options are optional
 ```
 
 ## Server-side / headless (no DOM) — best for agents & static sites
@@ -70,13 +83,17 @@ It is the same shape the MCP `render_chart` tool takes and is described by
 
 ```ts
 import { LineChart } from '@chartlite/core';
-import { tooltip, crosshair, legendToggle } from '@chartlite/core/interactive';
+import { tooltip, crosshair, legendToggle, callbacks } from '@chartlite/core/interactive';
 new LineChart('#chart', {
   data,
-  plugins: [tooltip(), crosshair(), legendToggle()],
+  plugins: [tooltip(), crosshair(), legendToggle(), callbacks()], // callbacks() fires onPointClick/onHover
   onPointClick: (p) => location.assign(`/detail/${p.x}`),
 }).render();
 ```
+
+On line/area/combo the tooltip snaps to the nearest x and lists every series there; it
+follows keyboard focus. `legendToggle()` also works on pie and radial legends.
+`interactive({ crosshair: true, legend: true })` returns all four plugins in one array.
 
 ## Formatters
 
@@ -97,6 +114,6 @@ Example MCP client config: `{ "command": "npx", "args": ["-y", "@chartlite/mcp"]
 ## Notes for correctness
 
 - Output SVG is WCAG-accessible (roles, labels, a hidden data-table). Don't strip it.
-- Charts are tuned for ≤ ~2,000 points (auto-downsampled above 500). For millions of
+- Charts are tuned for ≤ ~2,000 points (auto-downsampled above `maxPoints`, default 500). For millions of
   points or real-time streaming, use a heavier library.
 - Repo: https://github.com/chartlite/chartlite

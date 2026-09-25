@@ -115,6 +115,7 @@ chartlite/
 - Simple Arrays - Quick: `[30, 45, 38, 52]`
 - Column-Oriented - DataFrame style: `{ x: [...], y: [...] }`
 - Series-First - Ant Design style: `{ series: [...], data: [...] }`
+- Row Objects - `[{ month: 'Jan', revenue: 10, costs: 4 }]` (first non-numeric key = x, numeric keys = series)
 
 **Core Features:**
 - Multi-series support with auto-color assignment and configurable legend
@@ -149,9 +150,10 @@ chartlite/
 theme: 'default'    // Clean, professional (inspired by Tailwind)
 theme: 'midnight'   // Dark mode
 theme: 'minimal'    // Black & white, print-ready
+theme: 'tailwind'   // Tailwind CSS colors
+theme: 'nord'       // Nord color palette
+theme: 'high-contrast' // Maximum contrast (accessibility)
 theme: 'material'   // Material Design 3 (planned)
-theme: 'tailwind'   // Tailwind CSS colors (planned)
-theme: 'nord'       // Nord color palette (planned)
 theme: 'github'     // GitHub-style charts (planned)
 ```
 
@@ -262,7 +264,7 @@ new LineChart('#chart', {
 }).render();
 ```
 
-### Multi-Series (Planned)
+### Multi-Series
 
 ```typescript
 new LineChart('#chart', {
@@ -288,16 +290,16 @@ new BarChart('#chart', {
     x: ['Q1', 'Q2', 'Q3', 'Q4'],
     y: [45000, 52000, 48000, 61000]
   },
-  theme: 'material'
+  theme: 'nord'
 }).render();
 ```
 
-### With Reference Lines & Annotations (Planned)
+### With Reference Lines & Annotations
 
 ```typescript
 new LineChart('#chart', {
   data: monthlyRevenue,
-  referenceLine: [
+  referenceLines: [
     { axis: 'y', value: 50000, label: 'Goal' }
   ],
   annotations: [
@@ -428,9 +430,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 | Bundle Size | ~14.5KB gzip | ~400KB | ~200KB | ~1000KB |
 | Dependencies | 0 | D3 (many) | 0 | ZRender |
 | TypeScript | Native | Good | Good | Good |
-| Chart Types | 3-4 | 10+ | 8+ | 50+ |
+| Chart Types | 8 | 10+ | 8+ | 50+ |
 | Performance (1K points) | Excellent | Good | Good | Excellent |
-| Data Formats | 4 | 1 | 1 | 2 |
+| Data Formats | 5 | 1 | 1 | 2 |
 | Learning Curve | Low | Medium | Low | High |
 | Best For | Fast pages | React apps | Simple charts | Dashboards |
 

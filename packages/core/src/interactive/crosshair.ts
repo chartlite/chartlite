@@ -1,7 +1,7 @@
 /**
  * Crosshair / focus-line plugin. On hover of a data point it draws a guide line
- * (vertical, and optionally horizontal) across the plot area. Best for line/area
- * and scatter charts, which emit pixel centres (`data-cx`/`data-cy`).
+ * (vertical, and optionally horizontal) across the plot area. On line/area/combo
+ * charts it snaps to the nearest x, so it tracks the pointer anywhere in the plot.
  *
  * ```ts
  * import { crosshair } from '@chartlite/core/interactive';
@@ -10,6 +10,7 @@
  */
 
 import type { ChartPlugin, PluginContext } from '../types';
+import { trackHover } from './hover';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -25,6 +26,7 @@ export interface CrosshairOptions {
 }
 
 export function crosshair(options: CrosshairOptions = {}): ChartPlugin {
+  const owner = Symbol('crosshair');
   return {
     name: 'crosshair',
     afterRender(ctx: PluginContext): void {
@@ -57,26 +59,29 @@ export function crosshair(options: CrosshairOptions = {}): ChartPlugin {
       const hLine = options.horizontal ? makeLine() : null;
       main.appendChild(group);
 
-      main.querySelectorAll('.data-point').forEach((pt) => {
-        const cx = pt.getAttribute('data-cx');
-        const cy = pt.getAttribute('data-cy');
-        if (cx === null) return;
-        pt.addEventListener('mouseenter', () => {
-          vLine.setAttribute('x1', cx);
-          vLine.setAttribute('x2', cx);
-          vLine.setAttribute('y1', '0');
-          vLine.setAttribute('y2', String(plotH));
-          if (hLine && cy !== null) {
-            hLine.setAttribute('x1', '0');
-            hLine.setAttribute('x2', String(plotW));
-            hLine.setAttribute('y1', cy);
-            hLine.setAttribute('y2', cy);
-          }
-          group.style.display = '';
-        });
-        pt.addEventListener('mouseleave', () => {
+      // Follows the same snapping as the tooltip: the nearest x on line/area
+      // charts, the hovered mark elsewhere.
+      trackHover(ctx, owner, (points) => {
+        const cx = points[0]?.getAttribute('data-cx');
+        if (!cx) {
           group.style.display = 'none';
-        });
+          return;
+        }
+        vLine.setAttribute('x1', cx);
+        vLine.setAttribute('x2', cx);
+        vLine.setAttribute('y1', '0');
+        vLine.setAttribute('y2', String(plotH));
+        const cy = points[0].getAttribute('data-cy');
+        if (hLine && cy !== null && points.length === 1) {
+          hLine.setAttribute('x1', '0');
+          hLine.setAttribute('x2', String(plotW));
+          hLine.setAttribute('y1', cy);
+          hLine.setAttribute('y2', cy);
+          hLine.style.display = '';
+        } else if (hLine) {
+          hLine.style.display = 'none';
+        }
+        group.style.display = '';
       });
     },
   };

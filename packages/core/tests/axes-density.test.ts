@@ -10,10 +10,13 @@ function makeData(count: number, prefix = 'Category'): DataPoint[] {
   }));
 }
 
+function categoryTexts(container: HTMLElement, prefix: string): SVGTextElement[] {
+  return Array.from(container.querySelectorAll<SVGTextElement>('.chart-axis-labels text'))
+    .filter((label) => (label.textContent ?? '').startsWith(prefix));
+}
+
 function categoryLabels(container: HTMLElement, prefix: string): string[] {
-  return Array.from(container.querySelectorAll('.chart-main > text'))
-    .map((label) => label.textContent ?? '')
-    .filter((label) => label.startsWith(prefix));
+  return categoryTexts(container, prefix).map((label) => label.textContent ?? '');
 }
 
 describe('categorical axis label density', () => {
@@ -73,7 +76,10 @@ describe('categorical axis label density', () => {
 
     const labels = categoryLabels(container, 'Row');
     expect(labels.length).toBeGreaterThanOrEqual(2);
-    expect(labels.length).toBeLessThanOrEqual(7);
+    expect(labels.length).toBeLessThan(data.length / 10);
+    // Rows never overlap: consecutive labels sit at least one line apart.
+    const ys = categoryTexts(container, 'Row').map((label) => Number(label.getAttribute('y')));
+    ys.slice(1).forEach((y, index) => expect(y - ys[index]).toBeGreaterThanOrEqual(12 * 1.4));
     expect(labels[0]).toBe('Row 0');
     expect(labels.at(-1)).toBe('Row 499');
     expect(container.querySelectorAll('.data-point')).toHaveLength(data.length);

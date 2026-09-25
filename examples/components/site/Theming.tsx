@@ -3,11 +3,12 @@
 import { useState, type CSSProperties } from 'react';
 import { AreaChart } from '@chartlite/react';
 import Reveal from './Reveal';
+import SectionHeader from './SectionHeader';
 
 const areaData = {
   series: [
-    { name: 'A', dataKey: 'a' },
-    { name: 'B', dataKey: 'b' },
+    { name: 'Organic', dataKey: 'a' },
+    { name: 'Paid', dataKey: 'b' },
   ],
   data: [
     { x: 'Jan', a: 20, b: 12 },
@@ -20,13 +21,20 @@ const areaData = {
 };
 
 const PALETTES = {
-  Aurora: ['#22d3ee', '#a855f7'],
-  Sunset: ['#fb923c', '#ec4899'],
-  Forest: ['#34d399', '#0d9488'],
-  Mono: ['#e5e7eb', '#9ca3af'],
+  Almanac: ['#d4441c', '#0f5e5c'],
+  Orchard: ['#5f8a3a', '#d9a21b'],
+  Dusk: ['#7b4b6e', '#e07a5f'],
+  Graphite: ['#6b6255', '#b5aa98'],
 } as const;
 
 type PaletteName = keyof typeof PALETTES;
+
+const MODES = {
+  paper: { bg: '#faf7f1', text: '#776d5f', grid: 'rgba(27,24,19,0.09)', border: '#d6ccba' },
+  night: { bg: '#1b1814', text: '#978b77', grid: 'rgba(241,234,217,0.08)', border: '#332e27' },
+} as const;
+
+type ModeName = keyof typeof MODES;
 
 interface ThemeStyle extends CSSProperties {
   '--cl-series-0': string;
@@ -41,84 +49,107 @@ function isPaletteName(value: string): value is PaletteName {
 }
 
 export default function Theming() {
-  const [palette, setPalette] = useState<PaletteName>('Aurora');
-  const [light, setLight] = useState(false);
+  const [palette, setPalette] = useState<PaletteName>('Almanac');
+  const [mode, setMode] = useState<ModeName>('paper');
 
   const [s0, s1] = PALETTES[palette];
+  const m = MODES[mode];
   const style: ThemeStyle = {
     '--cl-series-0': s0,
     '--cl-series-1': s1,
-    '--cl-bg': light ? '#ffffff' : 'transparent',
-    '--cl-text': light ? '#475569' : '#8b8ba7',
-    '--cl-grid': light ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)',
-    transition: 'background-color .4s',
+    '--cl-bg': m.bg,
+    '--cl-text': m.text,
+    '--cl-grid': m.grid,
   };
 
   return (
-    <section id="theming" className="relative mx-auto max-w-6xl px-6 py-24 scroll-mt-24">
-      <Reveal className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
-        <div>
-          <p className="mb-3 font-mono text-xs uppercase tracking-[0.2em] text-glow-pink">
-            Theme with pure CSS
-          </p>
-          <h2 className="font-display text-4xl font-bold tracking-tight text-mist-100 sm:text-5xl">
-            Re-theme without re-rendering.
-          </h2>
-          <p className="mt-4 text-lg text-mist-500">
-            Pass <span className="font-mono text-mist-300">cssVars</span> and every
-            color becomes a CSS custom property. Restyle palettes, or flip
-            light/dark, entirely in CSS — no JavaScript, no redraw. Pairs with SSR
-            for zero-JS theming.
-          </p>
+    <section id="theming" className="relative mx-auto max-w-6xl scroll-mt-24 px-6 py-16 md:py-20">
+      <SectionHeader
+        number="§3"
+        kicker="Theme with plain CSS"
+        title={
+          <>
+            Re-theme <em className="text-accent">without</em> re-rendering.
+          </>
+        }
+      >
+        Pass <span className="font-mono text-[0.9em] text-ink">cssVars</span> and every
+        colour becomes a CSS custom property. Swap palettes or flip light and dark
+        in CSS alone, with no JavaScript and no redraw. Combined with server
+        rendering, that gives you theming with zero client JS.
+      </SectionHeader>
 
-          <div className="mt-8 space-y-4">
-            <div>
-              <p className="mb-2 text-xs uppercase tracking-widest text-mist-600">Palette</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(PALETTES).filter(isPaletteName).map((name) => (
-                  <button
-                    key={name}
-                    onClick={() => setPalette(name)}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                      palette === name
-                        ? 'border-white/30 text-mist-100'
-                        : 'border-white/10 text-mist-500 hover:text-mist-100'
-                    }`}
-                  >
-                    <span className="flex">
-                      <span className="h-3 w-3 rounded-full" style={{ background: PALETTES[name][0] }} />
-                      <span className="-ml-1 h-3 w-3 rounded-full" style={{ background: PALETTES[name][1] }} />
-                    </span>
-                    {name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs uppercase tracking-widest text-mist-600">Mode</p>
-              <button
-                onClick={() => setLight((v) => !v)}
-                className="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-mist-100 transition-colors hover:border-white/25"
-              >
-                {light ? '☀ Light' : '☾ Dark'} — click to flip
-              </button>
+      <Reveal className="grid items-start gap-12 lg:grid-cols-[1fr_1.25fr]">
+        <div className="space-y-8">
+          <div>
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Palette</p>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.keys(PALETTES).filter(isPaletteName).map((name) => (
+                <button
+                  key={name}
+                  onClick={() => setPalette(name)}
+                  aria-pressed={palette === name}
+                  className={`flex items-center gap-3 rounded-sm border px-3 py-2.5 text-left text-sm transition-colors ${
+                    palette === name
+                      ? 'border-ink bg-paper-raised text-ink'
+                      : 'border-rule text-muted hover:border-muted hover:text-ink'
+                  }`}
+                >
+                  <span className="flex">
+                    <span className="h-4 w-4 rounded-full ring-2 ring-paper" style={{ background: PALETTES[name][0] }} />
+                    <span className="-ml-1.5 h-4 w-4 rounded-full ring-2 ring-paper" style={{ background: PALETTES[name][1] }} />
+                  </span>
+                  {name}
+                </button>
+              ))}
             </div>
           </div>
 
-          <pre className="mt-8 overflow-x-auto rounded-xl border border-white/10 bg-ink-900/60 p-4 font-mono text-[12px] leading-relaxed text-mist-400">
-            <code>{`.chart {
-  --cl-series-0: ${s0};
-  --cl-series-1: ${s1};${light ? '\n  --cl-bg: #ffffff;\n  --cl-text: #475569;' : ''}
-}`}</code>
+          <div>
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Mode</p>
+            <div className="inline-flex rounded-full border border-rule p-1">
+              {(['paper', 'night'] as const).map((name) => (
+                <button
+                  key={name}
+                  onClick={() => setMode(name)}
+                  aria-pressed={mode === name}
+                  className={`rounded-full px-4 py-1.5 text-sm capitalize transition-colors ${
+                    mode === name ? 'bg-ink text-paper' : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <pre className="code-plate overflow-x-auto rounded-sm p-5 font-mono text-[12.5px] leading-relaxed">
+            <code>
+              <span className="text-slate-muted">.chart {'{'}</span>
+              {`\n  --cl-series-0: `}
+              <span style={{ color: s0 }}>■</span> {s0};
+              {`\n  --cl-series-1: `}
+              <span style={{ color: s1 }}>■</span> {s1};
+              {`\n  --cl-bg: ${m.bg};\n  --cl-text: ${m.text};\n`}
+              <span className="text-slate-muted">{'}'}</span>
+            </code>
           </pre>
         </div>
 
-        <div className="border-glow rounded-2xl glass p-6" style={{ background: light ? 'rgba(255,255,255,0.92)' : undefined }}>
-          <div style={style}>
+        <figure>
+          <div
+            className="rounded-sm border p-6 transition-colors duration-500"
+            style={{ ...style, background: m.bg, borderColor: m.border }}
+          >
             <AreaChart data={areaData} curve="smooth" cssVars height={340} />
           </div>
-        </div>
+          <figcaption className="mt-3 flex gap-3 text-sm text-muted">
+            <span className="shrink-0 whitespace-nowrap pt-0.5 font-mono text-[11px] uppercase tracking-[0.16em] text-accent-ink">Fig. 3</span>
+            <span className="font-serif text-[15px] italic">
+              One chart instance. Each click changes only the CSS variables on its wrapper.
+            </span>
+          </figcaption>
+        </figure>
       </Reveal>
     </section>
   );

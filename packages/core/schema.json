@@ -24,8 +24,8 @@
       ]
     },
     "data": {
-      "description": "Chart data. Accepts DataPoint[] ([{x,y}]), a plain number[] , column-oriented ({x:[...], y:[...]}), or series-first ({series:[...], data:[...]}).",
-      "oneOf": [
+      "description": "Chart data. Accepts DataPoint[] ([{x,y}]), a plain number[], row objects ([{month, revenue, costs}]: the first text field is x, each numeric field a series), column-oriented ({x:[...], y:[...]}), or series-first ({series:[...], data:[...]}).",
+      "anyOf": [
         {
           "type": "array",
           "minItems": 1,
@@ -57,6 +57,20 @@
           "minItems": 1,
           "items": {
             "type": "number"
+          }
+        },
+        {
+          "description": "Row objects: one object per x value, one numeric field per series.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number"
+              ]
+            }
           }
         },
         {
@@ -191,35 +205,48 @@
       "type": "boolean"
     },
     "legend": {
-      "type": "object",
-      "properties": {
-        "show": {
+      "description": "Shown automatically when there is more than one series (or pie slice / radial ring). false hides it; an object positions it.",
+      "anyOf": [
+        {
           "type": "boolean"
         },
-        "position": {
-          "type": "string",
-          "enum": [
-            "top",
-            "bottom"
-          ]
-        },
-        "align": {
-          "type": "string",
-          "enum": [
-            "left",
-            "center",
-            "right"
-          ]
-        },
-        "layout": {
-          "type": "string",
-          "enum": [
-            "horizontal",
-            "vertical"
-          ]
+        {
+          "type": "object",
+          "properties": {
+            "show": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom"
+              ]
+            },
+            "align": {
+              "type": "string",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            },
+            "layout": {
+              "type": "string",
+              "enum": [
+                "horizontal",
+                "vertical"
+              ]
+            }
+          },
+          "additionalProperties": false
         }
-      },
-      "additionalProperties": false
+      ]
+    },
+    "maxPoints": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Chart-wide point budget before downsampling (default 500; 0 disables sampling)."
     },
     "curve": {
       "type": "string",
@@ -236,7 +263,8 @@
       ]
     },
     "showPoints": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "Point markers. Default: shown when every series has 24 points or fewer."
     },
     "fillOpacity": {
       "type": "number",
@@ -296,6 +324,14 @@
     },
     "showEndDot": {
       "type": "boolean"
+    },
+    "variant": {
+      "type": "string",
+      "enum": [
+        "line",
+        "area"
+      ],
+      "description": "Sparkline shape (`type` is taken by the chart-type discriminator)."
     },
     "max": {
       "type": "number",

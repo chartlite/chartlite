@@ -46,7 +46,7 @@
     "vue": "^3.3.0"
   },
   "dependencies": {
-    "@chartlite/core": "workspace:*"
+    "@chartlite/core": "workspace:^"
   },
   "devDependencies": {
     "@vue/test-utils": "^2.4.6",

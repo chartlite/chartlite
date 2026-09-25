@@ -1,75 +1,94 @@
 @import "tailwindcss";
 
+/* `night:` styles apply while the Paper/Night toggle is on Night. */
+@custom-variant night (&:where([data-theme=dark], [data-theme=dark] *));
+
 /* ------------------------------------------------------------------ *
- * Chartlite — dark cinematic design system
+ * Chartlite — "almanac" design system
+ *
+ * Warm paper, printer's ink, and a single vermilion signal colour. Every
+ * token below is a CSS variable, and the Paper/Night toggle in the nav only
+ * swaps variables on <html> — the same trick `cssVars` charts use.
  * ------------------------------------------------------------------ */
 
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-display), var(--font-inter), sans-serif;
-  --font-mono: var(--font-mono), ui-monospace, monospace;
+  --font-sans: var(--nf-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--nf-serif), "Iowan Old Style", Georgia, serif;
+  --font-mono: var(--nf-mono), ui-monospace, monospace;
 
-  /* Ink scale (near-black canvas) */
-  --color-ink-950: #050509;
-  --color-ink-900: #0a0a12;
-  --color-ink-850: #0e0e18;
-  --color-ink-800: #14141f;
-  --color-ink-700: #1c1c2b;
-  --color-ink-600: #2a2a3d;
+  --color-paper: #f3eee4;
+  --color-paper-raised: #faf7f1;
+  --color-paper-sunken: #e9e2d4;
+  --color-ink: #1b1813;
+  --color-ink-soft: #423b31;
+  --color-muted: #776d5f;
+  --color-rule: #d6ccba;
+  --color-accent: #d4441c;
+  --color-accent-ink: #b3391a;
+  --color-teal: #0f5e5c;
+  --color-ochre: #b98512;
 
-  /* Text */
-  --color-mist-100: #f4f4fb;
-  --color-mist-300: #c8c8d8;
-  --color-mist-500: #8b8ba7;
-  --color-mist-600: #6a6a85;
-
-  /* Luminous accents */
-  --color-glow-cyan: #22d3ee;
-  --color-glow-blue: #6366f1;
-  --color-glow-violet: #a855f7;
-  --color-glow-pink: #ec4899;
+  /* Code blocks stay dark in both modes, like a printed terminal plate. */
+  --color-slate: #1d1a15;
+  --color-slate-line: #34302a;
+  --color-slate-text: #ece4d3;
+  --color-slate-muted: #9a8f7c;
 }
 
 :root {
-  --accent: var(--color-glow-cyan);
-  --accent-2: var(--color-glow-violet);
+  color-scheme: light;
+
+  /* Global Chartlite theme, inherited by every chart rendered with `cssVars`. */
+  --cl-bg: transparent;
+  --cl-text: #776d5f;
+  --cl-grid: rgba(27, 24, 19, 0.09);
+  --cl-primary: #d4441c;
+  --cl-series-0: #d4441c;
+  --cl-series-1: #0f5e5c;
+  --cl-series-2: #c9941a;
+  --cl-series-3: #7b4b6e;
+  --cl-series-4: #6f8f5f;
+
+  --grid-line: rgba(27, 24, 19, 0.035);
+  --grid-line-major: rgba(27, 24, 19, 0.07);
+}
+
+:root[data-theme='dark'] {
   color-scheme: dark;
 
-  /* Global Chartlite theme — inherited by every chart rendered with `cssVars`.
-     The nav toggle flips `data-chart-theme` to re-theme them all at once. */
-  --cl-bg: transparent;
-  --cl-text: #8b8ba7;
-  --cl-grid: rgba(255, 255, 255, 0.08);
-  --cl-primary: #22d3ee;
-  --cl-series-0: #22d3ee;
-  --cl-series-1: #a855f7;
-  --cl-series-2: #6366f1;
-  --cl-series-3: #ec4899;
-  --cl-series-4: #34d399;
+  --color-paper: #13110e;
+  --color-paper-raised: #1b1814;
+  --color-paper-sunken: #0e0c0a;
+  --color-ink: #f1ead9;
+  --color-ink-soft: #d0c6b2;
+  --color-muted: #978b77;
+  --color-rule: #332e27;
+  --color-accent: #ff6a3d;
+  --color-accent-ink: #ff8a63;
+  --color-teal: #4fb3a9;
+  --color-ochre: #e8b64c;
+  --color-slate: #0c0b09;
+  --color-slate-line: #2a2621;
 
-  /* Panel behind charts on example pages (follows the chart theme). */
-  --chart-slab: rgba(255, 255, 255, 0.015);
-  --chart-slab-border: rgba(255, 255, 255, 0.08);
+  --cl-text: #978b77;
+  --cl-grid: rgba(241, 234, 217, 0.08);
+  --cl-primary: #ff6a3d;
+  --cl-series-0: #ff6a3d;
+  --cl-series-1: #4fb3a9;
+  --cl-series-2: #e8b64c;
+  --cl-series-3: #c48ab3;
+  --cl-series-4: #9dbf86;
+
+  --grid-line: rgba(241, 234, 217, 0.03);
+  --grid-line-major: rgba(241, 234, 217, 0.055);
 }
 
-:root[data-chart-theme='light'] {
-  color-scheme: light;
-  --cl-bg: #ffffff;
-  --cl-text: #475569;
-  --cl-grid: rgba(15, 23, 42, 0.08);
-  --cl-primary: #4f46e5;
-  --cl-series-0: #4f46e5;
-  --cl-series-1: #db2777;
-  --cl-series-2: #0891b2;
-  --cl-series-3: #d97706;
-  --cl-series-4: #059669;
-
-  --chart-slab: #ffffff;
-  --chart-slab-border: rgba(15, 23, 42, 0.08);
-}
-
-* {
-  border-color: color-mix(in srgb, var(--color-mist-100) 8%, transparent);
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-rule);
+  }
 }
 
 html {
@@ -78,12 +97,13 @@ html {
 }
 
 body {
-  background-color: var(--color-ink-950);
-  color: var(--color-mist-300);
+  background-color: var(--color-paper);
+  color: var(--color-ink-soft);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 /* Lenis smooth-scroll hooks */
@@ -99,24 +119,28 @@ html.lenis body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-glow-cyan) 30%, transparent);
-  color: var(--color-mist-100);
+  background: var(--color-accent);
+  color: var(--color-paper);
 }
 
-/* Thin luminous scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-ink-950);
+  background: var(--color-paper);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-ink-600);
+  background: var(--color-rule);
   border-radius: 999px;
-  border: 3px solid var(--color-ink-950);
+  border: 3px solid var(--color-paper);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--color-glow-blue) 60%, var(--color-ink-600));
+  background: var(--color-muted);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
 /* ------------------------------------------------------------------ *
@@ -124,79 +148,84 @@ html.lenis body {
  * ------------------------------------------------------------------ */
 
 @layer utilities {
-  /* Gradient text */
-  .text-gradient {
-    background: linear-gradient(
-      120deg,
-      var(--color-mist-100) 0%,
-      var(--color-glow-cyan) 45%,
-      var(--color-glow-violet) 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
+  /* Engineering-paper grid: fine 8px lines with a heavier line every 40px. */
+  .graph-paper {
+    background-image:
+      linear-gradient(to right, var(--grid-line-major) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line-major) 1px, transparent 1px),
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
   }
 
-  /* Glass surface */
-  .glass {
-    background: color-mix(in srgb, var(--color-ink-800) 55%, transparent);
-    backdrop-filter: blur(16px) saturate(140%);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
-    border: 1px solid color-mix(in srgb, var(--color-mist-100) 8%, transparent);
+  /* A printed plate: raised paper, hairline rule, soft ink shadow. */
+  .plate {
+    /* Charts on a plate use its colour for label halos and marker outlines. */
+    --cl-bg: var(--color-paper-raised);
+    background: var(--color-paper-raised);
+    border: 1px solid var(--color-rule);
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--color-ink) 4%, transparent),
+      0 18px 40px -28px color-mix(in srgb, var(--color-ink) 35%, transparent);
+    transition: background-color 0.4s ease, border-color 0.4s ease;
   }
 
-  /* Gradient hairline border via mask */
-  .border-glow {
+  /* Printer's crop marks at the four corners of a plate. */
+  .crop-marks {
     position: relative;
   }
-  .border-glow::before {
+  .crop-marks::before,
+  .crop-marks::after {
     content: "";
     position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      130deg,
-      color-mix(in srgb, var(--color-glow-cyan) 60%, transparent),
-      transparent 40%,
-      transparent 60%,
-      color-mix(in srgb, var(--color-glow-violet) 55%, transparent)
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    inset: -9px;
     pointer-events: none;
+    --m: color-mix(in srgb, var(--color-ink) 45%, transparent);
+    background:
+      linear-gradient(var(--m), var(--m)) top left / 12px 1px,
+      linear-gradient(var(--m), var(--m)) top left / 1px 12px,
+      linear-gradient(var(--m), var(--m)) top right / 12px 1px,
+      linear-gradient(var(--m), var(--m)) top right / 1px 12px;
+    background-repeat: no-repeat;
+  }
+  .crop-marks::after {
+    transform: scaleY(-1);
   }
 
-  .glow-shadow {
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--color-glow-blue) 20%, transparent),
-      0 20px 70px -20px color-mix(in srgb, var(--color-glow-blue) 45%, transparent);
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-accent-ink);
   }
 
-  /* Film grain overlay */
+  .code-plate {
+    background: var(--color-slate);
+    color: var(--color-slate-text);
+    border: 1px solid var(--color-slate-line);
+  }
+
+  /* Paper grain; multiply on paper, screen at night. */
   .grain::after {
     content: "";
     position: fixed;
     inset: 0;
     z-index: 100;
     pointer-events: none;
+    opacity: 0.06;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  :root[data-theme='dark'] .grain::after {
+    mix-blend-mode: screen;
     opacity: 0.035;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+  }
 
   .reveal {
     opacity: 0;
     transform: translateY(28px);
     will-change: opacity, transform;
-  }
-
-  .container-px {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
   }
 }
 
@@ -205,15 +234,7 @@ html.lenis body {
     opacity: 1 !important;
     transform: none !important;
   }
+  body {
+    transition: none;
+  }
 }
-
-/* Give the live library charts the hero's luminous feel — a soft neon glow on
-   strokes and points, but only in the dark chart theme (glow reads badly on
-   white). Purely presentational, scoped to the site. */
-:root:not([data-chart-theme='light']) svg :is(.area-line, .combo-line, path.data-series) {
-  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.4));
-}
-:root:not([data-chart-theme='light']) svg circle.data-point {
-  filter: drop-shadow(0 0 3px rgba(34, 211, 238, 0.45));
-}
-

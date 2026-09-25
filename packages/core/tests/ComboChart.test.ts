@@ -41,9 +41,11 @@ describe('ComboChart', () => {
     expect(container.querySelectorAll('circle.data-point')).toHaveLength(3);
   });
 
-  it('omits points when showPoints is false', () => {
+  it('hides point markers when showPoints is false (hit targets remain)', () => {
     new ComboChart(container, { data: comboData, showPoints: false }).render();
-    expect(container.querySelectorAll('circle.data-point')).toHaveLength(0);
+    const circles = Array.from(container.querySelectorAll('circle.data-point'));
+    expect(circles.length).toBeGreaterThan(0);
+    circles.forEach((c) => expect(c.getAttribute('fill')).toBe('transparent'));
   });
 
   it('groups multiple bar series side-by-side', () => {

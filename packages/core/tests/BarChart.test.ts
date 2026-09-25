@@ -43,7 +43,7 @@ describe('BarChart', () => {
       chart.render();
       const bars = container.querySelectorAll('.bar');
       bars.forEach(bar => {
-        expect(bar.getAttribute('rx')).toBe('4');
+        expect(bar.getAttribute('rx')).toBe('3');
       });
     });
 

@@ -46,8 +46,10 @@ describe('RadialChart', () => {
       max: 100,
     }).render();
     expect(container.querySelectorAll('path.data-point')).toHaveLength(3);
-    // no center value label for multi-ring
-    expect(container.querySelector('text')).toBeNull();
+    // no center value label for multi-ring (the only text is the legend)
+    const texts = Array.from(container.querySelectorAll('text'));
+    expect(texts.filter((t) => !t.closest('.chart-legend'))).toHaveLength(0);
+    expect(container.querySelectorAll('.legend-item')).toHaveLength(3);
   });
 
   it('omits the value arc for a zero value', () => {

@@ -10,25 +10,21 @@
 
 import { BaseChart } from './BaseChart';
 import type { RadialChartConfig } from '../types';
-import { setDataPointAttrs } from '../render/dataAttrs';
-import { createSVGElement } from '../render/constants';
+import { markDataPoint } from '../render/dataAttrs';
+import { arcPath, polar, svgEl } from '../render/constants';
 
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
 
 export class RadialChart extends BaseChart {
-  protected config: RadialChartConfig;
+  declare protected config: RadialChartConfig;
 
   constructor(container: HTMLElement | string, config: RadialChartConfig) {
-    super(container, config, config.data, 'Radial');
+    super(container, { max: 100, startAngle: 0, endAngle: 360, showValue: true, ...config }, config.data, 'Radial');
+  }
 
-    this.config = {
-      max: 100,
-      startAngle: 0,
-      endAngle: 360,
-      showValue: true,
-      ...config,
-    };
+  protected hasAxes(): boolean {
+    return false;
   }
 
   protected renderChart(): void {
@@ -54,23 +50,28 @@ export class RadialChart extends BaseChart {
     const a1 = (this.config.endAngle ?? 360) * DEG;
     const sweep = a1 - a0;
 
-    const cx = margin.left + chartWidth / 2;
-    const cy = margin.top + chartHeight / 2;
-    const outerRadius = (Math.min(chartWidth, chartHeight) / 2) * 0.92;
+    // Fit the swept arc (plus its centre, where the value sits) to the plot
+    // area, so a 180° gauge fills the canvas instead of a quarter of it.
+    const angles = [a0, a1, 0];
+    for (let k = Math.ceil(a0 / (Math.PI / 2)); k * (Math.PI / 2) <= a1; k++) angles.push(k * (Math.PI / 2));
+    const xs = angles.map((a, i) => (i === 2 ? 0 : Math.sin(a)));
+    const ys = angles.map((a, i) => (i === 2 ? 0 : -Math.cos(a)));
+    const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const unit = Math.max(0, Math.min(chartWidth / (maxX - minX || 1), chartHeight / (maxY - minY || 1)));
+    const cx = margin.left + (chartWidth - (maxX - minX) * unit) / 2 - minX * unit;
+    const cy = margin.top + (chartHeight - (maxY - minY) * unit) / 2 - minY * unit;
+    const outerRadius = unit * 0.95;
+    const isGauge = sweep < TAU - 1e-6;
 
     // Ring geometry: outermost ring is the first data point.
     const ringCount = points.length;
     const thickness =
       this.config.thickness && this.config.thickness > 0
         ? this.config.thickness
-        : Math.max(6, (outerRadius * (ringCount === 1 ? 0.28 : 0.6)) / ringCount);
+        : Math.max(6, (outerRadius * (ringCount === 1 ? 0.22 : 0.6)) / ringCount);
     const gap = thickness * 0.4;
 
-    const palette =
-      this.config.colors && this.config.colors.length > 0
-        ? this.config.colors
-        : colors.seriesColors;
-    const trackColor = this.config.trackColor || colors.grid;
+    const palette = this.palette();
 
     points.forEach((point, index) => {
       const outerR = outerRadius - index * (thickness + gap);
@@ -80,92 +81,38 @@ export class RadialChart extends BaseChart {
       const fraction = Math.max(0, Math.min(1, point.y / max));
       const color = palette[index % palette.length];
 
-      // Track (full sweep, faint)
-      const track = createSVGElement('path');
-      track.setAttribute('d', this.ringArc(cx, cy, outerR, innerR, a0, a1));
-      track.setAttribute('fill', trackColor);
-      track.setAttribute('opacity', '0.25');
-      mainGroup.appendChild(track);
+      // Track (full sweep): a faint tint of the ring's own color by default.
+      // `data-index` hides it with its ring under legendToggle().
+      const track = svgEl('path', {
+        d: arcPath(cx, cy, outerR, innerR, a0, a1, true),
+        fill: this.config.trackColor || color,
+        opacity: this.config.trackColor ? 0.25 : 0.15,
+        'data-index': index,
+      }, mainGroup);
 
-      // Value arc
-      let dataMark: SVGPathElement = track;
-      if (fraction > 0) {
-        const valueEnd = a0 + fraction * sweep;
-        const arc = createSVGElement('path');
-        arc.setAttribute('d', this.ringArc(cx, cy, outerR, innerR, a0, valueEnd));
-        arc.setAttribute('fill', color);
-        mainGroup.appendChild(arc);
-        track.setAttribute('aria-hidden', 'true');
-        dataMark = arc;
-      }
+      // Value arc (the track itself is the data mark when the value is 0).
+      const dataMark = fraction > 0
+        ? svgEl('path', { d: arcPath(cx, cy, outerR, innerR, a0, a0 + fraction * sweep, true), fill: color }, mainGroup)
+        : track;
+      if (dataMark !== track) track.setAttribute('aria-hidden', 'true');
 
-      const dataAngle = fraction > 0 ? a0 + (fraction * sweep) / 2 : a0;
-      const dataRadius = (outerR + innerR) / 2;
-      const [dataX, dataY] = this.polar(cx, cy, dataRadius, dataAngle);
-      const pct = Math.round(fraction * 100);
-      dataMark.setAttribute('role', 'img');
-      dataMark.setAttribute('aria-label', `${point.label ?? point.x}: ${point.y} (${pct}%)`);
-      dataMark.setAttribute('tabindex', '-1');
-      dataMark.classList.add('data-point');
-      setDataPointAttrs(dataMark, point.label ?? point.x, point.y, this.seriesData[0]?.name, 0, index, dataX, dataY);
+      const [dataX, dataY] = polar(cx, cy, (outerR + innerR) / 2, a0 + (fraction * sweep) / 2);
+      markDataPoint(dataMark, `${point.label ?? point.x}: ${point.y} (${Math.round(fraction * 100)}%)`, point.label ?? point.x, point.y, this.seriesData[0]?.name, 0, index, dataX, dataY);
     });
 
-    // Center value label (single ring only)
+    // Center value label (single ring only). Full rings center it; gauges sit
+    // it on the baseline of the arc.
     if (this.config.showValue !== false && points.length === 1) {
-      const value = points[0].y;
-      const text = createSVGElement('text');
-      text.setAttribute('x', String(cx));
-      text.setAttribute('y', String(cy));
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('dominant-baseline', 'middle');
-      text.setAttribute('fill', colors.text);
-      text.setAttribute('font-size', String(Math.max(16, outerRadius * 0.32)));
-      text.setAttribute('font-weight', '700');
-      text.textContent = this.config.valueFormatter
-        ? this.config.valueFormatter(value)
-        : String(value);
-      mainGroup.appendChild(text);
+      const { y } = points[0];
+      svgEl('text', {
+        x: cx,
+        y: isGauge ? cy - 4 : cy,
+        'text-anchor': 'middle',
+        'dominant-baseline': isGauge ? undefined : 'middle',
+        fill: colors.text,
+        'font-size': Math.max(16, outerRadius * 0.32),
+        'font-weight': 700,
+      }, mainGroup).textContent = this.config.valueFormatter ? this.config.valueFormatter(y) : String(y);
     }
-  }
-
-  /** Point on a circle at `angle` (0 = 12 o'clock, clockwise). */
-  private polar(cx: number, cy: number, r: number, angle: number): [number, number] {
-    return [cx + r * Math.sin(angle), cy - r * Math.cos(angle)];
-  }
-
-  /** Path for a donut-band arc from a0 to a1. Handles the full-circle case. */
-  private ringArc(
-    cx: number,
-    cy: number,
-    outerR: number,
-    innerR: number,
-    a0: number,
-    a1: number
-  ): string {
-    const arcSweep = a1 - a0;
-    const isFull = arcSweep >= TAU - 1e-6;
-
-    if (isFull) {
-      const [ox0, oy0] = this.polar(cx, cy, outerR, 0);
-      const [oxh, oyh] = this.polar(cx, cy, outerR, Math.PI);
-      const [ix0, iy0] = this.polar(cx, cy, innerR, 0);
-      const [ixh, iyh] = this.polar(cx, cy, innerR, Math.PI);
-      return (
-        `M ${ox0} ${oy0} A ${outerR} ${outerR} 0 1 1 ${oxh} ${oyh} ` +
-        `A ${outerR} ${outerR} 0 1 1 ${ox0} ${oy0} Z ` +
-        `M ${ix0} ${iy0} A ${innerR} ${innerR} 0 1 0 ${ixh} ${iyh} ` +
-        `A ${innerR} ${innerR} 0 1 0 ${ix0} ${iy0} Z`
-      );
-    }
-
-    const largeArc = arcSweep > Math.PI ? 1 : 0;
-    const [ox0, oy0] = this.polar(cx, cy, outerR, a0);
-    const [ox1, oy1] = this.polar(cx, cy, outerR, a1);
-    const [ix1, iy1] = this.polar(cx, cy, innerR, a1);
-    const [ix0, iy0] = this.polar(cx, cy, innerR, a0);
-    return (
-      `M ${ox0} ${oy0} A ${outerR} ${outerR} 0 ${largeArc} 1 ${ox1} ${oy1} ` +
-      `L ${ix1} ${iy1} A ${innerR} ${innerR} 0 ${largeArc} 0 ${ix0} ${iy0} Z`
-    );
   }
 }
