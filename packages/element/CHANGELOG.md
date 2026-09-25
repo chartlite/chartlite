@@ -1,5 +1,40 @@
 # @chartlite/element
 
+## 1.1.0
+
+### Minor Changes
+
+- [#44](https://github.com/chartlite/chartlite/pull/44) [`3f361b7`](https://github.com/chartlite/chartlite/commit/3f361b7418b2749a1996b6ee229c7514d8130755) Thanks [@CanadaApollo6](https://github.com/CanadaApollo6)! - Wrapper polish: stable callbacks, in-place updates, tooltips, ref access, and error recovery.
+
+  - All wrappers: a data-only change now calls `chart.update(data)` instead of
+    recreating the chart. Function props (`onPointClick`, `onHover`,
+    `onLegendToggle`, `valueFormatter`, `onError`, tooltip `formatter`) are called
+    through stable proxies, so inline callbacks no longer recreate the chart.
+    `plugins` are compared by name.
+  - All wrappers: new `tooltip?: boolean | TooltipOptions` option. `onPointClick` /
+    `onHover` automatically install `callbacks()`, and `onLegendToggle` installs
+    `legendToggle()`, unless a plugin with that name is already present.
+  - All wrappers: the error fallback renders inside the chart container, so a chart
+    recovers as soon as valid input arrives.
+  - React: components forward refs (`{ chart, container, error, toSVG() }`),
+    pass through `id`, `className`, `style`, `aria-*` and `data-*`, and the
+    build ships a `'use client'` directive. The generic `<Chart>` props are a
+    discriminated union on `type`.
+  - Vue: every chart option is a declared, typed prop (kebab-case and boolean
+    shorthand work, including for undeclared attributes). Template refs expose
+    `{ chart, error, container, toSVG() }`.
+  - Svelte: `ChartParams` is a discriminated union on `type`, and the action
+    exposes the live `chart`.
+  - Element: new `tooltip` boolean attribute. Malformed JSON in `spec` or `data`
+    now reports an error that names the attribute, via `chartlite:error` and
+    `console.error`.
+  - `@chartlite/core` is now a `workspace:^` dependency.
+
+### Patch Changes
+
+- Updated dependencies [[`3f361b7`](https://github.com/chartlite/chartlite/commit/3f361b7418b2749a1996b6ee229c7514d8130755), [`3ee1a08`](https://github.com/chartlite/chartlite/commit/3ee1a08dd440199410b8b1f60b509020a2b612fe), [`3ee1a08`](https://github.com/chartlite/chartlite/commit/3ee1a08dd440199410b8b1f60b509020a2b612fe)]:
+  - @chartlite/core@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes
